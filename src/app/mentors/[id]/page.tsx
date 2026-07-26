@@ -83,13 +83,16 @@ export default function MentorProfile() {
   useEffect(() => {
     fetch(`/api/mentor/${id}`)
       .then(r => r.ok ? r.json() : null)
-      .then(data => { setMentor(data); setLoading(false); });
+      .then(data => { setMentor(data); setLoading(false); })
+      .catch(err => { console.error('fetch mentor failed:', err); setLoading(false); });
     fetch(`/api/sip-notes?mentorId=${id}`)
       .then(r => r.ok ? r.json() : [])
-      .then(data => setNotes(data));
+      .then(data => setNotes(data))
+      .catch(err => console.error('fetch notes failed:', err));
     fetch(`/api/mentor/${id}/follow`)
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) { setFollowing(data.following); setFollowerCount(data.count); } });
+      .then(data => { if (data) { setFollowing(data.following); setFollowerCount(data.count); } })
+      .catch(err => console.error('fetch follow failed:', err));
   }, [id]);
 
   async function toggleFollow() {

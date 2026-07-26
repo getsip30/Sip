@@ -88,23 +88,28 @@ export default function Dashboard() {
   const [isLive, setIsLive] = useState(false);
   
   const fetchData = useCallback(async () => {
-  const [mRes, rRes, liveRes, aRes, refRes] = await Promise.all([fetch('/api/mentor'), fetch('/api/requests'), fetch('/api/rooms'), fetch('/api/asks'), fetch('/api/referrals/me')]);
-  if (refRes.ok) setReferrals(await refRes.json());
-  if (mRes.ok) {
-    const m = await mRes.json();
-    setMentor(m);
-    if (liveRes.ok) {
-      const liveRooms = await liveRes.json();
-      setIsLive(liveRooms.some((r: { mentorId: string }) => r.mentorId === m.id));
+  try {
+    const [mRes, rRes, liveRes, aRes, refRes] = await Promise.all([fetch('/api/mentor'), fetch('/api/requests'), fetch('/api/rooms'), fetch('/api/asks'), fetch('/api/referrals/me')]);
+    if (refRes.ok) setReferrals(await refRes.json());
+    if (mRes.ok) {
+      const m = await mRes.json();
+      setMentor(m);
+      if (liveRes.ok) {
+        const liveRooms = await liveRes.json();
+        setIsLive(liveRooms.some((r: { mentorId: string }) => r.mentorId === m.id));
+      }
+      const notesRes = await fetch(`/api/sip-notes?mentorId=${m.id}&mine=true`);
+      if (notesRes.ok) setPendingNotes(await notesRes.json());
+      const liveNotesRes = await fetch(`/api/sip-notes?mentorId=${m.id}`);
+      if (liveNotesRes.ok) setLiveNotes(await liveNotesRes.json());
     }
-    const notesRes = await fetch(`/api/sip-notes?mentorId=${m.id}&mine=true`);
-    if (notesRes.ok) setPendingNotes(await notesRes.json());
-    const liveNotesRes = await fetch(`/api/sip-notes?mentorId=${m.id}`);
-    if (liveNotesRes.ok) setLiveNotes(await liveNotesRes.json());
+    if (rRes.ok) setRequests(await rRes.json());
+    if (aRes.ok) setAsks(await aRes.json());
+  } catch (err) {
+    console.error('fetchData failed:', err);
+  } finally {
+    setLoadingMentor(false);
   }
-  if (rRes.ok) setRequests(await rRes.json());
-  if (aRes.ok) setAsks(await aRes.json());
-  setLoadingMentor(false);
 }, []);
 
   useEffect(() => {

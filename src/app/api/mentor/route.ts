@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { mentors, seekers, referralEvents } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { NextResponse, after } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { generateReferralCode } from '@/lib/referral';
@@ -13,15 +13,13 @@ async function notifyMatchingSeekers(mentor: typeof mentors.$inferSelect) {
   const mentorTopics = mentor.topics.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
   if (mentorTopics.length === 0) return;
 
-  const allSeekers = await db.select().from(seekers);
-  const now = Date.now();
-  const matches = allSeekers.filter(s => {
-    const interests = (s.interests || '').split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
-    const isMatch = interests.some(i => mentorTopics.includes(i));
-    if (!isMatch) return false;
-    if (s.lastMatchEmailAt && now - new Date(s.lastMatchEmailAt).getTime() < 7 * 24 * 60 * 60 * 1000) return false;
-    return true;
-  });
+  const matchRows = await db.execute(sql`
+    SELECT * FROM seekers
+    WHERE email IS NOT NULL
+      AND (last_match_email_at IS NULL OR last_match_email_at < now() - interval '7 days')
+      AND string_to_array(lower(interests), ',') && ${mentorTopics}::text[]
+  `);
+  const matches = matchRows.rows as (typeof seekers.$inferSelect)[];
 
   for (const seeker of matches) {
     if (!seeker.email) continue;

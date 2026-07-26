@@ -11,7 +11,7 @@ import { flags } from '@/db/schema';
 import { ne, and } from 'drizzle-orm';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NAME_REGEX = /^[^\d]+$/;
+const NAME_REGEX = /^[A-Za-z\u00C0-\u024F\u0400-\u04FF\u0900-\u097F\u4E00-\u9FFF\s'.-]+$/;
 
 export async function POST(req: Request) {
   try {

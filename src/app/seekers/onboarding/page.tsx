@@ -17,7 +17,7 @@ export default function SeekerOnboarding() {
   useEffect(() => {
     fetch('/api/seeker').then(r => r.ok ? r.json() : null).then(data => {
       if (data) setForm({ age: data.age ? String(data.age) : '', linkedin: data.linkedin || '', interests: data.interests ? data.interests.split(',').filter(Boolean) : [] });
-    });
+    }).catch(err => console.error('fetch seeker failed:', err));
   }, []);
 
   const TOPICS = ['tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'co-op', 'grad school'];
