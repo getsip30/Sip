@@ -1,4 +1,4 @@
-// src/app/page.tsx
+﻿// src/app/page.tsx
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -209,7 +209,7 @@ export default function HomeClient() {
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 20px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: scrolled ? 'rgba(10,14,22,0.85)' : 'rgba(10,14,22,0.3)', backdropFilter: 'blur(24px) saturate(160%)', WebkitBackdropFilter: 'blur(24px) saturate(160%)', borderBottom: scrolled ? `1px solid ${BORDER}` : '1px solid transparent', transition: 'background 0.4s ease, border-color 0.4s ease' }}>
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 20px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: scrolled ? 'rgba(10,14,22,0.95)' : 'rgba(10,14,22,0.5)', backdropFilter: 'blur(20px)', borderBottom: scrolled ? `1px solid ${BORDER}` : '1px solid transparent', transition: 'background 0.3s, border-color 0.3s' }}>
         <Logo />
         {!user && (
           <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
@@ -223,29 +223,22 @@ export default function HomeClient() {
       </motion.nav>
 
       {/* HERO */}
-      <section style={{ position: 'relative', minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '100px 20px 40px', maxWidth: 1100, margin: '0 auto', textAlign: 'left', overflow: 'hidden' }}>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1, duration: 1.2 }}
-          style={{ position: 'absolute', top: '-20%', left: '-10%', width: 640, height: 640, background: `radial-gradient(circle, ${ACCENT}22 0%, transparent 70%)`, pointerEvents: 'none', filter: 'blur(20px)' }}
-        />
+      <section style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '100px 20px 40px', maxWidth: 1100, margin: '0 auto', textAlign: 'left' }}>
 
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: MUTED, marginBottom: 28, letterSpacing: 0.3, position: 'relative' }}>
-          <span style={{ width: 6, height: 6, background: '#4CAF7D', borderRadius: '50%', display: 'inline-block', boxShadow: '0 0 8px #4CAF7D' }} />
+          transition={{ delay: 0.15, duration: 0.5 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: MUTED, marginBottom: 28, letterSpacing: 0.3 }}>
+          <span style={{ width: 6, height: 6, background: '#4CAF7D', borderRadius: '50%', display: 'inline-block' }} />
           {count} mentors open right now
         </motion.div>
 
         <motion.h1
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          style={{ fontSize: 'clamp(44px, 6vw, 84px)', fontWeight: 600, lineHeight: 1.03, letterSpacing: -3, margin: '0 0 20px', color: TEXT, maxWidth: 780, position: 'relative' }}>
+          transition={{ delay: 0.25, duration: 0.55 }}
+          style={{ fontSize: 'clamp(44px, 6vw, 80px)', fontWeight: 600, lineHeight: 1.05, letterSpacing: -2.5, margin: '0 0 20px', color: TEXT, maxWidth: 780 }}>
           Real mentors,<br />talking right now -
           <span style={{ display: 'inline-block', height: '1.05em', overflow: 'hidden', verticalAlign: 'bottom', marginLeft: 12 }}>
             <AnimatePresence mode="wait">
@@ -296,10 +289,10 @@ export default function HomeClient() {
           ) : (
             <>
               <motion.button
-                whileHover={{ scale: 1.03, boxShadow: `0 0 24px ${ACCENT}66` }}
+                whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => document.getElementById('mentors')?.scrollIntoView({ behavior: 'smooth' })}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, background: ACCENT, color: '#fff', border: 'none', padding: '13px 24px', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'box-shadow 0.3s' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 8, background: ACCENT, color: '#fff', border: 'none', padding: '13px 24px', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 find your sip <IconArrow color="#fff" />
               </motion.button>
               <motion.button
@@ -323,7 +316,7 @@ export default function HomeClient() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.5 }}
           style={{ marginBottom: 44 }}>
           <h2 style={{ fontSize: 30, fontWeight: 600, letterSpacing: -1, marginBottom: 10 }}>How it works</h2>
           <p style={{ color: MUTED, fontSize: 15 }}>Three steps. No cringe.</p>
@@ -339,9 +332,8 @@ export default function HomeClient() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-60px' }}
-              transition={{ duration: 0.5, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-              whileHover={{ background: 'rgba(59,130,246,0.04)' }}
-              style={{ background: SURFACE, padding: '32px 28px', transition: 'background 0.3s' }}>
+              transition={{ duration: 0.45, delay: i * 0.1 }}
+              style={{ background: SURFACE, padding: '32px 28px' }}>
               <div style={{ marginBottom: 20 }}>{step.icon}</div>
               <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 8 }}>{step.title}</div>
               <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.65 }}>{step.body}</div>
@@ -356,7 +348,7 @@ export default function HomeClient() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.5 }}
           style={{ marginBottom: 44 }}>
           <h2 style={{ fontSize: 30, fontWeight: 600, letterSpacing: -1, marginBottom: 10 }}>Why not just DM someone on LinkedIn?</h2>
           <p style={{ color: MUTED, fontSize: 15, maxWidth: 560 }}>Because that message sits unread for three weeks, if it gets a reply at all. Here&apos;s what&apos;s actually different.</p>
@@ -372,9 +364,8 @@ export default function HomeClient() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-60px' }}
-              transition={{ duration: 0.5, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-              whileHover={{ background: 'rgba(59,130,246,0.04)' }}
-              style={{ background: SURFACE, padding: '32px 28px', transition: 'background 0.3s' }}>
+              transition={{ duration: 0.45, delay: i * 0.1 }}
+              style={{ background: SURFACE, padding: '32px 28px' }}>
               <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 8 }}>{item.title}</div>
               <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.65 }}>{item.body}</div>
             </motion.div>
@@ -393,7 +384,7 @@ export default function HomeClient() {
             {liveRooms.map(r => (
               <Link key={r.id} href={user ? `/rooms/${r.id}` : '/sign-in'} onClick={e => { if (!user) { e.preventDefault(); router.push('/sign-in'); } }} style={{ textDecoration: 'none', background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '14px 20px', color: TEXT, minWidth: 220 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{r.title}</div>
-                <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>{r.firstName} {r.lastName} · {r.role} @ {r.company}</div>
+                <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>{r.firstName} {r.lastName} Â· {r.role} @ {r.company}</div>
                 <div style={{ color: '#D9534F', fontSize: 12, marginTop: 6, fontWeight: 600 }}>join now</div>
               </Link>
             ))}
@@ -443,7 +434,7 @@ export default function HomeClient() {
               ) : (
                 aiMatches.map(m => (
                   <div key={m.id} onClick={() => window.location.href = `/mentors/${m.id}`} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '16px 20px', cursor: 'pointer' }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{m.firstName} {m.lastName} · {m.role} @ {m.company}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{m.firstName} {m.lastName} Â· {m.role} @ {m.company}</div>
                     <div style={{ color: ACCENT, fontSize: 13, marginTop: 4 }}>{m.reason}</div>
                   </div>
                 ))
@@ -497,9 +488,9 @@ export default function HomeClient() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.3, delay: i * 0.05 }}
-                  whileHover={{ y: -4, borderColor: ACCENT, boxShadow: `0 8px 30px ${ACCENT}1a` }}
+                  whileHover={{ y: -4 }}
                   onClick={() => window.location.href = `/mentors/${mentor.id}`}
-                  style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 24, cursor: 'pointer', transition: 'border-color 0.3s, box-shadow 0.3s' }}>
+                  style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 24, cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 10, background: AVATARS[i % AVATARS.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0, color: '#fff' }}>{INITIALS(mentor)}</div>
                     <div style={{ flex: 1 }}>
@@ -507,7 +498,7 @@ export default function HomeClient() {
                       <div style={{ color: MUTED, fontSize: 13 }}>{mentor.role} @ {mentor.company}</div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                      <span style={{ fontSize: 11, color: '#4CAF7D', fontWeight: 600 }}>● open</span>
+                      <span style={{ fontSize: 11, color: '#4CAF7D', fontWeight: 600 }}>â— open</span>
                       <span style={{ fontSize: 10, color: MUTED, background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: 6 }}>{mentor.availability}</span>
                     </div>
                   </div>
@@ -594,7 +585,7 @@ export default function HomeClient() {
               transition={{ type: 'spring', stiffness: 300, damping: 28 }}
               style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 36, width: '100%', maxWidth: 440 }}>
               <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 4 }}>request a sip</div>
-              <div style={{ color: MUTED, fontSize: 14, marginBottom: 28 }}>sending to {modal.firstName} {modal.lastName} · {modal.role} @ {modal.company}</div>
+              <div style={{ color: MUTED, fontSize: 14, marginBottom: 28 }}>sending to {modal.firstName} {modal.lastName} Â· {modal.role} @ {modal.company}</div>
               <AnimatePresence mode="wait">
                 {sent ? (
                   <motion.div
@@ -717,7 +708,7 @@ export default function HomeClient() {
           </div>
         </div>
         <div style={{ maxWidth: 1200, margin: '0 auto', borderTop: `1px solid ${BORDER}`, paddingTop: 24, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, fontSize: 12 }}>
-          <span>© {new Date().getFullYear()} Sip. All rights reserved.</span>
+          <span>Â© {new Date().getFullYear()} Sip. All rights reserved.</span>
           <span>Made for the curious ones.</span>
         </div>
       </footer>
