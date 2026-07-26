@@ -126,7 +126,7 @@ export default function HomeClient() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchMentors(); }, [fetchMentors]);
 
-  const ALL_FILTERS = ['all', 'tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research'];
+  const ALL_FILTERS = ['all', 'tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'engineering', 'computer science', 'data science', 'marketing', 'consulting', 'law', 'medicine', 'entrepreneurship', 'business', 'psychology', 'co-op', 'grad school'];
   const filtered = mentors.filter(m => {
     const matchFilter = filter === 'all' || m.topics.toLowerCase().includes(filter.toLowerCase());
     const q = search.toLowerCase();

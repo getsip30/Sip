@@ -4,7 +4,7 @@ import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
-const TOPICS = ['tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research'];
+const TOPICS = ['tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'engineering', 'computer science', 'data science', 'marketing', 'consulting', 'law', 'medicine', 'entrepreneurship', 'business', 'psychology', 'co-op', 'grad school'];
 
 export default function Onboarding() {
   const { user, isLoaded } = useUser();

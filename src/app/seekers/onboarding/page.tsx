@@ -20,7 +20,7 @@ export default function SeekerOnboarding() {
     }).catch(err => console.error('fetch seeker failed:', err));
   }, []);
 
-  const TOPICS = ['tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'co-op', 'grad school'];
+  const TOPICS = ['tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'engineering', 'computer science', 'data science', 'marketing', 'consulting', 'law', 'medicine', 'entrepreneurship', 'business', 'psychology', 'co-op', 'grad school'];
   const toggle = (t: string) => setForm(f => ({ ...f, interests: f.interests.includes(t) ? f.interests.filter(x => x !== t) : [...f.interests, t] }));
 
   useEffect(() => {
