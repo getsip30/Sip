@@ -1,0 +1,101 @@
+﻿
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '32px 36px', marginBottom: 80, display: 'flex', alignItems: 'center', justifyContent: 
+'space-between', gap: 20, flexWrap: 'wrap' }}>
+              <div>
+>               <div style={{ fontWeight: 600, fontSize: 17, marginBottom: 6 }}>These are just the top mentors right now</div>
+                <div style={{ color: MUTED, fontSize: 14 }}>Sign up free to see everyone open, filter by topic, and request a sip.</div>
+              </div>
+              <Link href="/sign-up" style={{ background: ACCENT, color: '#fff', padding: '13px 26px', borderRadius: 8, fontWeight: 600, fontSize: 14, textDecoration: 'none', whiteSpace: 
+'nowrap' }}>
+                see all mentors
+              </Link>
+            </motion.div>
+          )}
+        </section>
+  
+        {/* NO MATCH PROMPT */}
+        <AnimatePresence>
+          {noMatchInterest && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={e => { if (e.target === e.currentTarget) setNoMatchInterest(null); }}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 
+'blur(4px)' }}>
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 10 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 36, width: '100%', maxWidth: 400, textAlign: 'center' }}>
+                <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>no one in {noMatchInterest} is open right now</div>
+                <p style={{ color: MUTED, fontSize: 14, marginBottom: 28 }}>want to talk to someone from a different area instead?</p>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => setNoMatchInterest(null)} style={{ flex: 1, background: 'transparent', border: `1px solid ${BORDER}`, color: MUTED, padding: '12px 0', borderRadius: 
+8, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>no thanks</button>
+                  <button onClick={handleInstantSipFallback} style={{ flex: 1, background: ACCENT, border: 'none', color: '#fff', padding: '12px 0', borderRadius: 8, fontSize: 14, 
+fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>sure, find someone</button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+  
+        {/* MODAL */}
+        <AnimatePresence>
+          {modal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-80px' }}
+            transition={{ duration: 0.5 }}
+            style={{ marginBottom: 36 }}>
+>           <h2 style={{ fontSize: 30, fontWeight: 600, letterSpacing: -1, marginBottom: 10 }}>Questions</h2>
+          </motion.div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {[
+              { q: 'Is Sip free?', a: 'Yes. There\'s no cost to find a mentor or to become one.' },
+              { q: 'What if no one\'s open right now?', a: 'You can still send a request, or try the AI match to get pointed toward someone relevant even if they\'re offline.' },
+              { q: 'Do I need to be an expert to be a mentor?', a: 'No. If you\'ve got real experience in something and are willing to talk about it, that\'s enough.' },
+              { q: 'Is my information private?', a: 'We don\'t sell your data, and you control what\'s shown on your profile. See our Privacy Policy for details.' },
+            ].map(item => (
+              <motion.div
+                key={item.q}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.4 }}>
+                <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>{item.q}</div>
+                <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.65 }}>{item.a}</div>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+  
+        {/* FINAL CTA */}
+        <section style={{ padding: '20px 20px 80px', maxWidth: 1100, margin: '0 auto', textAlign: 'center' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-80px' }}
+            transition={{ duration: 0.5 }}
+            style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 20, padding: '60px 40px' }}>
+            <h2 style={{ fontSize: 28, fontWeight: 600, letterSpacing: -1, marginBottom: 12 }}>Stop drafting the perfect cold DM.</h2>
+            <p style={{ color: MUTED, fontSize: 15, marginBottom: 28, maxWidth: 440, margin: '0 auto 28px' }}>Someone&apos;s open right now. Go find them.</p>
+            <Link href="/#mentors" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: ACCENT, color: '#fff', border: 'none', padding: '13px 28px', borderRadius: 8, 
+fontSize: 15, fontWeight: 600, textDecoration: 'none' }}>
+              find your sip <IconArrow color="#fff" />
+            </Link>
+          </motion.div>
+        </section>
+  
+        {/* FOOTER */}
+        <footer style={{ borderTop: `1px solid ${BORDER}`, padding: '56px 20px 40px', color: MUTED }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 40, marginBottom: 40 }}>
+
+

@@ -630,7 +630,7 @@ export default function HomeClient() {
       </AnimatePresence>
 
       {/* FAQ */}
-      <section style={{ padding: '60px 20px', maxWidth: 760, margin: '0 auto' }}>
+      <section style={{ padding: '20px 20px 60px', maxWidth: 760, margin: '0 auto' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
