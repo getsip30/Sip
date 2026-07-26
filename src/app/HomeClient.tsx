@@ -228,15 +228,15 @@ export default function HomeClient() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.1, duration: 1.2 }}
-          style={{ position: 'absolute', top: '-20%', left: '-10%', width: 640, height: 640, background: `radial-gradient(circle, ${ACCENT}22 0%, transparent 70%)`, pointerEvents: 'none', filter: 'blur(20px)' }}
+          transition={{ delay: 0.1, duration: 1.4 }}
+          style={{ position: 'absolute', top: '-30%', right: '-15%', left: 'auto', width: 500, height: 500, background: `radial-gradient(circle, ${ACCENT}12 0%, transparent 65%)`, pointerEvents: 'none', zIndex: 0 }}
         />
 
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: MUTED, marginBottom: 28, letterSpacing: 0.3, position: 'relative' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: MUTED, marginBottom: 28, letterSpacing: 0.3, position: 'relative', zIndex: 1 }}>
           <span style={{ width: 6, height: 6, background: '#4CAF7D', borderRadius: '50%', display: 'inline-block', boxShadow: '0 0 8px #4CAF7D' }} />
           {count} mentors open right now
         </motion.div>
@@ -245,7 +245,7 @@ export default function HomeClient() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          style={{ fontSize: 'clamp(44px, 6vw, 84px)', fontWeight: 600, lineHeight: 1.03, letterSpacing: -3, margin: '0 0 20px', color: TEXT, maxWidth: 780, position: 'relative' }}>
+          style={{ fontSize: 'clamp(44px, 6vw, 84px)', fontWeight: 600, lineHeight: 1.03, letterSpacing: -3, margin: '0 0 20px', color: TEXT, maxWidth: 780, position: 'relative', zIndex: 1 }}>
           Real mentors,<br />talking right now -
           <span style={{ display: 'inline-block', height: '1.05em', overflow: 'hidden', verticalAlign: 'bottom', marginLeft: 12 }}>
             <AnimatePresence mode="wait">
@@ -266,7 +266,7 @@ export default function HomeClient() {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.5 }}
-          style={{ fontSize: 17, color: MUTED, maxWidth: 480, lineHeight: 1.7, marginBottom: 36 }}>
+          style={{ fontSize: 17, color: MUTED, maxWidth: 480, lineHeight: 1.7, marginBottom: 36, position: 'relative', zIndex: 1 }}>
           People who actually know their stuff, already open to talking. Click, connect, learn - no scheduling back-and-forth.
         </motion.p>
 
@@ -274,7 +274,7 @@ export default function HomeClient() {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.52, duration: 0.5 }}
-          style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          style={{ display: 'flex', gap: 12, flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
           {user ? (
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               {!rolesLoaded ? (
