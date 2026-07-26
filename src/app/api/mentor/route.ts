@@ -127,7 +127,7 @@ export async function GET(req: Request) {
 
   const result = await db.select().from(mentors).where(eq(mentors.clerkId, userId));
   const m = result[0];
-  if (!m) return NextResponse.json(null, { status: 200 });
+  if (!m) return NextResponse.json(null, { status: 404 });
 
   let referrerName: string | null = null;
   if (m.invitedByClerkId) {
