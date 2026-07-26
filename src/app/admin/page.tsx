@@ -39,14 +39,19 @@ export default function AdminPage() {
   const [forbidden, setForbidden] = useState(false);
 
   const fetchAll = useCallback(async () => {
-    const [ov, fl] = await Promise.all([
-      fetch('/api/admin/overview'),
-      fetch('/api/admin/flags'),
-    ]);
-    if (ov.status === 403 || fl.status === 403) { setForbidden(true); setLoading(false); return; }
-    if (ov.ok) setData(await ov.json());
-    if (fl.ok) setFlags(await fl.json());
-    setLoading(false);
+    try {
+      const [ov, fl] = await Promise.all([
+        fetch('/api/admin/overview'),
+        fetch('/api/admin/flags'),
+      ]);
+      if (ov.status === 403 || fl.status === 403) { setForbidden(true); setLoading(false); return; }
+      if (ov.ok) setData(await ov.json());
+      if (fl.ok) setFlags(await fl.json());
+      setLoading(false);
+    } catch (err) {
+      console.error('fetchAll failed:', err);
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
