@@ -10,15 +10,16 @@ import Logo from '@/components/Logo';
 export default function SeekerOnboarding() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
-  const [form, setForm] = useState({ age: '', linkedin: '', interests: [] as string[] });
+  const [form, setForm] = useState({ name: '', age: '', linkedin: '', interests: [] as string[] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     fetch('/api/seeker').then(r => r.ok ? r.json() : null).then(data => {
-      if (data) setForm({ age: data.age ? String(data.age) : '', linkedin: data.linkedin || '', interests: data.interests ? data.interests.split(',').filter(Boolean) : [] });
+      if (data) setForm({ name: data.firstName || '', age: data.age ? String(data.age) : '', linkedin: data.linkedin || '', interests: data.interests ? data.interests.split(',').filter(Boolean) : [] });
+      else if (user?.firstName) setForm(f => ({ ...f, name: user.firstName || '' }));
     }).catch(err => console.error('fetch seeker failed:', err));
-  }, []);
+  }, [user]);
 
   const TOPICS = ['tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'engineering', 'computer science', 'data science', 'marketing', 'consulting', 'law', 'medicine', 'entrepreneurship', 'business', 'psychology', 'co-op', 'grad school'];
   const toggle = (t: string) => setForm(f => ({ ...f, interests: f.interests.includes(t) ? f.interests.filter(x => x !== t) : [...f.interests, t] }));
@@ -31,6 +32,10 @@ export default function SeekerOnboarding() {
   const label: React.CSSProperties = { fontSize: 13, color: MUTED, display: 'block', marginBottom: 8, fontWeight: 500 };
 
   async function handleSubmit() {
+    if (!form.name.trim()) {
+      setError('Please enter your name.');
+      return;
+    }
     if (form.linkedin && !/^(https?:\/\/)?(www\.)?linkedin\.com\/.+/i.test(form.linkedin.trim())) {
       setError('Please enter a valid LinkedIn profile URL.');
       return;
@@ -44,7 +49,7 @@ export default function SeekerOnboarding() {
     const res = await fetch('/api/seeker', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ age: form.age ? Number(form.age) : null, linkedin: form.linkedin, interests: form.interests.join(',') }),
+      body: JSON.stringify({ firstName: form.name.trim(), age: form.age ? Number(form.age) : null, linkedin: form.linkedin, interests: form.interests.join(',') }),
     });
     if (!res.ok) { setError('Something went wrong. Try again.'); setLoading(false); return; }
     router.push('/seekers');

@@ -26,7 +26,7 @@ type SipRequest = {
 
 const AVATARS = [ACCENT, PURPLE, '#059669', '#DC2626', '#D97706', '#0891B2'];
 const INITIALS = (m: Mentor) => `${m.firstName[0]}${m.lastName[0]}`;
-const ALL_FILTERS = ['all', 'tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research'];
+const ALL_FILTERS = ['all', 'tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'engineering', 'computer science', 'data science', 'marketing', 'consulting', 'law', 'medicine', 'entrepreneurship', 'business', 'psychology', 'co-op', 'grad school'];
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; label: string }> = {
   pending:  { bg: 'rgba(245,158,11,0.1)',  color: '#F59E0B', border: 'rgba(245,158,11,0.3)',  label: 'pending ⏳' },
   accepted: { bg: 'rgba(91,219,138,0.1)',  color: '#5BDB8A', border: 'rgba(91,219,138,0.3)',  label: 'accepted ✓' },
@@ -229,13 +229,13 @@ function SeekersContent() {
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="search by name, role, company, topic..."
               style={{ flex: 1, minWidth: 240, background: SURFACE, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '12px 16px', color: TEXT, fontSize: 14, outline: 'none', fontFamily: 'inherit' }} />
           </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
+          <div className="filter-scroll" style={{ display: 'flex', gap: 8, marginBottom: 28, overflowX: 'auto', paddingBottom: 4 }}>
             {ALL_FILTERS.map(f => (
               <button key={f} onClick={() => setFilter(f)} style={{
                 background: filter === f ? 'rgba(112,181,249,0.12)' : 'transparent',
                 border: `1px solid ${filter === f ? 'rgba(112,181,249,0.4)' : BORDER}`,
                 color: filter === f ? LINK : MUTED, padding: '6px 16px', borderRadius: 16,
-                fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
               }}>{f}</button>
             ))}
           </div>

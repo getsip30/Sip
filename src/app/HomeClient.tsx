@@ -451,17 +451,20 @@ export default function HomeClient() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 40 }}>
-          {ALL_FILTERS.map(f => (
-            <motion.button
-              key={f}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setFilter(f)}
-              style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid', borderColor: filter === f ? ACCENT : BORDER, background: filter === f ? 'rgba(59,130,246,0.1)' : 'transparent', color: filter === f ? ACCENT : MUTED, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s' }}>
-              {f}
-            </motion.button>
-          ))}
+          style={{ position: 'relative', marginBottom: 40 }}>
+          <div className="filter-scroll" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+            {ALL_FILTERS.map(f => (
+              <motion.button
+                key={f}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setFilter(f)}
+                style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid', borderColor: filter === f ? ACCENT : BORDER, background: filter === f ? 'rgba(59,130,246,0.1)' : 'transparent', color: filter === f ? ACCENT : MUTED, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {f}
+              </motion.button>
+            ))}
+          </div>
+          <div style={{ position: 'absolute', top: 0, right: 0, bottom: 4, width: 48, background: `linear-gradient(to right, transparent, ${BG})`, pointerEvents: 'none' }} />
         </motion.div>
 
         {/* CARDS */}
