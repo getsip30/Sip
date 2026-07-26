@@ -226,13 +226,6 @@ export default function HomeClient() {
       <section style={{ position: 'relative', minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '100px 20px 40px', maxWidth: 1100, margin: '0 auto', textAlign: 'left', overflow: 'hidden' }}>
 
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1, duration: 1.4 }}
-          style={{ position: 'absolute', top: '-30%', right: '-15%', left: 'auto', width: 500, height: 500, background: `radial-gradient(circle, ${ACCENT}12 0%, transparent 65%)`, pointerEvents: 'none', zIndex: 0 }}
-        />
-
-        <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
