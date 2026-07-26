@@ -342,6 +342,37 @@ export default function HomeClient() {
         </div>
       </section>
 
+      {/* WHY SIP */}
+      <section style={{ padding: '20px 20px 60px', maxWidth: 1100, margin: '0 auto' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.5 }}
+          style={{ marginBottom: 44 }}>
+          <h2 style={{ fontSize: 30, fontWeight: 600, letterSpacing: -1, marginBottom: 10 }}>Why not just DM someone on LinkedIn?</h2>
+          <p style={{ color: MUTED, fontSize: 15, maxWidth: 560 }}>Because that message sits unread for three weeks, if it gets a reply at all. Here&apos;s what&apos;s actually different.</p>
+        </motion.div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 1, background: BORDER, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
+          {[
+            { title: 'They already said yes', body: 'Every person on Sip opted in to being reached out to right now. You\'re not interrupting anyone.' },
+            { title: 'No scheduling back-and-forth', body: 'One short form instead of five emails trying to find a time that works for both of you.' },
+            { title: 'You know exactly what happens next', body: 'They get your ask by email. If they say yes, you get on a call. No ambiguity about whether it worked.' },
+          ].map((item, i) => (
+            <motion.div
+              key={item.title}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ duration: 0.45, delay: i * 0.1 }}
+              style={{ background: SURFACE, padding: '32px 28px' }}>
+              <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 8 }}>{item.title}</div>
+              <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.65 }}>{item.body}</div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
       {/* DIRECTORY */}
       {liveRooms.length > 0 && (
         <section style={{ padding: '0 20px 40px', maxWidth: 1200, margin: '0 auto' }}>
@@ -597,6 +628,52 @@ export default function HomeClient() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* FAQ */}
+      <section style={{ padding: '60px 20px', maxWidth: 760, margin: '0 auto' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.5 }}
+          style={{ marginBottom: 36 }}>
+          <h2 style={{ fontSize: 30, fontWeight: 600, letterSpacing: -1, marginBottom: 10 }}>Questions</h2>
+        </motion.div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {[
+            { q: 'Is Sip free?', a: 'Yes. There\'s no cost to find a mentor or to become one.' },
+            { q: 'What if no one\'s open right now?', a: 'You can still send a request, or try the AI match to get pointed toward someone relevant even if they\'re offline.' },
+            { q: 'Do I need to be an expert to be a mentor?', a: 'No. If you\'ve got real experience in something and are willing to talk about it, that\'s enough.' },
+            { q: 'Is my information private?', a: 'We don\'t sell your data, and you control what\'s shown on your profile. See our Privacy Policy for details.' },
+          ].map(item => (
+            <motion.div
+              key={item.q}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.4 }}>
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>{item.q}</div>
+              <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.65 }}>{item.a}</div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section style={{ padding: '20px 20px 80px', maxWidth: 1100, margin: '0 auto', textAlign: 'center' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.5 }}
+          style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 20, padding: '60px 40px' }}>
+          <h2 style={{ fontSize: 28, fontWeight: 600, letterSpacing: -1, marginBottom: 12 }}>Stop drafting the perfect cold DM.</h2>
+          <p style={{ color: MUTED, fontSize: 15, marginBottom: 28, maxWidth: 440, margin: '0 auto 28px' }}>Someone&apos;s open right now. Go find them.</p>
+          <Link href="/#mentors" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: ACCENT, color: '#fff', border: 'none', padding: '13px 28px', borderRadius: 8, fontSize: 15, fontWeight: 600, textDecoration: 'none' }}>
+            find your sip <IconArrow color="#fff" />
+          </Link>
+        </motion.div>
+      </section>
 
       {/* FOOTER */}
       <footer style={{ borderTop: `1px solid ${BORDER}`, padding: '56px 20px 40px', color: MUTED }}>
