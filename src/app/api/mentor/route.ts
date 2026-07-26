@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { mentors, seekers, referralEvents } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { generateReferralCode } from '@/lib/referral';
 import { escapeHtml } from '@/lib/utils';
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
     });
   }
 
-  notifyMatchingSeekers(mentor[0]).catch(err => console.error('notifyMatchingSeekers failed:', err));
+  after(() => notifyMatchingSeekers(mentor[0]).catch(err => console.error('notifyMatchingSeekers failed:', err)));
 
   return NextResponse.json(mentor[0]);
   } catch (err) {
@@ -159,7 +159,7 @@ export async function PATCH(req: Request) {
 
   if (isOpen && !wasOpen && canNotify) {
     await db.update(mentors).set({ lastOpenNotifiedAt: new Date() }).where(eq(mentors.id, updated[0].id));
-    notifyMatchingSeekers(updated[0]).catch(err => console.error('notifyMatchingSeekers failed:', err));
+    after(() => notifyMatchingSeekers(updated[0]).catch(err => console.error('notifyMatchingSeekers failed:', err)));
   }
 
   return NextResponse.json(updated[0]);

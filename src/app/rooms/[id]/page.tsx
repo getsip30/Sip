@@ -40,20 +40,28 @@ export default function RoomPage() {
   const popupRef = useRef<Window | null>(null);
 
   const fetchRoom = useCallback(async () => {
-    const r = await fetch(`/api/rooms/${id}`);
-    if (r.ok) setRoom(await r.json());
+    try {
+      const r = await fetch(`/api/rooms/${id}`);
+      if (r.ok) setRoom(await r.json());
+    } catch (err) {
+      console.error('fetchRoom failed:', err);
+    }
   }, [id]);
 
   const fetchQueue = useCallback(async () => {
-    const r = await fetch(`/api/rooms/${id}/queue`);
-    if (!r.ok) return;
-    const data = await r.json();
-    setWaiting(data.waiting);
-    setActives(data.active);
-    setRecap(data.done || []);
-    if (user) {
-      const mine = [...data.waiting, ...data.active].find((e: QueueEntry) => e.seekerClerkId === user.id);
-      setMyEntry(mine || null);
+    try {
+      const r = await fetch(`/api/rooms/${id}/queue`);
+      if (!r.ok) return;
+      const data = await r.json();
+      setWaiting(data.waiting);
+      setActives(data.active);
+      setRecap(data.done || []);
+      if (user) {
+        const mine = [...data.waiting, ...data.active].find((e: QueueEntry) => e.seekerClerkId === user.id);
+        setMyEntry(mine || null);
+      }
+    } catch (err) {
+      console.error('fetchQueue failed:', err);
     }
   }, [id, user]);
 
