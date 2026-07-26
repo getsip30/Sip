@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const { success } = await mutationLimiter.limit(userId);
   if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
-  const { firstname, age, linkedin, interests, ref } = await req.json();
+  const { firstName, age, linkedin, interests, ref } = await req.json();
   if (age !== undefined && age !== null && (age < 13 || age > 100)) {
     return NextResponse.json({ error: 'Please enter a real age between 13 and 100.' }, { status: 400 });
   }
