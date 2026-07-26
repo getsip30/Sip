@@ -3,7 +3,7 @@
 A mentor-discovery platform that connects people directly with mentors for quick, no-pressure conversations — no cold DMs, no scheduling back-and-forth. Built as a full-stack solo project.
 
 ## Live Demo
-https://sip-lyart.vercel.app
+getsip.co
 
 ## Tech Stack
 - **Framework:** Next.js 16 (App Router), React 19, TypeScript

@@ -41,9 +41,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>
           <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">${mentor.firstName} answered you</h2>
           <p style="color:#8B949E;font-size:13px;margin-bottom:8px;">You asked:</p>
-          <p style="color:#C9D1D9;font-size:14px;line-height:1.7;margin-bottom:16px;">"${a.question}"</p>
+          <p style="color:#C9D1D9;font-size:14px;line-height:1.7;margin-bottom:16px;">"${escapeHtml(a.question)}"</p>
           <p style="color:#8B949E;font-size:13px;margin-bottom:8px;">Their answer:</p>
-          <p style="color:#C9D1D9;font-size:14px;line-height:1.7;margin-bottom:24px;">"${a.answer}"</p>
+          <p style="color:#C9D1D9;font-size:14px;line-height:1.7;margin-bottom:24px;">"${escapeHtml(a.answer ?? '')}"</p>        
         </div>
       `,
     }).catch(err => console.error('answer email failed:', err));

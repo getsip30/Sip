@@ -4,12 +4,16 @@ import { rooms, mentors } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
+import { mutationLimiter } from '@/lib/ratelimit';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { success } = await mutationLimiter.limit(userId);
+    if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
     const { mode } = await req.json();
     if (!['individual', 'batch'].includes(mode)) return NextResponse.json({ error: 'Invalid mode' }, { status: 400 });

@@ -4,15 +4,19 @@ import { rooms, mentors, follows } from '@/db/schema';
 import { eq, and, lt } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
-import { mutationLimiter } from '@/lib/ratelimit';
+import { mutationLimiter, readLimiter, getIp } from '@/lib/ratelimit';
 import { transporter } from '@/lib/mailer';
 import { escapeHtml } from '@/lib/utils';
 
 let lastCleanup = 0;
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // run at most once per 5 min regardless of read volume
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const ip = getIp(req);
+    const { success } = await readLimiter.limit(ip);
+    if (!success) return NextResponse.json({ error: 'Slow down a bit.' }, { status: 429 });
+
     const now = Date.now();
     if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
       lastCleanup = now;

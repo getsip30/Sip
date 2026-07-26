@@ -52,7 +52,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     await transporter.sendMail({
       from: process.env.GMAIL_USER,
-      to: process.env.ADMIN_EMAIL,
+      to: process.env.ADMIN_EMAIL!,
       subject: `Sip — new flag (${reason})`,
       text: `Reporter: ${userId} (${reporterIsMentor ? 'mentor' : 'seeker'})\nReported: ${reportedName} (${reportedClerkId})\nRoom: ${id}\nReason: ${reason}\nDetails: ${details}\n\nReview at /admin`,
     });

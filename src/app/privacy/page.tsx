@@ -1,6 +1,13 @@
+import type { Metadata } from 'next';
 import { BG, TEXT, MUTED, LINK } from '@/lib/theme';
 import Logo from '@/components/Logo';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  description: 'How Sip collects, uses, and protects your data.',
+  robots: { index: true, follow: true },
+};
 
 export default function Privacy() {
   return (

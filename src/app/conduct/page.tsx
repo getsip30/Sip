@@ -1,6 +1,13 @@
+import type { Metadata } from 'next';
 import { BG, TEXT, MUTED, LINK } from '@/lib/theme';
 import Logo from '@/components/Logo';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Code of Conduct',
+  description: 'Community guidelines for mentors and seekers on Sip.',
+  robots: { index: true, follow: true },
+};
 
 export default function Conduct() {
   return (

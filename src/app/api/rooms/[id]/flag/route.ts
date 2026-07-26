@@ -1,6 +1,6 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { flags, mentors, queueEntries } from '@/db/schema';
+import { flags, mentors, queueEntries, rooms } from '@/db/schema';
 import { eq, and, ne } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
@@ -18,9 +18,35 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const { reportedClerkId, reportedName, reason, details } = await req.json();
     if (!reason || !details) return NextResponse.json({ error: 'Reason and details required' }, { status: 400 });
+    if (!reportedClerkId) return NextResponse.json({ error: 'reportedClerkId required' }, { status: 400 });
+
+    const roomResult = await db.select().from(rooms).where(eq(rooms.id, id));
+    const room = roomResult[0];
+    if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
 
     const mentorResult = await db.select().from(mentors).where(eq(mentors.clerkId, userId));
     const reporterIsMentor = mentorResult.length > 0;
+
+    // reporter must have actually been in this room
+    const reporterWasMentorHere = reporterIsMentor && mentorResult[0].id === room.mentorId;
+    let reporterWasSeekerHere = false;
+    if (!reporterWasMentorHere) {
+      const reporterEntry = await db.select().from(queueEntries).where(and(eq(queueEntries.roomId, id), eq(queueEntries.seekerClerkId, userId)));
+      reporterWasSeekerHere = reporterEntry.length > 0;
+    }
+    if (!reporterWasMentorHere && !reporterWasSeekerHere) {
+      return NextResponse.json({ error: 'You can only report someone from a room you were in.' }, { status: 403 });
+    }
+
+    // reported person must have actually been in this room too
+    const reportedIsMentorHere = room.mentorId && mentorResult.length === 0
+      ? (await db.select().from(mentors).where(eq(mentors.id, room.mentorId)))[0]?.clerkId === reportedClerkId
+      : false;
+    const reportedEntry = await db.select().from(queueEntries).where(and(eq(queueEntries.roomId, id), eq(queueEntries.seekerClerkId, reportedClerkId)));
+    const reportedWasHere = reportedEntry.length > 0 || reportedIsMentorHere;
+    if (!reportedWasHere) {
+      return NextResponse.json({ error: 'That person was not in this room.' }, { status: 400 });
+    }
 
     const [flag] = await db.insert(flags).values({
       roomId: id,
@@ -69,7 +95,7 @@ Our team is reviewing it. If you believe this is a mistake, reply to this email.
     if (process.env.ADMIN_EMAIL) {
       await transporter.sendMail({
         from: process.env.GMAIL_USER,
-        to: process.env.ADMIN_EMAIL,
+        to: process.env.ADMIN_EMAIL!,
         subject: `Sip -- new flag (${reason}) -- flag #${flagCount} for this user`,
         text: `Reporter: ${userId} (${reporterIsMentor ? 'mentor' : 'seeker'})
 Reported: ${reportedName} (${reportedClerkId})

@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { requests, mentors, seekers, referralEvents } from '@/db/schema';
-import { eq, and, isNotNull, sql } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
@@ -54,14 +54,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const r = updated[0];
     if (!r) return NextResponse.json({ error: 'Request already responded to' }, { status: 409 });
 
-    const respondedRequests = await db.select().from(requests).where(and(eq(requests.mentorId, mentor.id), isNotNull(requests.respondedAt)));
-    if (respondedRequests.length > 0) {
-      const totalMinutes = respondedRequests.reduce((sum, req) => {
-        if (!req.respondedAt) return sum;
-        return sum + (new Date(req.respondedAt).getTime() - new Date(req.createdAt).getTime()) / 60000;
-      }, 0);
-      const avgResponseMinutes = Math.round(totalMinutes / respondedRequests.length);
-      await db.update(mentors).set({ avgResponseMinutes }).where(eq(mentors.id, mentor.id));
+    const [avgRow] = await db.execute(sql`
+      SELECT AVG(EXTRACT(EPOCH FROM (responded_at - created_at)) / 60)::int AS avg_minutes
+      FROM requests
+      WHERE mentor_id = ${mentor.id} AND responded_at IS NOT NULL
+    `).then(r => r.rows as { avg_minutes: number | null }[]);
+    if (avgRow?.avg_minutes != null) {
+      await db.update(mentors).set({ avgResponseMinutes: avgRow.avg_minutes }).where(eq(mentors.id, mentor.id));
     }
 
     if (status === 'accepted') {
@@ -94,17 +93,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
       const useCalendar = mentor.calendarLink && (contactMethod === 'calendar' || !mentor.contactEmail);
       const contactBlock = useCalendar
-        ? `<a href="${mentor.calendarLink}" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">Book Your Sip â†’</a>`
+        ? `<a href="${mentor.calendarLink}" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">Book Your Sip →</a>`
         : `<p style="color:#70B5F9;font-size:16px;font-weight:600;margin-bottom:0;">Book a Google Meet on this email only: ${escapeHtml(mentor.contactEmail || '')}</p>`;
 
       transporter.sendMail({
         from: `Sip <${process.env.GMAIL_USER}>`,
         to: r.seekerEmail,
-        subject: `${mentor.firstName} accepted your sip request â˜•`,
+        subject: `${mentor.firstName} accepted your sip request ☕`,
         html: `
           <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;">
-            <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip â˜•</div>
-            <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">Your request was accepted ðŸŽ‰</h2>
+            <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip ☕</div>
+            <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">Your request was accepted 🎉</h2>
             <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;">
             <strong style="color:#E6EDF3;">${escapeHtml(mentor.firstName)} ${escapeHtml(mentor.lastName)}</strong> (${escapeHtml(mentor.role)} @ ${escapeHtml(mentor.company)}) accepted your sip request.
             </p>

@@ -5,12 +5,52 @@ import { ACCENT, BG } from '@/lib/theme';
 import './globals.css';;
 
 export const metadata: Metadata = {
-  title: 'Sip — find your people',
-  description: 'Real conversations, zero cold messages.',
+  metadataBase: new URL('https://getsip.co'),
+  title: {
+    default: 'Sip — Find Your People',
+    template: '%s | Sip',
+  },
+  description: 'Real conversations, zero cold messages. Sip connects you with mentors for live, no-pressure conversations — no scheduling, no cold outreach.',
+  keywords: [
+    'mentorship platform',
+    'live mentorship',
+    'find a mentor',
+    'youth mentorship',
+    'career conversations',
+  ],
   icons: {
     icon: '/logo.png',
     shortcut: '/logo.png',
     apple: '/logo.png',
+  },
+  openGraph: {
+    title: 'Sip — Find Your People',
+    description: 'Real conversations, zero cold messages.',
+    url: 'https://getsip.co',
+    siteName: 'Sip',
+    images: [
+      {
+        url: '/logo.png',
+        width: 512,
+        height: 512,
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Sip — Find Your People',
+    description: 'Real conversations, zero cold messages.',
+    images: ['/logo.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
   },
 };
 

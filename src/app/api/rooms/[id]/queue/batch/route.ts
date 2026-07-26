@@ -4,6 +4,7 @@ import { queueEntries, rooms, mentors } from '@/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
+import { mutationLimiter } from '@/lib/ratelimit';
 
 async function assertMentorOwnsRoom(userId: string, roomId: string) {
   const mentorResult = await db.select().from(mentors).where(eq(mentors.clerkId, userId));
@@ -21,6 +22,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const mentor = await assertMentorOwnsRoom(userId, id);
     if (!mentor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    const { success } = await mutationLimiter.limit(userId);
+    if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
     const { entryIds } = await req.json();
     if (!Array.isArray(entryIds) || entryIds.length === 0) return NextResponse.json({ error: 'entryIds required' }, { status: 400 });
@@ -44,6 +48,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const mentor = await assertMentorOwnsRoom(userId, id);
     if (!mentor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    const { success } = await mutationLimiter.limit(userId);
+    if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
     const { action } = await req.json();
     if (action !== 'end') return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
