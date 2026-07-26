@@ -40,8 +40,7 @@ export default function Onboarding() {
     if (!user) { router.push('/'); return; }
 
     // Check if they already have a mentor profile
-    fetch('/api/mentor').catch(err => { console.error('fetch mentor failed:', err); setchecking(false); return null; }).then(res => {
-      if (!res) return;
+    fetch('/api/mentor').then(res => {
       if (res.ok) {
         res.json().then(data => {
           if (data && data.id) router.push('/dashboard');
