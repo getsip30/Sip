@@ -223,7 +223,7 @@ export default function HomeClient() {
       </motion.nav>
 
       {/* HERO */}
-      <section style={{ minHeight: '92vh', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '120px 20px 60px', maxWidth: 1100, margin: '0 auto', textAlign: 'left' }}>
+      <section style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '100px 20px 40px', maxWidth: 1100, margin: '0 auto', textAlign: 'left' }}>
 
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -311,7 +311,7 @@ export default function HomeClient() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section style={{ padding: '20px 20px 100px', maxWidth: 1100, margin: '0 auto' }}>
+      <section style={{ padding: '20px 20px 60px', maxWidth: 1100, margin: '0 auto' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
