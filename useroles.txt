@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 
@@ -13,10 +13,11 @@ export function useRoles() {
     if (!user) { // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoaded(true); return; }
     Promise.all([
-      fetch('/api/mentor').then(r => r.ok ? r.json() : null).then(d => !!d),
-      fetch('/api/seeker').then(r => r.ok ? r.json() : null).then(d => !!d),
+      fetch('/api/mentor').then(r => r.ok),
+      fetch('/api/seeker').then(r => r.ok),
     ]).then(([m, s]) => { setIsMentor(m); setIsSeeker(s); setLoaded(true); });
   }, [isLoaded, user]);
 
   return { isMentor, isSeeker, loaded };
 }
+

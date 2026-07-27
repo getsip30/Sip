@@ -1,32 +1,30 @@
-// src/components/Logo.tsx
+﻿// src/components/Logo.tsx
 'use client';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
+import { useRoles } from '@/hooks/useRoles';
 import { ACCENT } from '@/lib/theme';
-
-async function hasRole(endpoint: string) {
-  try {
-    const res = await fetch(endpoint);
-    if (!res.ok) return false;
-    const data = await res.json();
-    return !!data;
-  } catch {
-    return false;
-  }
-}
 
 export default function Logo({ style, children }: { style?: React.CSSProperties; children?: React.ReactNode }) {
   const { user, isLoaded } = useUser();
+  const { isMentor, isSeeker, loaded } = useRoles();
   const router = useRouter();
 
   async function handleClick(e: React.MouseEvent) {
     e.preventDefault();
     if (!isLoaded || !user) { router.push('/'); return; }
 
-    const [mentorFlag, seekerFlag] = await Promise.all([
-      hasRole('/api/mentor'),
-      hasRole('/api/seeker'),
-    ]);
+    let mentorFlag = isMentor;
+    let seekerFlag = isSeeker;
+
+    if (!loaded) {
+      const [m, s] = await Promise.all([
+        fetch('/api/mentor').then(r => r.json()).then(d => !!d),
+        fetch('/api/seeker').then(r => r.json()).then(d => !!d),
+      ]);
+      mentorFlag = m;
+      seekerFlag = s;
+    }
 
     const lastRole = typeof window !== 'undefined' ? localStorage.getItem('sip_last_role') : null;
     if (lastRole === 'seeker' && seekerFlag) { router.push('/seekers'); return; }
