@@ -66,22 +66,6 @@ export default function SeekerOnboarding() {
         <p style={{ color: MUTED, fontSize: 15, marginBottom: 36 }}>Helps mentors understand who&apos;s reaching out. All optional.</p>
 
         <div style={{ marginBottom: 16 }}>
-          <label style={label}>Your name</label>
-          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="what do people call you?" style={input} />
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={label}>Your name</label>
-          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="what do people call you?" style={input} />
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={label}>Your name</label>
-          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="what do people call you?" style={input} />
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={label}>Your name</label>
-          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="what do people call you?" style={input} />
-        </div>
-        <div style={{ marginBottom: 16 }}>
           <label style={label}>Age</label>
           <input value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value.replace(/\D/g, '') }))} placeholder="optional" style={input} />
         </div>
