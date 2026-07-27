@@ -253,8 +253,6 @@ export default function HomeClient() {
           </motion.div>
         )}
       </AnimatePresence>
-      {false && (
-      </motion.nav>
 
       {/* HERO */}
       <section style={{ position: 'relative', minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '100px 20px 40px', maxWidth: 1100, margin: '0 auto', textAlign: 'left', overflow: 'hidden' }}>
