@@ -62,6 +62,7 @@ export default function HomeClient() {
   const [count, setCount] = useState(0);
   const [wordIndex, setWordIndex] = useState(0);
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [aiQuery, setAiQuery] = useState('');
@@ -218,8 +219,41 @@ export default function HomeClient() {
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <Link href="/sign-in" style={{ background: TEXT, color: BG, padding: '9px 20px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'block' }}>sign in</Link>
             </motion.div>
+            <button onClick={() => setMobileMenu(m => !m)} className="mobile-only" style={{ background: 'transparent', border: 'none', color: TEXT, cursor: 'pointer', padding: 4, display: 'none' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke={TEXT} strokeWidth="2" strokeLinecap="round"/></svg>
+            </button>
           </div>
         )}
+      </motion.nav>
+
+      <AnimatePresence>
+        {mobileMenu && !user && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mobile-only"
+            style={{ position: 'fixed', top: 72, left: 0, right: 0, zIndex: 99, background: 'rgba(10,14,22,0.98)', backdropFilter: 'blur(24px)', borderBottom: `1px solid ${BORDER}`, padding: 20, flexDirection: 'column', gap: 16 }}>
+            <Link href="/leaderboard" onClick={() => setMobileMenu(false)} style={{ color: TEXT, textDecoration: 'none', fontSize: 15 }}>leaderboard</Link>
+            <Link href="/mentors/signup" onClick={() => setMobileMenu(false)} style={{ color: TEXT, textDecoration: 'none', fontSize: 15 }}>become a mentor</Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {mobileMenu && !user && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mobile-only"
+            style={{ position: 'fixed', top: 72, left: 0, right: 0, zIndex: 99, background: 'rgba(10,14,22,0.98)', backdropFilter: 'blur(24px)', borderBottom: `1px solid ${BORDER}`, padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <Link href="/leaderboard" onClick={() => setMobileMenu(false)} style={{ color: TEXT, textDecoration: 'none', fontSize: 15 }}>leaderboard</Link>
+            <Link href="/mentors/signup" onClick={() => setMobileMenu(false)} style={{ color: TEXT, textDecoration: 'none', fontSize: 15 }}>become a mentor</Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {false && (
       </motion.nav>
 
       {/* HERO */}
@@ -321,23 +355,28 @@ export default function HomeClient() {
           <h2 style={{ fontSize: 30, fontWeight: 600, letterSpacing: -1, marginBottom: 10 }}>How it works</h2>
           <p style={{ color: MUTED, fontSize: 15 }}>Three steps. No cringe.</p>
         </motion.div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 1, background: BORDER, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {[
             { icon: <IconCup />, title: 'Pick someone real', body: 'Browse people who actually said yes to being here. Every card is a green light.' },
             { icon: <IconEnvelope />, title: 'Send your ask', body: "One short form. Your name, your email, what's on your mind. That's it." },
             { icon: <IconHandshake />, title: 'Show up', body: 'They get an email. You get a reply. You both get on a call.' },
-          ].map((step, i) => (
+          ].map((step, i, arr) => (
             <motion.div
               key={step.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: '-60px' }}
-              transition={{ duration: 0.5, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-              whileHover={{ background: 'rgba(59,130,246,0.04)' }}
-              style={{ background: SURFACE, padding: '32px 28px', transition: 'background 0.3s' }}>
-              <div style={{ marginBottom: 20 }}>{step.icon}</div>
-              <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 8 }}>{step.title}</div>
-              <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.65 }}>{step.body}</div>
+              transition={{ duration: 0.5, delay: i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+              style={{ display: 'flex', gap: 28, padding: '28px 0', borderBottom: i < arr.length - 1 ? `1px solid ${BORDER}` : 'none' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                <div style={{ width: 56, height: 56, borderRadius: 14, background: SURFACE, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{step.icon}</div>
+                {i < arr.length - 1 && <div style={{ width: 1, flex: 1, background: BORDER, marginTop: 12, minHeight: 20 }} />}
+              </div>
+              <div style={{ paddingTop: 6 }}>
+                <div style={{ color: ACCENT, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>STEP {i + 1}</div>
+                <div style={{ fontSize: 19, fontWeight: 600, marginBottom: 8 }}>{step.title}</div>
+                <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.65, maxWidth: 480 }}>{step.body}</div>
+              </div>
             </motion.div>
           ))}
         </div>
