@@ -2,7 +2,6 @@
 import { BG, TEXT, MUTED, LINK } from '@/lib/theme';
 import Logo from '@/components/Logo';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -17,7 +16,7 @@ export const metadata: Metadata = {
 export default function About() {
   return (
     <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "'Space Grotesk', sans-serif", padding: '60px 20px' }}>
-      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ maxWidth: 640, margin: '0 auto' }}>
+      <div style={{ maxWidth: 640, margin: '0 auto', animation: 'fadeInUp 0.5s ease-out' }}>
         <div style={{ marginBottom: 32 }}><Logo /></div>
         <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 20 }}>About Sip</h1>
         <p style={{ color: MUTED, fontSize: 15, lineHeight: 1.8, marginBottom: 16 }}>
@@ -27,7 +26,7 @@ export default function About() {
           We built a place where mentors show up when they&apos;re actually free, and seekers can join a live queue instead of sending a message into the void. No scheduling links. No waiting on replies. Just people who said yes to being here right now.
         </p>
         <Link href="/" style={{ color: LINK, textDecoration: 'none', fontSize: 14 }}>← back home</Link>
-      </motion.div>
+      </div>
     </div>
   );
 }
