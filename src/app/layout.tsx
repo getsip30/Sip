@@ -1,4 +1,4 @@
-import { ClerkProvider } from '@clerk/nextjs';
+﻿import { ClerkProvider } from '@clerk/nextjs';
 import { dark } from '@clerk/themes';
 import type { Metadata } from 'next';
 import { ACCENT, BG } from '@/lib/theme';

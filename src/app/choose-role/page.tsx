@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { useRoles } from '@/hooks/useRoles';
 import Logo from '@/components/Logo';
+import { motion } from 'framer-motion';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT } from '@/lib/theme';
 
 function IconGrad() {
@@ -32,7 +33,7 @@ export default function ChooseRole() {
   );
 
   return (
-    <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "'Space Grotesk', sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+    <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "'Space Grotesk', sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ marginBottom: 40 }}><Logo /></div>
       <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 8 }}>Continue as...</h1>
       <p style={{ color: MUTED, fontSize: 14, marginBottom: 36 }}>You have both a mentor and seeker account.</p>
@@ -50,6 +51,6 @@ export default function ChooseRole() {
           <div style={{ color: MUTED, fontSize: 13 }}>Find mentors, join queues, ask questions</div>
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }

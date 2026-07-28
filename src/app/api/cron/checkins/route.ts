@@ -1,4 +1,4 @@
-import { db } from '@/db';
+﻿import { db } from '@/db';
 import { seekers } from '@/db/schema';
 import { lte, or, isNull, and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';

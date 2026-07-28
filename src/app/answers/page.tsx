@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
+import { motion } from 'framer-motion';
 
 type PublicAsk = {
   id: string; question: string; answer: string; seekerFirstName: string; answeredAt: string;
@@ -17,31 +18,31 @@ export default function AnswersPage() {
   }, []);
 
   return (
-    <div style={{ background: '#0D1117', minHeight: '100vh', color: '#E6EDF3', fontFamily: "'Space Grotesk', sans-serif" }}>
+    <div style={{ background: '#0A0E16', minHeight: '100vh', color: '#EDEFF3', fontFamily: "'Space Grotesk', sans-serif" }}>
       <nav style={{ padding: '0 16px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <Logo />
-        <Link href="/sign-up" style={{ background: '#0A66C2', color: 'white', padding: '8px 20px', borderRadius: 20, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>sign up</Link>
+        <Link href="/sign-up" style={{ background: '#3B82F6', color: 'white', padding: '8px 20px', borderRadius: 20, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>sign up</Link>
       </nav>
 
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '60px 24px 100px' }}>
+      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ maxWidth: 720, margin: '0 auto', padding: '60px 24px 100px' }}>
         <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: -1.5, marginBottom: 8 }}>Real Questions, Real Answers</h1>
-        <p style={{ color: '#8B949E', fontSize: 15, marginBottom: 40 }}>Quick questions people asked mentors on Sip — answered async, no scheduling needed.</p>
+        <p style={{ color: '#8A93A3', fontSize: 15, marginBottom: 40 }}>Quick questions people asked mentors on Sip — answered async, no scheduling needed.</p>
 
         {loading ? (
-          <p style={{ color: '#8B949E' }}>loading...</p>
+          <p style={{ color: '#8A93A3' }}>loading...</p>
         ) : asks.length === 0 ? (
-          <p style={{ color: '#8B949E' }}>no public answers yet — check back soon.</p>
+          <p style={{ color: '#8A93A3' }}>no public answers yet — check back soon.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {asks.map(a => (
-              <div key={a.id} style={{ background: '#161B22', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 22 }}>
+              <div key={a.id} style={{ background: '#121923', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 22 }}>
                 <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 8 }}>{a.seekerFirstName} asked:</div>
-                <p style={{ color: '#C9D1D9', fontSize: 14, lineHeight: 1.6, marginBottom: 14 }}>&quot;{a.question}&quot;</p>
+                <p style={{ color: '#EDEFF3', fontSize: 14, lineHeight: 1.6, marginBottom: 14 }}>&quot;{a.question}&quot;</p>
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
                   <Link href={`/mentors/${a.mentorId}`} style={{ color: '#70B5F9', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
                     {a.mentorFirstName} {a.mentorLastName} · {a.mentorRole} @ {a.mentorCompany}
                   </Link>
-                  <p style={{ color: '#8B949E', fontSize: 14, lineHeight: 1.6, marginTop: 8 }}>{a.answer}</p>
+                  <p style={{ color: '#8A93A3', fontSize: 14, lineHeight: 1.6, marginTop: 8 }}>{a.answer}</p>
                 </div>
               </div>
             ))}
@@ -50,9 +51,9 @@ export default function AnswersPage() {
 
         <div style={{ marginTop: 48, background: 'linear-gradient(135deg, rgba(10,102,194,0.12), rgba(112,181,249,0.04))', border: '1px solid rgba(112,181,249,0.25)', borderRadius: 20, padding: '28px 20px', textAlign: 'center' }}>
           <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Got your own question?</div>
-          <Link href="/sign-up" style={{ display: 'inline-block', background: '#0A66C2', color: 'white', padding: '13px 28px', borderRadius: 12, fontWeight: 600, fontSize: 14, textDecoration: 'none', marginTop: 8 }}>sign up free →</Link>
+          <Link href="/sign-up" style={{ display: 'inline-block', background: '#3B82F6', color: 'white', padding: '13px 28px', borderRadius: 12, fontWeight: 600, fontSize: 14, textDecoration: 'none', marginTop: 8 }}>sign up free →</Link>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

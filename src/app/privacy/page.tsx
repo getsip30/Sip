@@ -1,7 +1,8 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 import { BG, TEXT, MUTED, LINK } from '@/lib/theme';
 import Logo from '@/components/Logo';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 export default function Privacy() {
   return (
     <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "'Space Grotesk', sans-serif", padding: '80px 40px' }}>
-      <div style={{ maxWidth: 640, margin: '0 auto' }}>
+      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ maxWidth: 640, margin: '0 auto' }}>
         <div style={{ marginBottom: 32 }}><Logo /></div>
         <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 20 }}>Privacy Policy</h1>
         <p style={{ color: MUTED, fontSize: 14, marginBottom: 24 }}>Last updated: {new Date().toLocaleDateString()}</p>
@@ -44,7 +45,7 @@ export default function Privacy() {
           <p><strong style={{ color: TEXT }}>Contact:</strong> questions about your data, or requests to access/correct/delete it, go to m.shahmeer.khan8@gmail.com.</p>
         </div>
         <Link href="/" style={{ color: LINK, textDecoration: 'none', fontSize: 14, display: 'block', marginTop: 32 }}>← back home</Link>
-      </div>
+      </motion.div>
     </div>
   );
 }

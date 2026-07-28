@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { BG, SURFACE, TEXT, MUTED, ACCENT, LINK, PURPLE } from '@/lib/theme';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -38,7 +38,7 @@ export default function Leaderboard() {
 
       {/* NAV */}
       <motion.nav initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4 }}
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(13,17,23,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <Logo />
         <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           {rolesLoaded && isMentor && <Link href="/dashboard" style={{ color: MUTED, textDecoration: 'none', fontSize: 14 }}>mentor dashboard</Link>}
@@ -102,7 +102,7 @@ export default function Leaderboard() {
                   {m.badges && (
                     <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                       {m.badges.split(',').filter(Boolean).map(b => (
-                        <span key={b} style={{ fontSize: 11, padding: '2px 10px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BADGE_META[b]?.color}40`, color: '#C9D1D9' }}>
+                        <span key={b} style={{ fontSize: 11, padding: '2px 10px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BADGE_META[b]?.color}40`, color: '#EDEFF3' }}>
                           {BADGE_META[b]?.label}
                         </span>
                       ))}

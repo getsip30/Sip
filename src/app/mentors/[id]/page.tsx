@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK } from '@/lib/theme';
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
@@ -186,7 +186,7 @@ export default function MentorProfile() {
     <div style={{ background: BG, height: isMobile ? 'auto' : '100vh', minHeight: '100vh', color: TEXT, overflow: isMobile ? 'visible' : 'hidden', display: 'flex', flexDirection: 'column' }}>
 
       <motion.nav initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4 }}
-        style={{ flex: '0 0 auto', padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(13,17,23,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        style={{ flex: '0 0 auto', padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <Logo />
         <button onClick={() => window.history.length > 1 ? window.history.back() : window.location.href = '/'} style={{ background: 'none', border: 'none', color: MUTED, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>← back</button>
       </motion.nav>
@@ -200,7 +200,7 @@ export default function MentorProfile() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
             style={{ ...boxStyle, flex: isMobile ? 'none' : '1.4', overflowY: isMobile ? 'visible' : 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 20 }}>
-              <motion.div whileHover={{ scale: 1.06 }} style={{ width: 64, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #0A66C2, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 22, flexShrink: 0 }}>
+              <motion.div whileHover={{ scale: 1.06 }} style={{ width: 64, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #3B82F6, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 22, flexShrink: 0 }}>
                 {mentor.firstName[0]}{mentor.lastName[0]}
               </motion.div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -240,7 +240,7 @@ export default function MentorProfile() {
               </div>
             </div>
 
-            <p style={{ color: '#C9D1D9', fontSize: 14, lineHeight: 1.65, marginBottom: 18 }}>&quot;{mentor.bio}&quot;</p>
+            <p style={{ color: '#EDEFF3', fontSize: 14, lineHeight: 1.65, marginBottom: 18 }}>&quot;{mentor.bio}&quot;</p>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {mentor.topics.split(',').map(t => (
@@ -268,7 +268,7 @@ export default function MentorProfile() {
             {mentor.badges && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {mentor.badges.split(',').filter(Boolean).map(b => (
-                  <span key={b} style={{ fontSize: 12, padding: '5px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#C9D1D9' }}>
+                  <span key={b} style={{ fontSize: 12, padding: '5px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#EDEFF3' }}>
                     {BADGE_META[b]?.label}
                   </span>
                 ))}
@@ -293,7 +293,7 @@ export default function MentorProfile() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', flex: 1, marginBottom: 12 }}>
                   {pagedNotes.map(n => (
                     <div key={n.id} style={{ background: BG, borderRadius: 12, padding: '14px 16px' }}>
-                      <p style={{ color: '#C9D1D9', fontSize: 13, lineHeight: 1.55, marginBottom: 6 }}>&quot;{n.note}&quot;</p>
+                      <p style={{ color: '#EDEFF3', fontSize: 13, lineHeight: 1.55, marginBottom: 6 }}>&quot;{n.note}&quot;</p>
                       <div style={{ color: MUTED, fontSize: 11 }}>{n.seekerName}</div>
                     </div>
                   ))}

@@ -1,4 +1,4 @@
-import { db } from '@/db';
+﻿import { db } from '@/db';
 import { requests, mentors, seekers } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';

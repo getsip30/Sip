@@ -28,7 +28,7 @@ type Overview = {
 const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Flags'] as const;
 type Tab = typeof TABS[number];
 
-const card: React.CSSProperties = { background: '#161B22', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20 };
+const card: React.CSSProperties = { background: '#121923', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20 };
 const btn: React.CSSProperties = { padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', border: '1px solid rgba(255,255,255,0.1)' };
 
 export default function AdminPage() {
@@ -80,8 +80,8 @@ export default function AdminPage() {
     fetchAll();
   }
 
-  if (loading) return <div style={{ background: '#0D1117', minHeight: '100vh', color: '#8B949E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>loading...</div>;
-  if (forbidden) return <div style={{ background: '#0D1117', minHeight: '100vh', color: '#F87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>forbidden</div>;
+  if (loading) return <div style={{ background: '#0A0E16', minHeight: '100vh', color: '#8A93A3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>loading...</div>;
+  if (forbidden) return <div style={{ background: '#0A0E16', minHeight: '100vh', color: '#F87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>forbidden</div>;
   if (!data) return null;
 
   const s = data.stats;
@@ -89,14 +89,14 @@ export default function AdminPage() {
   const resolvedFlags = flags.filter(f => f.status !== 'open');
 
   return (
-    <div style={{ background: '#0D1117', minHeight: '100vh', color: '#E6EDF3', fontFamily: "'Space Grotesk', sans-serif", padding: '40px 16px' }}>
+    <div style={{ background: '#0A0E16', minHeight: '100vh', color: '#EDEFF3', fontFamily: "'Space Grotesk', sans-serif", padding: '40px 16px' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 24 }}>Admin</h1>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 30, flexWrap: 'wrap' }}>
           {TABS.map(t => (
             <button key={t} onClick={() => setTab(t)}
-              style={{ ...btn, background: tab === t ? 'rgba(112,181,249,0.15)' : 'transparent', borderColor: tab === t ? 'rgba(112,181,249,0.4)' : 'rgba(255,255,255,0.1)', color: tab === t ? '#70B5F9' : '#8B949E', padding: '8px 16px', fontSize: 13 }}>
+              style={{ ...btn, background: tab === t ? 'rgba(112,181,249,0.15)' : 'transparent', borderColor: tab === t ? 'rgba(112,181,249,0.4)' : 'rgba(255,255,255,0.1)', color: tab === t ? '#70B5F9' : '#8A93A3', padding: '8px 16px', fontSize: 13 }}>
               {t}{t === 'Flags' && openFlags.length > 0 ? ` (${openFlags.length})` : ''}
             </button>
           ))}
@@ -111,7 +111,7 @@ export default function AdminPage() {
               ['In queue', s.peopleInQueue],
             ].map(([label, val]) => (
               <div key={label as string} style={card}>
-                <div style={{ fontSize: 12, color: '#8B949E', marginBottom: 6 }}>{label}</div>
+                <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 6 }}>{label}</div>
                 <div style={{ fontSize: 28, fontWeight: 700 }}>{val}</div>
               </div>
             ))}
@@ -123,8 +123,8 @@ export default function AdminPage() {
             {data.mentors.map(m => (
               <div key={m.id} style={{ ...card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, flexWrap: 'wrap', gap: 10 }}>
                 <div>
-                  <div style={{ fontWeight: 600 }}>{m.firstName} {m.lastName} <span style={{ color: '#8B949E', fontWeight: 400 }}>· {m.role} @ {m.company}</span></div>
-                  <div style={{ fontSize: 12, color: '#8B949E' }}>{m.email} · xp {m.xp} · {m.sipCount} sips · {m.isOpen ? 'open' : 'closed'}{m.banned ? ' · BANNED' : ''}</div>
+                  <div style={{ fontWeight: 600 }}>{m.firstName} {m.lastName} <span style={{ color: '#8A93A3', fontWeight: 400 }}>· {m.role} @ {m.company}</span></div>
+                  <div style={{ fontSize: 12, color: '#8A93A3' }}>{m.email} · xp {m.xp} · {m.sipCount} sips · {m.isOpen ? 'open' : 'closed'}{m.banned ? ' · BANNED' : ''}</div>
                 </div>
                 <button onClick={() => toggleBan('mentors', m.id, m.banned)}
                   style={{ ...btn, background: m.banned ? 'rgba(34,197,94,0.15)' : 'rgba(220,38,38,0.15)', borderColor: m.banned ? 'rgba(34,197,94,0.3)' : 'rgba(220,38,38,0.3)', color: m.banned ? '#4ADE80' : '#F87171' }}>
@@ -141,7 +141,7 @@ export default function AdminPage() {
               <div key={sk.id} style={{ ...card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, flexWrap: 'wrap', gap: 10 }}>
                 <div>
                   <div style={{ fontWeight: 600 }}>{sk.firstName} {sk.lastName}</div>
-                  <div style={{ fontSize: 12, color: '#8B949E' }}>{sk.email} · streak {sk.currentStreak}{sk.banned ? ' · BANNED' : ''}</div>
+                  <div style={{ fontSize: 12, color: '#8A93A3' }}>{sk.email} · streak {sk.currentStreak}{sk.banned ? ' · BANNED' : ''}</div>
                 </div>
                 <button onClick={() => toggleBan('seekers', sk.id, sk.banned)}
                   style={{ ...btn, background: sk.banned ? 'rgba(34,197,94,0.15)' : 'rgba(220,38,38,0.15)', borderColor: sk.banned ? 'rgba(34,197,94,0.3)' : 'rgba(220,38,38,0.3)', color: sk.banned ? '#4ADE80' : '#F87171' }}>
@@ -154,11 +154,11 @@ export default function AdminPage() {
 
         {tab === 'Rooms' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {data.rooms.length === 0 ? <p style={{ color: '#8B949E', fontSize: 14 }}>no live rooms</p> : data.rooms.map(r => (
+            {data.rooms.length === 0 ? <p style={{ color: '#8A93A3', fontSize: 14 }}>no live rooms</p> : data.rooms.map(r => (
               <div key={r.id} style={{ ...card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, flexWrap: 'wrap', gap: 10 }}>
                 <div>
                   <div style={{ fontWeight: 600 }}>{r.title}</div>
-                  <div style={{ fontSize: 12, color: '#8B949E' }}>{r.roomName} · started {new Date(r.startedAt).toLocaleString()}</div>
+                  <div style={{ fontSize: 12, color: '#8A93A3' }}>{r.roomName} · started {new Date(r.startedAt).toLocaleString()}</div>
                 </div>
                 <button onClick={() => endRoom(r.id)}
                   style={{ ...btn, background: 'rgba(220,38,38,0.15)', borderColor: 'rgba(220,38,38,0.3)', color: '#F87171' }}>
@@ -172,27 +172,27 @@ export default function AdminPage() {
         {tab === 'Flags' && (
           <>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#FBBF24' }}>Open ({openFlags.length})</h2>
-            {openFlags.length === 0 ? <p style={{ color: '#8B949E', fontSize: 14, marginBottom: 30 }}>no open flags</p> : (
+            {openFlags.length === 0 ? <p style={{ color: '#8A93A3', fontSize: 14, marginBottom: 30 }}>no open flags</p> : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 30 }}>
                 {openFlags.map(f => (
-                  <div key={f.id} style={{ background: '#161B22', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 12, padding: 18 }}>
-                    <div style={{ fontSize: 12, color: '#8B949E', marginBottom: 6 }}>{new Date(f.createdAt).toLocaleString()} · room {f.roomId.slice(0, 8)}</div>
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>{f.reportedName} <span style={{ color: '#8B949E', fontWeight: 400 }}>reported by {f.reporterRole}</span></div>
+                  <div key={f.id} style={{ background: '#121923', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 12, padding: 18 }}>
+                    <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 6 }}>{new Date(f.createdAt).toLocaleString()} · room {f.roomId.slice(0, 8)}</div>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>{f.reportedName} <span style={{ color: '#8A93A3', fontWeight: 400 }}>reported by {f.reporterRole}</span></div>
                     <div style={{ fontSize: 13, color: '#FBBF24', marginBottom: 6 }}>{f.reason}</div>
                     <div style={{ fontSize: 14, marginBottom: 12 }}>{f.details}</div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button onClick={() => resolveFlag(f.id, 'action')} style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.3)', color: '#F87171', padding: '7px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>take action</button>
-                      <button onClick={() => resolveFlag(f.id, 'dismiss')} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#8B949E', padding: '7px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>dismiss</button>
+                      <button onClick={() => resolveFlag(f.id, 'dismiss')} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#8A93A3', padding: '7px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>dismiss</button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#8B949E' }}>Resolved ({resolvedFlags.length})</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#8A93A3' }}>Resolved ({resolvedFlags.length})</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {resolvedFlags.map(f => (
-                <div key={f.id} style={{ background: '#161B22', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: 14, opacity: 0.6 }}>
-                  <div style={{ fontSize: 12, color: '#8B949E' }}>{f.reportedName} · {f.reason} · {f.status}</div>
+                <div key={f.id} style={{ background: '#121923', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: 14, opacity: 0.6 }}>
+                  <div style={{ fontSize: 12, color: '#8A93A3' }}>{f.reportedName} · {f.reason} · {f.status}</div>
                 </div>
               ))}
             </div>

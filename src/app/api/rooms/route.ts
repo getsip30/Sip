@@ -1,4 +1,4 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+﻿import { auth, clerkClient } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { rooms, mentors, follows } from '@/db/schema';
 import { eq, and, lt } from 'drizzle-orm';

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 import { db } from '@/db';
 import { mentors } from '@/db/schema';
 import { eq } from 'drizzle-orm';
