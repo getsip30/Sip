@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { queueEntries, rooms, seekers, flags } from '@/db/schema';
+import { queueEntries, rooms, seekers, flags, mentors } from '@/db/schema';
 import { eq, and, sql, inArray, ne, lt } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
@@ -83,6 +83,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const room = await db.select().from(rooms).where(and(eq(rooms.id, id), eq(rooms.status, 'live')));
     if (!room[0]) return NextResponse.json({ error: 'Room not found or ended' }, { status: 404 });
+
+    const roomMentor = await db.select().from(mentors).where(eq(mentors.id, room[0].mentorId));
+    if (roomMentor[0]?.clerkId === userId) {
+      return NextResponse.json({ error: "You can't join your own room's queue." }, { status: 403 });
+    }
 
     const seekerCheck = await db.select().from(seekers).where(eq(seekers.clerkId, userId));
     if (seekerCheck[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });

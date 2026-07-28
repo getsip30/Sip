@@ -118,8 +118,9 @@ export async function GET(req: Request) {
   }
 
   if (all === 'true') {
+    const { userId: viewerId } = await auth();
     const result = await db.select().from(mentors).where(eq(mentors.isOpen, true)).orderBy(desc(mentors.createdAt));
-    return NextResponse.json(result.map(sanitizeMentor));
+    return NextResponse.json(result.filter(m => m.clerkId !== viewerId).map(sanitizeMentor));
   }
 
   const { userId } = await auth();

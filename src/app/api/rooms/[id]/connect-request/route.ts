@@ -17,6 +17,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!seekerClerkId || !seekerName) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
+    if (seekerClerkId === userId) {
+      return NextResponse.json({ error: "You can't send a connect request to yourself." }, { status: 403 });
+    }
 
     const roomResult = await db.select().from(rooms).where(eq(rooms.id, roomId));
     const room = roomResult[0];
