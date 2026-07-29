@@ -18,7 +18,7 @@ export default function PixelAvatarPicker({ value, onChange }: { value: string; 
     onChange(next.map(i => i.toString(36)).join(''));
   }, [grid, activeColor, onChange]);
 
-  const clear = () => onChange(new Array(GRID_SIZE * GRID_SIZE).fill(0).map(i => i.toString(36)).join(''));
+  const clear = () => onChange('');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
