@@ -410,74 +410,75 @@ function SeekersContent() {
                     const s = STATUS_STYLE[r.status];
                     return (
                       <div key={r.id} style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24, opacity: (r.status === 'declined' || r.status === 'cancelled') ? 0.5 : 1 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 16 }}>{r.mentor ? `${r.mentor.firstName} ${r.mentor.lastName}` : 'Mentor'}</div>
                             <div style={{ color: MUTED, fontSize: 13 }}>{r.mentor ? `${r.mentor.role} @ ${r.mentor.company}` : ''}</div>
                           </div>
-                          <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 12, background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontWeight: 600, height: 'fit-content' }}>{s.label}</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                            <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 12, background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontWeight: 600 }}>{s.label}</span>
+                            <span style={{ color: MUTED, fontSize: 12 }}>{new Date(r.createdAt).toLocaleDateString()}</span>
+                            {r.status === 'cancelled' && r.cancelledBy && (
+                              <div style={{ color: MUTED, fontSize: 11 }}>cancelled by {r.cancelledBy}</div>
+                            )}
+                          </div>
                         </div>
-                        {r.status === 'cancelled' && r.cancelledBy && (
-                          <div style={{ color: MUTED, fontSize: 12, marginBottom: 8 }}>cancelled by {r.cancelledBy}</div>
-                        )}
-                        <p style={{ color: MUTED, fontSize: 14, marginBottom: 16 }}>&quot;{r.message}&quot;</p>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: MUTED, fontSize: 12 }}>{new Date(r.createdAt).toLocaleDateString()}</span>
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            {r.status === 'accepted' && (
+
+                        <p style={{ color: MUTED, fontSize: 14, margin: '0 0 16px' }}>&quot;{r.message}&quot;</p>
+
+                        {r.status === 'accepted' && (
+                          <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                               <button onClick={() => toggleConsent(r.id, r.seekerConsentToShow)} disabled={togglingConsent === r.id}
                                 style={{ background: r.seekerConsentToShow ? 'rgba(91,219,138,0.1)' : 'transparent', border: `1px solid ${r.seekerConsentToShow ? 'rgba(91,219,138,0.3)' : BORDER}`, color: r.seekerConsentToShow ? '#5BDB8A' : MUTED, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                                 {r.seekerConsentToShow ? 'showing on profile ✓' : 'show on profile'}
                               </button>
-                            )}
-                            {r.status === 'accepted' && r.mentor?.calendarLink && (
-                              <a href={r.mentor.calendarLink} target="_blank" rel="noopener noreferrer"
-                                style={{ background: ACCENT, color: 'white', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                                book your sip â†’
-                              </a>
-                            )}
-                            {r.status === 'accepted' && !r.scheduledAt && (
-                              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                <input type="datetime-local" value={scheduleDrafts[r.id] || ''} onChange={e => setScheduleDrafts(d => ({ ...d, [r.id]: e.target.value }))} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 8px', color: TEXT, fontSize: 12, fontFamily: 'inherit' }} />
+                              <button onClick={() => cancelRequest(r.id)} disabled={cancelling === r.id} style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{cancelling === r.id ? 'cancelling...' : 'cancel'}</button>
+                              {r.mentor?.calendarLink && (
+                                <a href={r.mentor.calendarLink} target="_blank" rel="noopener noreferrer"
+                                  style={{ background: ACCENT, color: 'white', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+                                  book your sip →
+                                </a>
+                              )}
+                              {r.originRoomId && (r.mentor?.calendarLink || r.mentor?.contactEmail) && (
+                                <a href={r.mentor.calendarLink ? r.mentor.calendarLink : `mailto:${r.mentor.contactEmail}?subject=${encodeURIComponent('Scheduling our 1:1')}`}
+                                  target="_blank" rel="noopener noreferrer"
+                                  style={{ background: ACCENT, color: 'white', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+                                  click here to schedule call →
+                                </a>
+                              )}
+                            </div>
+
+                            {!r.scheduledAt ? (
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                <input type="datetime-local" value={scheduleDrafts[r.id] || ''} onChange={e => setScheduleDrafts(d => ({ ...d, [r.id]: e.target.value }))} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, fontFamily: 'inherit' }} />
                                 <button onClick={() => saveSchedule(r.id)} disabled={scheduling === r.id || !scheduleDrafts[r.id]} style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{scheduling === r.id ? 'saving...' : 'save time'}</button>
                               </div>
-                            )}
-                            {r.status === 'accepted' && r.scheduledAt && (
+                            ) : (
                               <span style={{ color: MUTED, fontSize: 12 }}>scheduled: {new Date(r.scheduledAt).toLocaleString()}</span>
                             )}
-                            {r.status === 'accepted' && (
-                              <button onClick={() => cancelRequest(r.id)} disabled={cancelling === r.id} style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{cancelling === r.id ? 'cancelling...' : 'cancel'}</button>
-                            )}
-                            {r.status === 'accepted' && (
-                              r.seekerFeedbackGiven ? (
-                                <span style={{ color: '#5BDB8A', fontSize: 12 }}>feedback sent ✓</span>
-                              ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                                  <div style={{ display: 'flex', gap: 4 }}>
-                                    {[1, 2, 3, 4, 5].map(n => (
-                                      <span key={n} onClick={() => setFeedbackRatings(d => ({ ...d, [r.id]: n }))}
-                                        style={{ cursor: 'pointer', fontSize: 16, color: (feedbackRatings[r.id] || 0) >= n ? '#F59E0B' : 'rgba(255,255,255,0.2)' }}>★</span>
-                                    ))}
-                                  </div>
-                                  <textarea value={feedbackComments[r.id] || ''} onChange={e => setFeedbackComments(d => ({ ...d, [r.id]: e.target.value }))}
-                                    placeholder="optional comment..." rows={2} maxLength={1000}
-                                    style={{ width: 180, background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
-                                  <button onClick={() => submitFeedback(r.id)} disabled={submittingFeedback === r.id || !feedbackRatings[r.id]}
-                                    style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                                    {submittingFeedback === r.id ? 'sending...' : 'submit feedback'}
-                                  </button>
+
+                            {r.seekerFeedbackGiven ? (
+                              <span style={{ color: '#5BDB8A', fontSize: 12 }}>feedback sent ✓</span>
+                            ) : (
+                              <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  {[1, 2, 3, 4, 5].map(n => (
+                                    <span key={n} onClick={() => setFeedbackRatings(d => ({ ...d, [r.id]: n }))}
+                                      style={{ cursor: 'pointer', fontSize: 18, color: (feedbackRatings[r.id] || 0) >= n ? '#F59E0B' : 'rgba(255,255,255,0.2)' }}>★</span>
+                                  ))}
                                 </div>
-                              )
-                            )}
-                            {r.originRoomId && r.status !== 'declined' && (r.mentor?.calendarLink || r.mentor?.contactEmail) && (
-                              <a href={r.mentor.calendarLink ? r.mentor.calendarLink : `mailto:${r.mentor.contactEmail}?subject=${encodeURIComponent('Scheduling our 1:1')}`}
-                                target="_blank" rel="noopener noreferrer"
-                                style={{ background: ACCENT, color: 'white', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                                click here to schedule call â†’
-                              </a>
+                                <textarea value={feedbackComments[r.id] || ''} onChange={e => setFeedbackComments(d => ({ ...d, [r.id]: e.target.value }))}
+                                  placeholder="optional comment..." rows={2} maxLength={1000}
+                                  style={{ width: '100%', background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+                                <button onClick={() => submitFeedback(r.id)} disabled={submittingFeedback === r.id || !feedbackRatings[r.id]}
+                                  style={{ alignSelf: 'flex-end', background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  {submittingFeedback === r.id ? 'sending...' : 'submit feedback'}
+                                </button>
+                              </div>
                             )}
                           </div>
-                        </div>
+                        )}
                       </div>
                     );
                   })}
