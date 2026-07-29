@@ -14,12 +14,22 @@ export default function PixelAvatar({ data, size = 40 }: { data: string | null; 
     );
   }
   const grid = decodeAvatar(data);
-  const cell = size / GRID_SIZE;
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, display: 'grid', gridTemplateColumns: `repeat(${GRID_SIZE}, ${cell}px)` }}>
-      {grid.map((idx, i) => (
-        <div key={i} style={{ width: cell, height: cell, background: PALETTE[idx] === 'transparent' ? '#0A0E16' : PALETTE[idx] }} />
-      ))}
-    </div>
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${GRID_SIZE} ${GRID_SIZE}`}
+      shapeRendering="crispEdges"
+      style={{ borderRadius: '50%', flexShrink: 0, display: 'block' }}
+    >
+      <rect x="0" y="0" width={GRID_SIZE} height={GRID_SIZE} fill="#0A0E16" />
+      {grid.map((idx, i) => {
+        const color = PALETTE[idx];
+        if (color === 'transparent' || color === undefined) return null;
+        const x = i % GRID_SIZE;
+        const y = Math.floor(i / GRID_SIZE);
+        return <rect key={i} x={x} y={y} width="1" height="1" fill={color} />;
+      })}
+    </svg>
   );
 }
