@@ -50,7 +50,7 @@ export async function POST(req: Request) {
   if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
   const body = await req.json();
-  const { firstName, lastName, email, role, company, bio, topics, calendarLink, contactEmail, availability, linkedin, showLinkedin, ref } = body;
+  const { firstName, lastName, email, role, company, bio, topics, calendarLink, contactEmail, availability, linkedin, showLinkedin, avatarData, ref } = body;
   
   if (!firstName || !lastName || !email || !role || !company || !bio || !topics || (!calendarLink && !contactEmail)) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
 
   if (existing.length > 0) {
     const updated = await db.update(mentors)
-      .set({ firstName, lastName, email, role, company, bio, topics, calendarLink: calendarLink || null, contactEmail: contactEmail || null, availability, linkedin, showLinkedin: !!showLinkedin })
+      .set({ firstName, lastName, email, role, company, bio, topics, calendarLink: calendarLink || null, contactEmail: contactEmail || null, availability, linkedin, showLinkedin: !!showLinkedin, ...(avatarData ? { avatarData } : {}) })
       .where(eq(mentors.clerkId, userId))
       .returning();
     return NextResponse.json(updated[0]);
@@ -81,6 +81,7 @@ export async function POST(req: Request) {
   const mentor = await db.insert(mentors).values({
     clerkId: userId, firstName, lastName, email, role, company, bio, topics,
     calendarLink: calendarLink || null, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin, showLinkedin: !!showLinkedin,
+    avatarData: avatarData || null,
     referralCode: generateReferralCode(),
     invitedByClerkId,
   }).returning();

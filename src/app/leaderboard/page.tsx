@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
 import Logo from '@/components/Logo';
+import PixelAvatar from '@/components/PixelAvatar';
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
-  xp: number; sipCount: number; badges: string; isOpen: boolean;
+  xp: number; sipCount: number; badges: string; isOpen: boolean; avatarData?: string;
 };
 
 const BADGE_META: Record<string, { label: string; color: string }> = {
@@ -91,9 +92,11 @@ export default function Leaderboard() {
                 </div>
 
                 {/* avatar */}
+                {m.avatarData ? <PixelAvatar data={m.avatarData} size={44} /> : (
                 <div style={{ width: 44, height: 44, borderRadius: '50%', background: AVATARS[i % AVATARS.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
                   {m.firstName[0]}{m.lastName[0]}
                 </div>
+                )}
 
                 {/* info */}
                 <div style={{ flex: 1, minWidth: 0 }}>

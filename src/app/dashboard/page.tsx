@@ -7,13 +7,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
 import Logo from '@/components/Logo';
 import RoleSwitchLink from '@/components/RoleSwitchLink';
+import PixelAvatar from '@/components/PixelAvatar';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, SUCCESS2, WARNING, DANGER, PURPLE } from '@/lib/theme';
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
   bio: string; topics: string; calendarLink: string | null; contactEmail: string | null; availability: string;
-  isOpen: boolean; xp: number; sipCount: number; badges: string; referrerName?: string | null;
+  isOpen: boolean; xp: number; sipCount: number; badges: string; referrerName?: string | null; avatarData?: string;
 };
 type Request = {
   id: string; seekerName: string; seekerEmail: string; message: string; status: string; createdAt: string;
@@ -280,12 +281,15 @@ export default function Dashboard() {
               {/* HEADER */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                 style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 40, flexWrap: 'wrap', gap: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <PixelAvatar data={mentor.avatarData ?? null} size={56} />
                 <div>
                   <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: -1.5, marginBottom: 6 }}>Your Dashboard</h1>
                   <p style={{ color: MUTED, fontSize: 15 }}>{mentor.role} @ {mentor.company}</p>
                   {mentor.referrerName && (
                     <p style={{ color: LINK, fontSize: 13, marginTop: 6 }}>Invited by {mentor.referrerName}</p>
                   )}
+                </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} onClick={toggleOpen} disabled={togglingOpen}

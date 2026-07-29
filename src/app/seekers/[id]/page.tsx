@@ -5,12 +5,13 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import Logo from '@/components/Logo';
+import PixelAvatar from '@/components/PixelAvatar';
 
 type Sip = { mentorId: string; firstName: string; lastName: string; role: string; company: string };
 type Seeker = {
   id: string; firstName: string; lastName: string; age?: number | null;
   linkedin?: string; interests: string; currentStreak: number; longestStreak: number;
-  sips: Sip[];
+  sips: Sip[]; avatarData?: string;
 };
 
 export default function SeekerProfile() {
@@ -53,9 +54,11 @@ export default function SeekerProfile() {
           style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, padding: 'clamp(20px,5vw,40px)', marginBottom: 24 }}>
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 28 }}>
+            {seeker.avatarData ? <PixelAvatar data={seeker.avatarData} size={72} /> : (
             <motion.div whileHover={{ scale: 1.06 }} style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #059669, #0891B2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 24, flexShrink: 0 }}>
               {seeker.firstName[0]}{seeker.lastName[0]}
             </motion.div>
+            )}
             <div style={{ flex: 1 }}>
               <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1, margin: 0, marginBottom: 8 }}>{seeker.firstName} {seeker.lastName}</h1>
               {seeker.linkedin && (

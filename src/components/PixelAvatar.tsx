@@ -1,0 +1,25 @@
+const PALETTE = ['#F5F5F5','#1A1A1A','#EF4444','#F97316','#EAB308','#22C55E','#14B8A6','#3B82F6','#6366F1','#A855F7','#EC4899','#78350F','#FFFFFF','transparent'];
+const GRID_SIZE = 16;
+
+export function decodeAvatar(data: string): number[] {
+  return data.split('').map(c => parseInt(c, 36));
+}
+
+export default function PixelAvatar({ data, size = 40 }: { data: string | null; size?: number }) {
+  if (!data || data.length !== GRID_SIZE * GRID_SIZE) {
+    return (
+      <div style={{ width: size, height: size, borderRadius: '50%', background: '#1E2733', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <span style={{ fontSize: size * 0.4, color: '#70B5F9' }}>?</span>
+      </div>
+    );
+  }
+  const grid = decodeAvatar(data);
+  const cell = size / GRID_SIZE;
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, display: 'grid', gridTemplateColumns: `repeat(${GRID_SIZE}, ${cell}px)` }}>
+      {grid.map((idx, i) => (
+        <div key={i} style={{ width: cell, height: cell, background: PALETTE[idx] === 'transparent' ? '#0A0E16' : PALETTE[idx] }} />
+      ))}
+    </div>
+  );
+}

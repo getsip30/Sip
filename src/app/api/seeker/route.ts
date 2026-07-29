@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const { success } = await mutationLimiter.limit(userId);
   if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
-  const { firstName, age, linkedin, interests, ref } = await req.json();
+  const { firstName, age, linkedin, interests, avatarData, ref } = await req.json();
   if (age !== undefined && age !== null && (age < 13 || age > 100)) {
     return NextResponse.json({ error: 'Please enter a real age between 13 and 100.' }, { status: 400 });
   }
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   const existing = await db.select().from(seekers).where(eq(seekers.clerkId, userId));
   if (existing.length > 0) {
     const updated = await db.update(seekers)
-      .set({ firstName: firstName || existing[0].firstName, age, linkedin, interests })
+      .set({ firstName: firstName || existing[0].firstName, age, linkedin, interests, ...(avatarData ? { avatarData } : {}) })
       .where(eq(seekers.clerkId, userId))
       .returning();
     return NextResponse.json(updated[0]);
@@ -64,6 +64,7 @@ export async function POST(req: Request) {
     age,
     linkedin,
     interests,
+    avatarData: avatarData || null,
     referralCode: generateReferralCode(),
     invitedByClerkId,
   }).returning();

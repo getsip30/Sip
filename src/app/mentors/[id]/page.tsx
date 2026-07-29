@@ -6,12 +6,13 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
 import Logo from '@/components/Logo';
+import PixelAvatar from '@/components/PixelAvatar';
 import { MessageConsentGate } from '@/components/MessageConsentGate';
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
   bio: string; topics: string; availability: string; isOpen: boolean; xp: number; sipCount: number; badges: string;
-  linkedin?: string; showLinkedin?: boolean; avgResponseMinutes?: number | null;
+  linkedin?: string; showLinkedin?: boolean; avgResponseMinutes?: number | null; avatarData?: string;
 };
 
 function formatResponseTime(minutes: number): string {
@@ -200,9 +201,11 @@ export default function MentorProfile() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
             style={{ ...boxStyle, flex: isMobile ? 'none' : '1.4', overflowY: isMobile ? 'visible' : 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 20 }}>
+              {mentor.avatarData ? <PixelAvatar data={mentor.avatarData} size={72} /> : (
               <motion.div whileHover={{ scale: 1.06 }} style={{ width: 64, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #3B82F6, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 22, flexShrink: 0 }}>
                 {mentor.firstName[0]}{mentor.lastName[0]}
               </motion.div>
+              )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
                   <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: -1, margin: 0 }}>{mentor.firstName} {mentor.lastName}</h1>

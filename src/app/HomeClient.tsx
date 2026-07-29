@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
 import Logo from '@/components/Logo';
+import PixelAvatar from '@/components/PixelAvatar';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, AVATARS } from '@/lib/theme';
 
 type Mentor = {
@@ -19,6 +20,7 @@ type Mentor = {
   bio: string;
   isOpen: boolean;
   availability: string;
+  avatarData?: string;
 };
 
 const INITIALS = (m: Mentor) => `${m.firstName[0]}${m.lastName[0]}`;
@@ -534,7 +536,7 @@ export default function HomeClient() {
                   onClick={() => window.location.href = `/mentors/${mentor.id}`}
                   style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 24, cursor: 'pointer', transition: 'border-color 0.3s, box-shadow 0.3s' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 10, background: AVATARS[i % AVATARS.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0, color: '#fff' }}>{INITIALS(mentor)}</div>
+                    {mentor.avatarData ? <PixelAvatar data={mentor.avatarData} size={44} /> : <div style={{ width: 44, height: 44, borderRadius: 10, background: AVATARS[i % AVATARS.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0, color: '#fff' }}>{INITIALS(mentor)}</div>}
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 15 }}>{mentor.firstName} {mentor.lastName}</div>
                       <div style={{ color: MUTED, fontSize: 13 }}>{mentor.role} @ {mentor.company}</div>

@@ -8,6 +8,7 @@ import { useRoles } from '@/hooks/useRoles';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 import RoleSwitchLink from '@/components/RoleSwitchLink';
+import PixelAvatar from '@/components/PixelAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Suspense } from 'react';
 
@@ -15,7 +16,7 @@ type LiveRoom = { id: string; title: string; firstName: string; lastName: string
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
-  topics: string; bio: string; isOpen: boolean; availability: string;
+  topics: string; bio: string; isOpen: boolean; availability: string; avatarData?: string;
 };
 type SipRequest = {
   id: string; mentorId: string; seekerName: string; seekerEmail: string; message: string;
@@ -255,7 +256,7 @@ function SeekersContent() {
                     onClick={() => window.location.href = `/mentors/${mentor.id}`}
                     style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: 24, cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                      <div style={{ width: 46, height: 46, borderRadius: '50%', background: AVATARS[i % AVATARS.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15 }}>{INITIALS(mentor)}</div>
+                      {mentor.avatarData ? <PixelAvatar data={mentor.avatarData} size={46} /> : <div style={{ width: 46, height: 46, borderRadius: '50%', background: AVATARS[i % AVATARS.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15 }}>{INITIALS(mentor)}</div>}
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 600, fontSize: 15 }}>{mentor.firstName} {mentor.lastName}</div>
                         <div style={{ color: MUTED, fontSize: 13 }}>{mentor.role} @ {mentor.company}</div>

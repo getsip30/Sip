@@ -6,17 +6,22 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import Logo from '@/components/Logo';
+import PixelAvatarPicker from '@/components/PixelAvatarPicker';
 
 export default function SeekerOnboarding() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
   const [form, setForm] = useState({ name: '', age: '', linkedin: '', interests: [] as string[] });
+  const [avatarData, setAvatarData] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     fetch('/api/seeker').then(r => r.ok ? r.json() : null).then(data => {
-      if (data) setForm({ name: data.firstName || '', age: data.age ? String(data.age) : '', linkedin: data.linkedin || '', interests: data.interests ? data.interests.split(',').filter(Boolean) : [] });
+      if (data) {
+        setForm({ name: data.firstName || '', age: data.age ? String(data.age) : '', linkedin: data.linkedin || '', interests: data.interests ? data.interests.split(',').filter(Boolean) : [] });
+        if (data.avatarData) setAvatarData(data.avatarData);
+      }
       else if (user?.firstName) setForm(f => ({ ...f, name: user.firstName || '' }));
     }).catch(err => console.error('fetch seeker failed:', err));
   }, [user]);
@@ -49,7 +54,7 @@ export default function SeekerOnboarding() {
     const res = await fetch('/api/seeker', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ firstName: form.name.trim(), age: form.age ? Number(form.age) : null, linkedin: form.linkedin, interests: form.interests.join(',') }),
+      body: JSON.stringify({ firstName: form.name.trim(), age: form.age ? Number(form.age) : null, linkedin: form.linkedin, interests: form.interests.join(','), avatarData }),
     });
     if (!res.ok) { setError('Something went wrong. Try again.'); setLoading(false); return; }
     router.push('/seekers');
@@ -64,6 +69,9 @@ export default function SeekerOnboarding() {
         <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: -1.5, marginBottom: 12 }}>Tell us a bit about you</h1>
         <p style={{ color: MUTED, fontSize: 15, marginBottom: 36 }}>Helps mentors understand who&apos;s reaching out. All optional.</p>
 
+        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
+          <PixelAvatarPicker value={avatarData} onChange={setAvatarData} />
+        </div>
         <div style={{ marginBottom: 16 }}>
           <label style={label}>Your name</label>
           <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="what do people call you?" style={input} />

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import PixelAvatarPicker from '@/components/PixelAvatarPicker';
 
 const TOPICS = ['tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'engineering', 'computer science', 'data science', 'marketing', 'consulting', 'law', 'medicine', 'entrepreneurship', 'business', 'psychology', 'co-op', 'grad school'];
 
@@ -15,6 +16,7 @@ export default function Onboarding() {
   const [linkedin, setLinkedin] = useState('');
   const [linkedinError, setLinkedinError] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('');
+  const [avatarData, setAvatarData] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const LINKEDIN_REGEX = /^(https?:\/\/)?(www\.)?linkedin\.com\/.+/i;
@@ -29,7 +31,7 @@ export default function Onboarding() {
     await fetch('/api/seeker', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ age: age ? parseInt(age) : null, linkedin, interests: selectedTopic }),
+      body: JSON.stringify({ age: age ? parseInt(age) : null, linkedin, interests: selectedTopic, avatarData }),
     });
     setSubmitting(false);
     router.push(`/seekers${selectedTopic ? `?topic=${encodeURIComponent(selectedTopic)}` : ''}`);
@@ -66,6 +68,10 @@ export default function Onboarding() {
           <div style={{ fontFamily: 'Space Mono', fontSize: 26, fontWeight: 700, color: '#70B5F9', marginBottom: 32 }}>sip</div>
           <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: -1.5, marginBottom: 12 }}>Quick intro</h1>
           <p style={{ color: '#8A93A3', fontSize: 15, lineHeight: 1.7, marginBottom: 32 }}>Helps mentors know who they&apos;re talking to. Optional but recommended.</p>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+            <PixelAvatarPicker value={avatarData} onChange={setAvatarData} />
+          </div>
 
           <div style={{ textAlign: 'left', marginBottom: 20 }}>
             <label style={{ fontSize: 13, color: '#8A93A3', display: 'block', marginBottom: 6 }}>Age</label>

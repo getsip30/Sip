@@ -71,6 +71,13 @@
       "when": 1784082627540,
       "tag": "0009_fresh_the_initiative",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785260116706,
+      "tag": "0010_low_bug",
+      "breakpoints": true
     }
   ]
 }

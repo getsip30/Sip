@@ -6,6 +6,7 @@ import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/Logo';
+import PixelAvatarPicker from '@/components/PixelAvatarPicker';
 
 const TOPIC_OPTIONS = ['tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'co-op', 'grad school'];
 
@@ -28,7 +29,7 @@ function MentorSignup() {
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '', role: '', company: '',
     bio: '', topics: [] as string[], calendarLink: '', contactEmail: '', availability: 'flexible',
-    linkedin: '', showLinkedin: false,
+    linkedin: '', showLinkedin: false, avatarData: '',
   });
 
   const set = (k: string, v: string | string[]) => setForm(f => ({ ...f, [k]: v }));
@@ -45,6 +46,7 @@ function MentorSignup() {
           topics: data.topics ? data.topics.split(',').filter(Boolean) : [],
           calendarLink: data.calendarLink || '', contactEmail: data.contactEmail || '', availability: data.availability,
           linkedin: data.linkedin || '', showLinkedin: data.showLinkedin,
+          avatarData: data.avatarData || '',
         }));
       } else {
         setForm(f => ({
@@ -135,6 +137,9 @@ function MentorSignup() {
             {/* STEP 1 */}
             {step === 1 && (
               <motion.div key="step1" variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: 'easeInOut' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+                  <PixelAvatarPicker value={form.avatarData} onChange={v => set('avatarData', v)} />
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, marginBottom: 16 }}>
                   <div>
                     <label style={label}>First name</label>
