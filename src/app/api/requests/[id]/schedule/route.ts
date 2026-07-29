@@ -1,0 +1,43 @@
+import { auth, clerkClient } from '@clerk/nextjs/server';
+import { db } from '@/db';
+import { requests } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
+import { handleApiError } from '@/lib/api-handler';
+import { mutationLimiter } from '@/lib/ratelimit';
+
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const { userId } = await auth();
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { success } = await mutationLimiter.limit(userId);
+    if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
+
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    const email = user.emailAddresses[0]?.emailAddress;
+    if (!email) return NextResponse.json({ error: 'No email on file' }, { status: 400 });
+
+    const { scheduledAt } = await req.json();
+    if (!scheduledAt || isNaN(Date.parse(scheduledAt))) {
+      return NextResponse.json({ error: 'Invalid date' }, { status: 400 });
+    }
+
+    const existing = await db.select().from(requests).where(eq(requests.id, id));
+    const r = existing[0];
+    if (!r) return NextResponse.json({ error: 'Request not found' }, { status: 404 });
+    if (r.seekerEmail.toLowerCase() !== email.toLowerCase()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (r.status !== 'accepted') return NextResponse.json({ error: 'Request is not accepted' }, { status: 400 });
+
+    const updated = await db.update(requests)
+      .set({ scheduledAt: new Date(scheduledAt), reminderSentAt: null })
+      .where(eq(requests.id, id))
+      .returning();
+
+    return NextResponse.json(updated[0]);
+  } catch (err) {
+    return handleApiError(err, 'PATCH /api/requests/[id]/schedule');
+  }
+}

@@ -1,7 +1,7 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { requests, mentors } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { requests, mentors, sipFeedback } from '@/db/schema';
+import { eq, and, getTableColumns } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 
@@ -17,23 +17,23 @@ export async function GET() {
 
     const rows = await db
       .select({
-        id: requests.id, mentorId: requests.mentorId, seekerName: requests.seekerName,
-        seekerEmail: requests.seekerEmail, seekerLinkedin: requests.seekerLinkedin, message: requests.message,
-        status: requests.status, seekerConsentToShow: requests.seekerConsentToShow,
-        mentorConsentToShow: requests.mentorConsentToShow, createdAt: requests.createdAt, respondedAt: requests.respondedAt,
-        mentorFirstName: mentors.firstName, mentorLastName: mentors.lastName,
-        mentorRole: mentors.role, mentorCompany: mentors.company, mentorCalendarLink: mentors.calendarLink,
-        mentorContactEmail: mentors.contactEmail, originRoomId: requests.originRoomId,
+        ...getTableColumns(requests),
+        mentorFirstName: mentors.firstName,
+        mentorLastName: mentors.lastName,
+        mentorRole: mentors.role,
+        mentorCompany: mentors.company,
+        mentorCalendarLink: mentors.calendarLink,
+        mentorContactEmail: mentors.contactEmail,
+        seekerFeedbackGiven: sipFeedback.id,
       })
       .from(requests)
       .leftJoin(mentors, eq(requests.mentorId, mentors.id))
+      .leftJoin(sipFeedback, and(eq(sipFeedback.requestId, requests.id), eq(sipFeedback.role, 'seeker')))
       .where(eq(requests.seekerEmail, email));
 
     const enriched = rows.map(r => ({
-      id: r.id, mentorId: r.mentorId, seekerName: r.seekerName, seekerEmail: r.seekerEmail,
-      seekerLinkedin: r.seekerLinkedin, message: r.message, status: r.status,
-      seekerConsentToShow: r.seekerConsentToShow, mentorConsentToShow: r.mentorConsentToShow,
-      createdAt: r.createdAt, respondedAt: r.respondedAt, originRoomId: r.originRoomId,
+      ...r,
+      seekerFeedbackGiven: r.seekerFeedbackGiven !== null,
       mentor: r.mentorFirstName ? {
         firstName: r.mentorFirstName, lastName: r.mentorLastName,
         role: r.mentorRole, company: r.mentorCompany, calendarLink: r.mentorCalendarLink,

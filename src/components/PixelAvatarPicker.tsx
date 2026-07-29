@@ -3,6 +3,7 @@ import { useState, useRef, useCallback } from 'react';
 
 const PALETTE = ['#F5F5F5','#1A1A1A','#EF4444','#F97316','#EAB308','#22C55E','#14B8A6','#3B82F6','#6366F1','#A855F7','#EC4899','#78350F','#FFFFFF','transparent'];
 const GRID_SIZE = 16;
+const ERASE = -1;
 
 export default function PixelAvatarPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const grid = value.length === GRID_SIZE * GRID_SIZE ? value.split('').map(c => parseInt(c, 36)) : new Array(GRID_SIZE * GRID_SIZE).fill(0);
@@ -10,9 +11,10 @@ export default function PixelAvatarPicker({ value, onChange }: { value: string; 
   const painting = useRef(false);
 
   const paint = useCallback((idx: number) => {
-    if (grid[idx] === activeColor) return;
+    const target = activeColor === ERASE ? 0 : activeColor;
+    if (grid[idx] === target) return;
     const next = [...grid];
-    next[idx] = activeColor;
+    next[idx] = target;
     onChange(next.map(i => i.toString(36)).join(''));
   }, [grid, activeColor, onChange]);
 
@@ -36,6 +38,18 @@ export default function PixelAvatarPicker({ value, onChange }: { value: string; 
         ))}
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 288 }}>
+        <button
+          onClick={() => setActiveColor(ERASE)}
+          title="Eraser"
+          style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: '#0A0E16',
+            border: activeColor === ERASE ? '2px solid #70B5F9' : '1px solid rgba(255,255,255,0.2)',
+            cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
+          }}
+        >
+          🧹
+        </button>
         {PALETTE.map((color, i) => (
           <button
             key={i}

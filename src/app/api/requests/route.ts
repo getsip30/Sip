@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { requests, mentors } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { requests, mentors, sipFeedback } from '@/db/schema';
+import { eq, and, getTableColumns } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
@@ -12,7 +12,16 @@ export async function GET() {
   if (mentorResult.length === 0) return NextResponse.json([]);
 
   const mentor = mentorResult[0];
-  const result = await db.select().from(requests).where(eq(requests.mentorId, mentor.id)).orderBy(requests.createdAt);
+  const rows = await db
+    .select({
+      ...getTableColumns(requests),
+      mentorFeedbackGiven: sipFeedback.id,
+    })
+    .from(requests)
+    .leftJoin(sipFeedback, and(eq(sipFeedback.requestId, requests.id), eq(sipFeedback.role, 'mentor')))
+    .where(eq(requests.mentorId, mentor.id))
+    .orderBy(requests.createdAt);
 
+  const result = rows.map(r => ({ ...r, mentorFeedbackGiven: r.mentorFeedbackGiven !== null }));
   return NextResponse.json(result.reverse());
 }

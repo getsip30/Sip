@@ -15,17 +15,19 @@ type Seeker = {
   currentStreak: number; banned: boolean; createdAt: string;
 };
 type Room = { id: string; title: string; roomName: string; status: string; startedAt: string; mentorId: string };
-type Req = { id: string; seekerName: string; status: string; createdAt: string };
+type Req = { id: string; seekerName: string; status: string; createdAt: string; scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null };
+type FeedbackEntry = { id: string; requestId: string; mentorId: string; role: string; raterClerkId: string; rating: number; comment: string | null; createdAt: string };
 type Overview = {
   stats: {
     totalMentors: number; bannedMentors: number; openMentors: number;
     totalSeekers: number; bannedSeekers: number; liveRooms: number;
     openFlags: number; pendingRequests: number; totalSips: number; peopleInQueue: number;
+    scheduledSips: number; cancelledSips: number; avgRating: number | null;
   };
-  mentors: Mentor[]; seekers: Seeker[]; rooms: Room[]; requests: Req[];
+  mentors: Mentor[]; seekers: Seeker[]; rooms: Room[]; requests: Req[]; feedback: FeedbackEntry[];
 };
 
-const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Flags'] as const;
+const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Flags'] as const;
 type Tab = typeof TABS[number];
 
 const card: React.CSSProperties = { background: '#121923', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20 };
@@ -108,7 +110,8 @@ export default function AdminPage() {
               ['Mentors', s.totalMentors], ['Banned mentors', s.bannedMentors], ['Open mentors', s.openMentors],
               ['Seekers', s.totalSeekers], ['Banned seekers', s.bannedSeekers], ['Live rooms', s.liveRooms],
               ['Open flags', s.openFlags], ['Pending requests', s.pendingRequests], ['Total sips', s.totalSips],
-              ['In queue', s.peopleInQueue],
+              ['In queue', s.peopleInQueue], ['Scheduled sips', s.scheduledSips], ['Cancelled sips', s.cancelledSips],
+              ['Avg rating', s.avgRating ?? '—'],
             ].map(([label, val]) => (
               <div key={label as string} style={card}>
                 <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 6 }}>{label}</div>
@@ -166,6 +169,39 @@ export default function AdminPage() {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {tab === 'Sips' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 30 }}>
+            <div>
+              <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#8A93A3' }}>Scheduled / cancelled</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {data.requests.filter(r => r.scheduledAt || r.status === 'cancelled').length === 0 ? (
+                  <p style={{ color: '#8A93A3', fontSize: 14 }}>nothing scheduled or cancelled yet</p>
+                ) : data.requests.filter(r => r.scheduledAt || r.status === 'cancelled').map(r => (
+                  <div key={r.id} style={{ ...card, padding: 16 }}>
+                    <div style={{ fontWeight: 600 }}>{r.seekerName} <span style={{ color: '#8A93A3', fontWeight: 400 }}>· {r.status}</span></div>
+                    {r.scheduledAt && <div style={{ fontSize: 12, color: '#8A93A3' }}>scheduled: {new Date(r.scheduledAt).toLocaleString()}</div>}
+                    {r.status === 'cancelled' && <div style={{ fontSize: 12, color: '#F87171' }}>cancelled by {r.cancelledBy} · {r.cancelledAt ? new Date(r.cancelledAt).toLocaleString() : ''}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#8A93A3' }}>Feedback ({data.feedback.length})</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {data.feedback.length === 0 ? (
+                  <p style={{ color: '#8A93A3', fontSize: 14 }}>no feedback yet</p>
+                ) : data.feedback.map(f => (
+                  <div key={f.id} style={{ ...card, padding: 16 }}>
+                    <div style={{ fontWeight: 600 }}>{'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)} <span style={{ color: '#8A93A3', fontWeight: 400 }}>· {f.role}</span></div>
+                    {f.comment && <div style={{ fontSize: 13, marginTop: 4 }}>{f.comment}</div>}
+                    <div style={{ fontSize: 12, color: '#8A93A3', marginTop: 6 }}>{new Date(f.createdAt).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

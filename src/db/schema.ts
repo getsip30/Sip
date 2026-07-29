@@ -89,10 +89,29 @@ export const requests = pgTable('requests', {
   mentorConsentToShow: boolean('mentor_consent_to_show').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   respondedAt: timestamp('responded_at'),
+  scheduledAt: timestamp('scheduled_at'),
+  cancelledAt: timestamp('cancelled_at'),
+  cancelledBy: text('cancelled_by'),
+  reminderSentAt: timestamp('reminder_sent_at'),
 }, (t) => [
   index('requests_mentor_id_idx').on(t.mentorId),
   index('requests_seeker_clerk_id_idx').on(t.seekerClerkId),
   index('requests_origin_ask_id_idx').on(t.originAskId),
+]);
+
+export const sipFeedback = pgTable('sip_feedback', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  requestId: uuid('request_id').references(() => requests.id, { onDelete: 'cascade' }).notNull(),
+  mentorId: uuid('mentor_id').references(() => mentors.id, { onDelete: 'cascade' }).notNull(),
+  role: text('role').notNull(), // mentor | seeker
+  raterClerkId: text('rater_clerk_id'),
+  rating: integer('rating').notNull(),
+  comment: text('comment'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('sip_feedback_request_id_idx').on(t.requestId),
+  index('sip_feedback_mentor_id_idx').on(t.mentorId),
+  uniqueIndex('sip_feedback_unique_idx').on(t.requestId, t.role),
 ]);
 
 export const sipNotes = pgTable('sip_notes', {

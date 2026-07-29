@@ -19,6 +19,8 @@ type Mentor = {
 type Request = {
   id: string; seekerName: string; seekerEmail: string; message: string; status: string; createdAt: string;
   seekerLinkedin?: string; seekerConsentToShow: boolean; mentorConsentToShow: boolean;
+  scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null;
+  mentorFeedbackGiven?: boolean;
 };
 type Ask = {
   id: string; seekerName: string; question: string; answer: string | null; status: string; createdAt: string;
@@ -61,6 +63,10 @@ export default function Dashboard() {
   const [shareNoteDraft, setShareNoteDraft] = useState('');
   const [showShareNote, setShowShareNote] = useState(false);
   const [shareNoteCopied, setShareNoteCopied] = useState(false);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [feedbackRatings, setFeedbackRatings] = useState<Record<string, number>>({});
+  const [feedbackComments, setFeedbackComments] = useState<Record<string, string>>({});
+  const [submittingFeedback, setSubmittingFeedback] = useState<string | null>(null);
 
   async function acceptRequest(requestId: string, contactMethod?: 'calendar' | 'email') {
     setAccepting(requestId);
@@ -71,6 +77,28 @@ export default function Dashboard() {
     if (res.ok) setRequests(prev => prev.map(x => x.id === requestId ? { ...x, status: 'accepted' } : x));
     setAccepting(null);
     setChoosingContactFor(null);
+  }
+
+  async function cancelRequest(requestId: string) {
+    setCancelling(requestId);
+    const res = await fetch(`/api/requests/${requestId}/cancel`, { method: 'PATCH' });
+    if (res.ok) {
+      const updated = await res.json();
+      setRequests(prev => prev.map(x => x.id === requestId ? { ...x, status: 'cancelled', cancelledAt: updated.cancelledAt, cancelledBy: updated.cancelledBy } : x));
+    }
+    setCancelling(null);
+  }
+
+  async function submitFeedback(requestId: string) {
+    const rating = feedbackRatings[requestId];
+    if (!rating) return;
+    setSubmittingFeedback(requestId);
+    const res = await fetch(`/api/requests/${requestId}/feedback`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating, comment: feedbackComments[requestId] || undefined }),
+    });
+    if (res.ok) setRequests(prev => prev.map(x => x.id === requestId ? { ...x, mentorFeedbackGiven: true } : x));
+    setSubmittingFeedback(null);
   }
 
   async function toggleConsent(requestId: string, current: boolean) {
@@ -501,7 +529,7 @@ export default function Dashboard() {
                     {requests.map((r, i) => (
                       <motion.div key={r.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
                         whileHover={{ borderColor: 'rgba(255,255,255,0.15)' }}
-                        style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, transition: 'all 0.2s', opacity: r.status === 'declined' ? 0.45 : 1, flexWrap: 'wrap' }}>
+                        style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, transition: 'all 0.2s', opacity: (r.status === 'declined' || r.status === 'cancelled') ? 0.45 : 1, flexWrap: 'wrap' }}>
                         <div style={{ flex: '1 1 220px', minWidth: 0 }}>
                           <div style={{ fontWeight: 600, marginBottom: 4 }}>{r.seekerName}</div>
                           <div style={{ color: MUTED, fontSize: 13, marginBottom: 10 }}>
@@ -513,7 +541,13 @@ export default function Dashboard() {
                             <p style={{ color: TEXT, fontSize: 14, lineHeight: 1.6, margin: 0 }}>&quot;{r.message}&quot;</p>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, minWidth: 0, flex: '1 1 140px' }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 12, background: r.status === 'pending' ? 'rgba(245,158,11,0.1)' : 'rgba(91,219,138,0.1)', color: r.status === 'pending' ? WARNING : SUCCESS2, border: `1px solid ${r.status === 'pending' ? 'rgba(245,158,11,0.3)' : 'rgba(91,219,138,0.3)'}` }}>{r.status}</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 12,
+                            background: r.status === 'pending' ? 'rgba(245,158,11,0.1)' : r.status === 'cancelled' ? 'rgba(220,38,38,0.1)' : 'rgba(91,219,138,0.1)',
+                            color: r.status === 'pending' ? WARNING : r.status === 'cancelled' ? DANGER : SUCCESS2,
+                            border: `1px solid ${r.status === 'pending' ? 'rgba(245,158,11,0.3)' : r.status === 'cancelled' ? 'rgba(220,38,38,0.3)' : 'rgba(91,219,138,0.3)'}` }}>{r.status}</span>
+                          {r.status === 'cancelled' && r.cancelledBy && (
+                            <div style={{ color: MUTED, fontSize: 11 }}>cancelled by {r.cancelledBy}</div>
+                          )}
                           <div style={{ color: MUTED, fontSize: 12 }}>{new Date(r.createdAt).toLocaleDateString()}</div>
                           {r.status === 'pending' && (
                             <div style={{ display: 'flex', gap: 8 }}>
@@ -537,11 +571,44 @@ export default function Dashboard() {
                             </div>
                           )}
                           {r.status === 'accepted' && (
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-                              onClick={() => toggleConsent(r.id, r.mentorConsentToShow)} disabled={togglingConsent === r.id}
-                              style={{ background: r.mentorConsentToShow ? 'rgba(91,219,138,0.1)' : 'transparent', border: `1px solid ${r.mentorConsentToShow ? 'rgba(91,219,138,0.3)' : 'rgba(255,255,255,0.1)'}`, color: r.mentorConsentToShow ? SUCCESS2 : MUTED, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                              {r.mentorConsentToShow ? 'showing on profiles ✓' : 'show on profiles'}
-                            </motion.button>
+                            <>
+                              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+                                onClick={() => toggleConsent(r.id, r.mentorConsentToShow)} disabled={togglingConsent === r.id}
+                                style={{ background: r.mentorConsentToShow ? 'rgba(91,219,138,0.1)' : 'transparent', border: `1px solid ${r.mentorConsentToShow ? 'rgba(91,219,138,0.3)' : 'rgba(255,255,255,0.1)'}`, color: r.mentorConsentToShow ? SUCCESS2 : MUTED, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                {r.mentorConsentToShow ? 'showing on profiles ✓' : 'show on profiles'}
+                              </motion.button>
+
+                              {r.scheduledAt && (
+                                <div style={{ color: MUTED, fontSize: 12 }}>scheduled: {new Date(r.scheduledAt).toLocaleString()}</div>
+                              )}
+
+                              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+                                onClick={() => cancelRequest(r.id)} disabled={cancelling === r.id}
+                                style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: DANGER, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: cancelling === r.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                                {cancelling === r.id ? 'cancelling...' : 'cancel'}
+                              </motion.button>
+
+                              {r.mentorFeedbackGiven ? (
+                                <div style={{ color: SUCCESS2, fontSize: 12 }}>feedback sent ✓</div>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, width: '100%' }}>
+                                  <div style={{ display: 'flex', gap: 4 }}>
+                                    {[1, 2, 3, 4, 5].map(n => (
+                                      <span key={n} onClick={() => setFeedbackRatings(d => ({ ...d, [r.id]: n }))}
+                                        style={{ cursor: 'pointer', fontSize: 16, color: (feedbackRatings[r.id] || 0) >= n ? WARNING : 'rgba(255,255,255,0.2)' }}>★</span>
+                                    ))}
+                                  </div>
+                                  <textarea value={feedbackComments[r.id] || ''} onChange={e => setFeedbackComments(d => ({ ...d, [r.id]: e.target.value }))}
+                                    placeholder="optional comment..." rows={2} maxLength={1000}
+                                    style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+                                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+                                    onClick={() => submitFeedback(r.id)} disabled={submittingFeedback === r.id || !feedbackRatings[r.id]}
+                                    style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: (submittingFeedback === r.id || !feedbackRatings[r.id]) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                                    {submittingFeedback === r.id ? 'sending...' : 'submit feedback'}
+                                  </motion.button>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       </motion.div>

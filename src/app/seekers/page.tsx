@@ -20,8 +20,10 @@ type Mentor = {
 };
 type SipRequest = {
   id: string; mentorId: string; seekerName: string; seekerEmail: string; message: string;
-  status: 'pending' | 'accepted' | 'declined'; createdAt: string; originRoomId?: string | null;
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled'; createdAt: string; originRoomId?: string | null;
   seekerConsentToShow: boolean; mentorConsentToShow: boolean;
+  scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null;
+  seekerFeedbackGiven?: boolean;
   mentor?: { firstName: string; lastName: string; role: string; company: string; calendarLink: string; contactEmail?: string; };
 };
 
@@ -32,6 +34,7 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; 
   pending:  { bg: 'rgba(245,158,11,0.1)',  color: '#F59E0B', border: 'rgba(245,158,11,0.3)',  label: 'pending ⏳' },
   accepted: { bg: 'rgba(91,219,138,0.1)',  color: '#5BDB8A', border: 'rgba(91,219,138,0.3)',  label: 'accepted ✓' },
   declined: { bg: 'rgba(248,113,113,0.1)', color: '#F87171', border: 'rgba(248,113,113,0.3)', label: 'declined' },
+  cancelled: { bg: 'rgba(248,113,113,0.1)', color: '#F87171', border: 'rgba(248,113,113,0.3)', label: 'cancelled' },
 };
 
 function SeekersContent() {
@@ -61,6 +64,12 @@ function SeekersContent() {
   const [seekerId, setSeekerId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [togglingConsent, setTogglingConsent] = useState<string | null>(null);
+  const [scheduleDrafts, setScheduleDrafts] = useState<Record<string, string>>({});
+  const [scheduling, setScheduling] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [feedbackRatings, setFeedbackRatings] = useState<Record<string, number>>({});
+  const [feedbackComments, setFeedbackComments] = useState<Record<string, string>>({});
+  const [submittingFeedback, setSubmittingFeedback] = useState<string | null>(null);
   
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -100,6 +109,43 @@ function SeekersContent() {
     return () => clearInterval(t);
   }, [fetchLiveRooms]);
   
+  async function saveSchedule(requestId: string) {
+    const scheduledAt = scheduleDrafts[requestId];
+    if (!scheduledAt) return;
+    setScheduling(requestId);
+    const res = await fetch(`/api/requests/${requestId}/schedule`,  {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scheduledAt: new Date(scheduledAt).toISOString() }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setRequests(prev => prev.map(r => r.id === requestId ? { ...r, scheduledAt: updated.scheduledAt } : r));
+    }
+    setScheduling(null);
+  }
+
+  async function cancelRequest(requestId: string) {
+    setCancelling(requestId);
+    const res = await fetch(`/api/requests/${requestId}/cancel`, { method: 'PATCH' });
+    if (res.ok) {
+      const updated = await res.json();
+      setRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'cancelled', cancelledAt: updated.cancelledAt, cancelledBy: updated.cancelledBy } : r));
+    }
+    setCancelling(null);
+  }
+
+  async function submitFeedback(requestId: string) {
+    const rating = feedbackRatings[requestId];
+    if (!rating) return;
+    setSubmittingFeedback(requestId);
+    const res = await fetch(`/api/requests/${requestId}/feedback`,  {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating, comment: feedbackComments[requestId] || undefined }),
+    });
+    if (res.ok) setRequests(prev => prev.map(r => r.id === requestId ? { ...r, seekerFeedbackGiven: true } : r));
+    setSubmittingFeedback(null);
+  }
+
   const filtered = mentors.filter(m => {
     const matchFilter = filter === 'all' || m.topics.toLowerCase().includes(filter.toLowerCase());
     const q = search.toLowerCase();
@@ -363,7 +409,7 @@ function SeekersContent() {
                   {requests.map(r => {
                     const s = STATUS_STYLE[r.status];
                     return (
-                      <div key={r.id} style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24, opacity: r.status === 'declined' ? 0.5 : 1 }}>
+                      <div key={r.id} style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24, opacity: (r.status === 'declined' || r.status === 'cancelled') ? 0.5 : 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 16 }}>{r.mentor ? `${r.mentor.firstName} ${r.mentor.lastName}` : 'Mentor'}</div>
@@ -371,6 +417,9 @@ function SeekersContent() {
                           </div>
                           <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 12, background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontWeight: 600, height: 'fit-content' }}>{s.label}</span>
                         </div>
+                        {r.status === 'cancelled' && r.cancelledBy && (
+                          <div style={{ color: MUTED, fontSize: 12, marginBottom: 8 }}>cancelled by {r.cancelledBy}</div>
+                        )}
                         <p style={{ color: MUTED, fontSize: 14, marginBottom: 16 }}>&quot;{r.message}&quot;</p>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: MUTED, fontSize: 12 }}>{new Date(r.createdAt).toLocaleDateString()}</span>
@@ -386,6 +435,39 @@ function SeekersContent() {
                                 style={{ background: ACCENT, color: 'white', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
                                 book your sip â†’
                               </a>
+                            )}
+                            {r.status === 'accepted' && !r.scheduledAt && (
+                              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                <input type="datetime-local" value={scheduleDrafts[r.id] || ''} onChange={e => setScheduleDrafts(d => ({ ...d, [r.id]: e.target.value }))} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 8px', color: TEXT, fontSize: 12, fontFamily: 'inherit' }} />
+                                <button onClick={() => saveSchedule(r.id)} disabled={scheduling === r.id || !scheduleDrafts[r.id]} style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{scheduling === r.id ? 'saving...' : 'save time'}</button>
+                              </div>
+                            )}
+                            {r.status === 'accepted' && r.scheduledAt && (
+                              <span style={{ color: MUTED, fontSize: 12 }}>scheduled: {new Date(r.scheduledAt).toLocaleString()}</span>
+                            )}
+                            {r.status === 'accepted' && (
+                              <button onClick={() => cancelRequest(r.id)} disabled={cancelling === r.id} style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{cancelling === r.id ? 'cancelling...' : 'cancel'}</button>
+                            )}
+                            {r.status === 'accepted' && (
+                              r.seekerFeedbackGiven ? (
+                                <span style={{ color: '#5BDB8A', fontSize: 12 }}>feedback sent ✓</span>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                                  <div style={{ display: 'flex', gap: 4 }}>
+                                    {[1, 2, 3, 4, 5].map(n => (
+                                      <span key={n} onClick={() => setFeedbackRatings(d => ({ ...d, [r.id]: n }))}
+                                        style={{ cursor: 'pointer', fontSize: 16, color: (feedbackRatings[r.id] || 0) >= n ? '#F59E0B' : 'rgba(255,255,255,0.2)' }}>★</span>
+                                    ))}
+                                  </div>
+                                  <textarea value={feedbackComments[r.id] || ''} onChange={e => setFeedbackComments(d => ({ ...d, [r.id]: e.target.value }))}
+                                    placeholder="optional comment..." rows={2} maxLength={1000}
+                                    style={{ width: 180, background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+                                  <button onClick={() => submitFeedback(r.id)} disabled={submittingFeedback === r.id || !feedbackRatings[r.id]}
+                                    style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                    {submittingFeedback === r.id ? 'sending...' : 'submit feedback'}
+                                  </button>
+                                </div>
+                              )
                             )}
                             {r.originRoomId && r.status !== 'declined' && (r.mentor?.calendarLink || r.mentor?.contactEmail) && (
                               <a href={r.mentor.calendarLink ? r.mentor.calendarLink : `mailto:${r.mentor.contactEmail}?subject=${encodeURIComponent('Scheduling our 1:1')}`}
@@ -457,3 +539,10 @@ export default function Seekers() {
     </Suspense>
   );
 }
+
+
+
+
+
+
+
