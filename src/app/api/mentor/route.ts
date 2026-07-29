@@ -65,7 +65,7 @@ export async function POST(req: Request) {
 
   if (existing.length > 0) {
     const updated = await db.update(mentors)
-      .set({ firstName, lastName, email, role, company, bio, topics, calendarLink: calendarLink || null, contactEmail: contactEmail || null, availability, linkedin, showLinkedin: !!showLinkedin, ...(avatarData ? { avatarData } : {}) })
+      .set({ firstName, lastName, email, role, company, bio, topics, calendarLink: calendarLink || null, contactEmail: contactEmail || null, availability, linkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null })
       .where(eq(mentors.clerkId, userId))
       .returning();
     return NextResponse.json(updated[0]);
