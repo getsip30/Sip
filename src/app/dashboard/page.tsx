@@ -310,7 +310,7 @@ export default function Dashboard() {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                 style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 40, flexWrap: 'wrap', gap: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <PixelAvatar data={mentor.avatarData ?? null} size={56} />
+                  {mentor.avatarData ? <PixelAvatar data={mentor.avatarData} size={56} /> : <div style={{ width: 56, height: 56, borderRadius: '50%', background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 19, flexShrink: 0, color: 'white' }}>{mentor.firstName[0]}{mentor.lastName[0]}</div>}
                 <div>
                   <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: -1.5, marginBottom: 6 }}>Your Dashboard</h1>
                   <p style={{ color: MUTED, fontSize: 15 }}>{mentor.role} @ {mentor.company}</p>
