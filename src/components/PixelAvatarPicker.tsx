@@ -24,7 +24,7 @@ export default function PixelAvatarPicker({ value, onChange }: { value: string; 
         onMouseDown={() => (painting.current = true)}
         onMouseUp={() => (painting.current = false)}
         onMouseLeave={() => (painting.current = false)}
-        style={{ display: 'grid', gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`, width: 288, height: 288, border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, overflow: 'hidden', userSelect: 'none', touchAction: 'none' }}
+        style={{ display: 'grid', gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`, width: 288, height: 288, border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, overflow: 'hidden', userSelect: 'none', touchAction: 'none', backgroundImage: 'linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px)', backgroundSize: `${288/GRID_SIZE}px ${288/GRID_SIZE}px` }}
       >
         {grid.map((c, i) => (
           <div
