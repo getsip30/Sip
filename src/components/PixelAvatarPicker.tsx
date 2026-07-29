@@ -24,14 +24,14 @@ export default function PixelAvatarPicker({ value, onChange }: { value: string; 
         onMouseDown={() => (painting.current = true)}
         onMouseUp={() => (painting.current = false)}
         onMouseLeave={() => (painting.current = false)}
-        style={{ display: 'grid', gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`, width: 288, height: 288, border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, overflow: 'hidden', userSelect: 'none', touchAction: 'none', backgroundImage: 'linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px)', backgroundSize: `${288/GRID_SIZE}px ${288/GRID_SIZE}px` }}
+        style={{ display: 'grid', gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`, width: 288, height: 288, border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, overflow: 'hidden', userSelect: 'none', touchAction: 'none' }}
       >
         {grid.map((c, i) => (
           <div
             key={i}
             onMouseDown={() => paint(i)}
             onMouseEnter={() => painting.current && paint(i)}
-            style={{ width: '100%', aspectRatio: '1', background: PALETTE[c] === 'transparent' ? '#0A0E16' : PALETTE[c], cursor: 'pointer' }}
+            style={{ width: '100%', aspectRatio: '1', background: PALETTE[c] === 'transparent' ? '#0A0E16' : PALETTE[c], cursor: 'pointer', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.12)' }}
           />
         ))}
       </div>
