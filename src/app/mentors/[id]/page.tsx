@@ -202,7 +202,7 @@ export default function MentorProfile() {
             style={{ ...boxStyle, flex: isMobile ? 'none' : '1.4', overflowY: isMobile ? 'visible' : 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 20 }}>
               {mentor.avatarData ? <PixelAvatar data={mentor.avatarData} size={72} /> : (
-              <motion.div whileHover={{ scale: 1.06 }} style={{ width: 64, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #3B82F6, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 22, flexShrink: 0 }}>
+              <motion.div whileHover={{ scale: 1.06 }} style={{ width: 64, height: 72, borderRadius: '50%', background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 22, flexShrink: 0 }}>
                 {mentor.firstName[0]}{mentor.lastName[0]}
               </motion.div>
               )}

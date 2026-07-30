@@ -105,7 +105,7 @@ function MentorSignup() {
           </motion.div>
           <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: -2, lineHeight: 1.1, marginBottom: 12 }}>
             Open Your Door.<br />
-            <span style={{ background: 'linear-gradient(135deg, #70B5F9, #0A66C2)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Change Someone&apos;s Path.</span>
+            <span style={{ color: '#70B5F9' }}>Change Someone&apos;s Path.</span>
           </h1>
           <p style={{ color: MUTED, fontSize: 15, lineHeight: 1.7 }}>
             You know something someone needs to hear. List yourself, stay in control, show up when you want to.

@@ -422,7 +422,7 @@ export default function Dashboard() {
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, height: 8, overflow: 'hidden', marginBottom: 20 }}>
                   <motion.div initial={{ width: 0 }} animate={{ width: `${progressPct}%` }} transition={{ duration: 1, delay: 0.5, ease: 'easeOut' }}
-                    style={{ height: '100%', background: 'linear-gradient(90deg, #0A66C2, #7C3AED)', borderRadius: 8 }} />
+                    style={{ height: '100%', background: ACCENT, borderRadius: 8 }} />
                 </div>
                 {earnedBadges.length > 0 ? (
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

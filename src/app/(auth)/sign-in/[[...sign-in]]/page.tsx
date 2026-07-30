@@ -9,7 +9,7 @@ export default function SignInPage() {
         <div style={{ fontFamily: 'Space Mono', fontSize: 26, fontWeight: 700, color: '#70B5F9', marginBottom: 48 }}>sip</div>
         <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: -2, lineHeight: 1.1, marginBottom: 16 }}>
           Welcome back.<br />
-          <span style={{ background: 'linear-gradient(135deg, #70B5F9, #3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>People are waiting.</span>
+          <span style={{ color: '#70B5F9' }}>People are waiting.</span>
         </h1>
         <p style={{ color: '#8A93A3', fontSize: 16, lineHeight: 1.7, maxWidth: 380, marginBottom: 48 }}>
           Sign in to manage your requests, update your availability, and keep showing up.
