@@ -1,7 +1,7 @@
 ﻿import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { requests, mentors, seekers, rooms } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
@@ -34,6 +34,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const seekerResult = await db.select().from(seekers).where(eq(seekers.clerkId, seekerClerkId));
     const seeker = seekerResult[0];
     if (!seeker) return NextResponse.json({ error: 'Seeker not found' }, { status: 404 });
+
+    const existingOpen = await db.select().from(requests).where(and(eq(requests.mentorId, mentor.id), eq(requests.seekerClerkId, seekerClerkId)));
+    const hasOpenRequest = existingOpen.some(r => r.status === 'pending' || (r.status === 'accepted' && !r.sipCountedAt));
+    if (hasOpenRequest) {
+      return NextResponse.json({ error: 'There is already an open request between you and this seeker.' }, { status: 409 });
+    }
 
     const created = await db.insert(requests).values({
       mentorId: mentor.id,

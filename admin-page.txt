@@ -14,26 +14,20 @@ type Seeker = {
   id: string; firstName: string; lastName: string; email: string;
   currentStreak: number; banned: boolean; createdAt: string;
 };
-type Room = { id: string; title: string; roomName: string; status: string; startedAt: string; endedAt: string | null; mentorId: string };
-type Req = { id: string; seekerName: string; seekerEmail: string; mentorId: string; status: string; createdAt: string; scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null };
+type Room = { id: string; title: string; roomName: string; status: string; startedAt: string; mentorId: string };
+type Req = { id: string; seekerName: string; status: string; createdAt: string; scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null };
 type FeedbackEntry = { id: string; requestId: string; mentorId: string; role: string; raterClerkId: string; rating: number; comment: string | null; createdAt: string };
-type Ask = { id: string; mentorId: string; seekerClerkId: string; seekerName: string; seekerEmail: string; question: string; answer: string | null; status: string; createdAt: string; answeredAt: string | null };
-type Note = { id: string; mentorId: string; seekerName: string; seekerEmail: string | null; note: string; status: string; createdAt: string };
-type Referral = { id: string; referrerClerkId: string; referredClerkId: string; referredRole: string; milestone: string; createdAt: string };
 type Overview = {
   stats: {
     totalMentors: number; bannedMentors: number; openMentors: number;
     totalSeekers: number; bannedSeekers: number; liveRooms: number;
     openFlags: number; pendingRequests: number; totalSips: number; peopleInQueue: number;
     scheduledSips: number; cancelledSips: number; avgRating: number | null;
-    totalAsks: number; pendingAsks: number; totalNotes: number;
-    totalReferralSignups: number; totalReferralConversions: number; totalFollows: number; totalConsents: number;
   };
   mentors: Mentor[]; seekers: Seeker[]; rooms: Room[]; requests: Req[]; feedback: FeedbackEntry[];
-  asks: Ask[]; notes: Note[]; referrals: Referral[]; follows: unknown[]; consents: unknown[];
 };
 
-const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Flags'] as const;
+const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Flags'] as const;
 type Tab = typeof TABS[number];
 
 const card: React.CSSProperties = { background: '#121923', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20 };
@@ -117,9 +111,7 @@ export default function AdminPage() {
               ['Seekers', s.totalSeekers], ['Banned seekers', s.bannedSeekers], ['Live rooms', s.liveRooms],
               ['Open flags', s.openFlags], ['Pending requests', s.pendingRequests], ['Total sips', s.totalSips],
               ['In queue', s.peopleInQueue], ['Scheduled sips', s.scheduledSips], ['Cancelled sips', s.cancelledSips],
-              ['Avg rating', s.avgRating ?? '—'], ['Asks', s.totalAsks], ['Pending asks', s.pendingAsks],
-              ['Notes', s.totalNotes], ['Referral signups', s.totalReferralSignups], ['Referral conversions', s.totalReferralConversions],
-              ['Follows', s.totalFollows], ['Consents logged', s.totalConsents],
+              ['Avg rating', s.avgRating ?? '—'],
             ].map(([label, val]) => (
               <div key={label as string} style={card}>
                 <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 6 }}>{label}</div>
@@ -165,18 +157,16 @@ export default function AdminPage() {
 
         {tab === 'Rooms' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {data.rooms.length === 0 ? <p style={{ color: '#8A93A3', fontSize: 14 }}>no rooms yet</p> : data.rooms.map(r => (
-              <div key={r.id} style={{ ...card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, flexWrap: 'wrap', gap: 10, opacity: r.status === 'live' ? 1 : 0.6 }}>
+            {data.rooms.length === 0 ? <p style={{ color: '#8A93A3', fontSize: 14 }}>no live rooms</p> : data.rooms.map(r => (
+              <div key={r.id} style={{ ...card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, flexWrap: 'wrap', gap: 10 }}>
                 <div>
-                  <div style={{ fontWeight: 600 }}>{r.title} <span style={{ fontSize: 11, color: r.status === 'live' ? '#4ADE80' : '#8A93A3', fontWeight: 600 }}>· {r.status}</span></div>
-                  <div style={{ fontSize: 12, color: '#8A93A3' }}>{r.roomName} · started {new Date(r.startedAt).toLocaleString()}{r.endedAt ? ` · ended ${new Date(r.endedAt).toLocaleString()}` : ''}</div>
+                  <div style={{ fontWeight: 600 }}>{r.title}</div>
+                  <div style={{ fontSize: 12, color: '#8A93A3' }}>{r.roomName} · started {new Date(r.startedAt).toLocaleString()}</div>
                 </div>
-                {r.status === 'live' && (
-                  <button onClick={() => endRoom(r.id)}
-                    style={{ ...btn, background: 'rgba(220,38,38,0.15)', borderColor: 'rgba(220,38,38,0.3)', color: '#F87171' }}>
-                    force end
-                  </button>
-                )}
+                <button onClick={() => endRoom(r.id)}
+                  style={{ ...btn, background: 'rgba(220,38,38,0.15)', borderColor: 'rgba(220,38,38,0.3)', color: '#F87171' }}>
+                  force end
+                </button>
               </div>
             ))}
           </div>
@@ -215,45 +205,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {tab === 'Asks' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {data.asks.length === 0 ? <p style={{ color: '#8A93A3', fontSize: 14 }}>no asks yet</p> : data.asks.map(a => (
-              <div key={a.id} style={{ ...card, padding: 16 }}>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>{a.seekerName} <span style={{ color: '#8A93A3', fontWeight: 400 }}>· {a.status}</span></div>
-                <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 8 }}>{a.seekerEmail} · {new Date(a.createdAt).toLocaleString()}</div>
-                <div style={{ fontSize: 14, marginBottom: a.answer ? 8 : 0 }}>{a.question}</div>
-                {a.answer && <div style={{ fontSize: 13, color: '#70B5F9', borderLeft: '2px solid rgba(112,181,249,0.3)', paddingLeft: 10 }}>{a.answer}</div>}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {tab === 'Notes' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {data.notes.length === 0 ? <p style={{ color: '#8A93A3', fontSize: 14 }}>no notes yet</p> : data.notes.map(n => (
-              <div key={n.id} style={{ ...card, padding: 16 }}>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>{n.seekerName} <span style={{ color: '#8A93A3', fontWeight: 400 }}>· {n.status}</span></div>
-                <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 8 }}>{n.seekerEmail || 'no email'} · {new Date(n.createdAt).toLocaleString()}</div>
-                <div style={{ fontSize: 14 }}>{n.note}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {tab === 'Referrals' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {data.referrals.length === 0 ? <p style={{ color: '#8A93A3', fontSize: 14 }}>no referral activity yet</p> : data.referrals.map(r => (
-              <div key={r.id} style={{ ...card, padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{r.milestone === 'signed_up' ? 'signup' : 'first sip booked'} <span style={{ color: '#8A93A3', fontWeight: 400 }}>· {r.referredRole}</span></div>
-                  <div style={{ fontSize: 12, color: '#8A93A3' }}>referrer {r.referrerClerkId.slice(0, 12)}… → referred {r.referredClerkId.slice(0, 12)}…</div>
-                </div>
-                <div style={{ fontSize: 12, color: '#8A93A3' }}>{new Date(r.createdAt).toLocaleString()}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {tab === 'Flags' && (
           <>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#FBBF24' }}>Open ({openFlags.length})</h2>
@@ -287,3 +238,4 @@ export default function AdminPage() {
     </div>
   );
 }
+

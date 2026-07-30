@@ -1,6 +1,6 @@
 import { db } from '@/db';
 import { requests, mentors } from '@/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
 
@@ -62,7 +62,11 @@ export async function GET(req: Request) {
   const milestones: [number, string][] = [[1, 'first-sip'], [5, 'regular'], [10, 'veteran'], [25, 'legend'], [50, 'goat']];
 
   for (const row of completedRows) {
-    await db.update(requests).set({ sipCountedAt: new Date() }).where(eq(requests.id, row.id));
+    const claimed = await db.update(requests)
+      .set({ sipCountedAt: new Date() })
+      .where(and(eq(requests.id, row.id), sql`sip_counted_at is null`))
+      .returning({ id: requests.id });
+    if (claimed.length === 0) continue;
 
     const bumped = await db.update(mentors)
       .set({ sipCount: sql`${mentors.sipCount} + 1`, xp: sql`${mentors.xp} + 25` })
