@@ -93,6 +93,7 @@ export const requests = pgTable('requests', {
   cancelledAt: timestamp('cancelled_at'),
   cancelledBy: text('cancelled_by'),
   reminderSentAt: timestamp('reminder_sent_at'),
+  sipCountedAt: timestamp('sip_counted_at'),
 }, (t) => [
   index('requests_mentor_id_idx').on(t.mentorId),
   index('requests_seeker_clerk_id_idx').on(t.seekerClerkId),

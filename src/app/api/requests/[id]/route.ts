@@ -64,22 +64,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     if (status === 'accepted') {
-      const milestones: [number, string][] = [[1, 'first-sip'], [5, 'regular'], [10, 'veteran'], [25, 'legend'], [50, 'goat']];
-      const bumped = await db.update(mentors)
-        .set({ sipCount: sql`${mentors.sipCount} + 1`, xp: sql`${mentors.xp} + 25` })
-        .where(eq(mentors.id, mentor.id))
-        .returning({ sipCount: mentors.sipCount, badges: mentors.badges });
-
-      const freshSipCount = bumped[0].sipCount;
-      const existingBadges = bumped[0].badges ? bumped[0].badges.split(',').filter(Boolean) : [];
-      const newBadges = [...existingBadges];
-      for (const [threshold, badge] of milestones) {
-        if (freshSipCount >= threshold && !newBadges.includes(badge)) newBadges.push(badge);
-      }
-      if (newBadges.length !== existingBadges.length) {
-        await db.update(mentors).set({ badges: newBadges.join(',') }).where(eq(mentors.id, mentor.id));
-      }
-
       const bookingSeeker = await db.select().from(seekers).where(eq(seekers.email, r.seekerEmail));
       if (bookingSeeker[0]?.invitedByClerkId) {
         const alreadyLogged = await db.select().from(referralEvents).where(and(

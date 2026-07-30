@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { requests } from '@/db/schema';
+import { requests, mentors } from '@/db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
@@ -48,5 +48,37 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ due: due.rows.length, sent });
+  const eligible = await db.execute(sql`
+    SELECT DISTINCT r.id, r.mentor_id
+    FROM requests r
+    JOIN sip_feedback f ON f.request_id = r.id AND f.rating >= 3
+    WHERE r.status = 'accepted'
+      AND r.scheduled_at IS NOT NULL
+      AND r.scheduled_at < now()
+      AND r.sip_counted_at IS NULL
+  `);
+
+  const completedRows = eligible.rows as { id: string; mentor_id: string }[];
+  const milestones: [number, string][] = [[1, 'first-sip'], [5, 'regular'], [10, 'veteran'], [25, 'legend'], [50, 'goat']];
+
+  for (const row of completedRows) {
+    await db.update(requests).set({ sipCountedAt: new Date() }).where(eq(requests.id, row.id));
+
+    const bumped = await db.update(mentors)
+      .set({ sipCount: sql`${mentors.sipCount} + 1`, xp: sql`${mentors.xp} + 25` })
+      .where(eq(mentors.id, row.mentor_id))
+      .returning({ sipCount: mentors.sipCount, badges: mentors.badges });
+
+    const freshSipCount = bumped[0].sipCount;
+    const existingBadges = bumped[0].badges ? bumped[0].badges.split(',').filter(Boolean) : [];
+    const newBadges = [...existingBadges];
+    for (const [threshold, badge] of milestones) {
+      if (freshSipCount >= threshold && !newBadges.includes(badge)) newBadges.push(badge);
+    }
+    if (newBadges.length !== existingBadges.length) {
+      await db.update(mentors).set({ badges: newBadges.join(',') }).where(eq(mentors.id, row.mentor_id));
+    }
+  }
+
+  return NextResponse.json({ due: due.rows.length, sent, sipsCompleted: completedRows.length });
 }
