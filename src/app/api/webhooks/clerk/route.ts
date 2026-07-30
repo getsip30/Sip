@@ -2,8 +2,8 @@ import { Webhook } from 'svix';
 import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { mentors, seekers } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { mentors, seekers, requests, asks, follows, queueentries, referralevents, flags } from '@/db/schema';
+import { eq, or } from 'drizzle-orm';
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -37,6 +37,15 @@ export async function POST(req: Request) {
   if (evt.type === 'user.deleted') {
     const { id } = evt.data;
     if (id) {
+      // mentors cascade-delete their requests/asks/rooms/sipNotes/follows via FK,
+      // but clerkId-text-only columns below have no FK and must be cleaned up manually
+      await db.delete(requests).where(eq(requests.seekerClerkId, id));
+      await db.delete(asks).where(eq(asks.seekerClerkId, id));
+      await db.delete(follows).where(eq(follows.seekerClerkId, id));
+      await db.delete(queueEntries).where(eq(queueEntries.seekerClerkId, id));
+      await db.delete(referralEvents).where(or(eq(referralEvents.referrerClerkId, id), eq(referralEvents.referredClerkId, id)));
+      await db.delete(flags).where(eq(flags.reporterClerkId, id));
+
       await db.delete(mentors).where(eq(mentors.clerkId, id));
       await db.delete(seekers).where(eq(seekers.clerkId, id));
     }

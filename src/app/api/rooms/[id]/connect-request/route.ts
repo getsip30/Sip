@@ -30,6 +30,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!mentor || mentor.clerkId !== userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    if (mentor.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
 
     const seekerResult = await db.select().from(seekers).where(eq(seekers.clerkId, seekerClerkId));
     const seeker = seekerResult[0];

@@ -3,7 +3,7 @@ import { requests, mentors } from '@/db/schema';
 import { eq, sql, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
-import { escapehtml } from '@/lib/utils';
+import { escapeHtml } from '@/lib/utils';
 
 type Row = {
   id: string; seeker_email: string; seeker_name: string; scheduled_at: string;

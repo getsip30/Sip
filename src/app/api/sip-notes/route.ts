@@ -40,6 +40,9 @@ export async function POST(req: Request) {
     const seekerEmail = clerkUser.emailAddresses[0]?.emailAddress;
     if (!seekerEmail) return NextResponse.json({ error: 'No verified email on account' }, { status: 400 });
 
+    const seekerSelf = await db.select().from(seekers).where(eq(seekers.clerkId, userId));
+    if (seekerSelf[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
+
     const { mentorId, seekerName, note } = await req.json();
     if (!mentorId || !seekerName || !note) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     if (note.length > 1000) return NextResponse.json({ error: 'Note is too long' }, { status: 400 });
