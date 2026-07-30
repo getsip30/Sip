@@ -212,7 +212,7 @@ export default function MentorProfile() {
                   <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 10, background: 'rgba(112,181,249,0.1)', border: '1px solid rgba(112,181,249,0.2)', color: LINK, fontWeight: 600 }}>{mentor.xp} XP</span>
                   {user && (
                     <button onClick={toggleFollow} disabled={followBusy}
-                      style={{ fontSize: 12, padding: '3px 12px', borderRadius: 20, border: `1px solid ${following ? 'rgba(91,219,138,0.3)' : BORDER}`, background: following ? 'rgba(91,219,138,0.1)' : 'transparent', color: following ? '#5BDB8A' : MUTED, fontWeight: 600, cursor: followBusy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                      style={{ fontSize: 12, padding: '3px 12px', borderRadius: 10, border: `1px solid ${following ? 'rgba(91,219,138,0.3)' : BORDER}`, background: following ? 'rgba(91,219,138,0.1)' : 'transparent', color: following ? '#5BDB8A' : MUTED, fontWeight: 600, cursor: followBusy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                       {following ? 'following ✓' : 'follow'}
                     </button>
                   )}
@@ -246,7 +246,7 @@ export default function MentorProfile() {
             <p style={{ color: '#EDEFF3', fontSize: 14, lineHeight: 1.65, marginBottom: 18 }}>&quot;{mentor.bio}&quot;</p>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {mentor.topics.split(',').filter(t => t.trim()).map(t => (
+              {mentor.topics.split(',').map(t => (
                 <span key={t} style={{ background: 'rgba(112,181,249,0.07)', border: '1px solid rgba(112,181,249,0.15)', color: LINK, padding: '5px 14px', borderRadius: 14, fontSize: 13 }}>{t.trim()}</span>
               ))}
             </div>
@@ -325,7 +325,7 @@ export default function MentorProfile() {
                 { key: 'ask', label: 'Ask something' },
               ] as const).map(t => (
                 <button key={t.key} onClick={() => setActiveTab(t.key)}
-                  style={{ flex: 1, padding: '10px 8px', borderRadius: 20, border: `1px solid ${activeTab === t.key ? 'rgba(112,181,249,0.3)' : BORDER}`, background: activeTab === t.key ? 'rgba(112,181,249,0.1)' : 'transparent', color: activeTab === t.key ? LINK : MUTED, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ flex: 1, padding: '10px 8px', borderRadius: 10, border: `1px solid ${activeTab === t.key ? 'rgba(112,181,249,0.3)' : BORDER}`, background: activeTab === t.key ? 'rgba(112,181,249,0.1)' : 'transparent', color: activeTab === t.key ? LINK : MUTED, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                   {t.label}
                 </button>
               ))}
@@ -466,7 +466,8 @@ export default function MentorProfile() {
                 </button>
                 <a href="https://www.linkedin.com/feed/?shareActive=true" target="_blank" rel="noopener noreferrer"
                   onClick={() => { navigator.clipboard.writeText(linkedinDraft); }}
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: ACCENT, color: 'white', padding: '12px 0', borderRadius: 20, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>                  open LinkedIn
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: ACCENT, color: 'white', padding: '12px 0', borderRadius: 10, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                  open LinkedIn
                 </a>
               </div>
               <button onClick={() => setShowLinkedInPrompt(false)} style={{ display: 'block', margin: '14px auto 0', background: 'none', border: 'none', color: MUTED, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>skip</button>

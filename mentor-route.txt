@@ -52,11 +52,11 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { firstName, lastName, email, role, company, bio, topics, calendarLink, contactEmail, availability, linkedin, showLinkedin, avatarData, ref } = body;
   
-  if (!firstName || !lastName || !email || !role || !company) {
+  if (!firstName || !lastName || !email || !role || !company || !bio || !topics || (!calendarLink && !contactEmail)) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
-  if (bio && bio.length > 500) return NextResponse.json({ error: 'Bio is too long' }, { status: 400 });
-  if (topics && topics.length > 300) return NextResponse.json({ error: 'Topics field is too long' }, { status: 400 });
+  if (bio.length > 500) return NextResponse.json({ error: 'Bio is too long' }, { status: 400 });
+  if (topics.length > 300) return NextResponse.json({ error: 'Topics field is too long' }, { status: 400 });
   if (firstName.length > 50 || lastName.length > 50 || role.length > 100 || company.length > 100) {
     return NextResponse.json({ error: 'One of the fields is too long' }, { status: 400 });
   }
@@ -65,7 +65,8 @@ export async function POST(req: Request) {
 
   if (existing.length > 0) {
     const updated = await db.update(mentors)
-      .set({ firstName, lastName, email, role, company, bio: bio || '', topics: topics || '', calendarLink: calendarLink || null, contactEmail: contactEmail || null, availability, linkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null })      .where(eq(mentors.clerkId, userId))
+      .set({ firstName, lastName, email, role, company, bio, topics, calendarLink: calendarLink || null, contactEmail: contactEmail || null, availability, linkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null })
+      .where(eq(mentors.clerkId, userId))
       .returning();
     return NextResponse.json(updated[0]);
   }
@@ -78,7 +79,8 @@ export async function POST(req: Request) {
   }
 
   const mentor = await db.insert(mentors).values({
-    clerkId: userId, firstName, lastName, email, role, company, bio: bio || '', topics: topics || '',    calendarLink: calendarLink || null, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin, showLinkedin: !!showLinkedin,
+    clerkId: userId, firstName, lastName, email, role, company, bio, topics,
+    calendarLink: calendarLink || null, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin, showLinkedin: !!showLinkedin,
     avatarData: avatarData || null,
     referralCode: generateReferralCode(),
     invitedByClerkId,
@@ -165,3 +167,4 @@ export async function PATCH(req: Request) {
     return handleApiError(err, 'PATCH /api/mentor');
   }
 }
+
