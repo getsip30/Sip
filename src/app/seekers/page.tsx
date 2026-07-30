@@ -66,6 +66,7 @@ function SeekersContent() {
   const [togglingConsent, setTogglingConsent] = useState<string | null>(null);
   const [scheduleDrafts, setScheduleDrafts] = useState<Record<string, string>>({});
   const [scheduling, setScheduling] = useState<string | null>(null);
+  const [scheduleErrors, setScheduleErrors] = useState<Record<string, string>>({});
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [feedbackRatings, setFeedbackRatings] = useState<Record<string, number>>({});
   const [feedbackComments, setFeedbackComments] = useState<Record<string, string>>({});
@@ -111,7 +112,11 @@ function SeekersContent() {
   
   async function saveSchedule(requestId: string) {
     const scheduledAt = scheduleDrafts[requestId];
-    if (!scheduledAt) return;
+    if (!scheduledAt) {
+      setScheduleErrors(d => ({ ...d, [requestId]: 'pick a date and time first' }));
+      return;
+    }
+    setScheduleErrors(d => ({ ...d, [requestId]: '' }));
     setScheduling(requestId);
     const res = await fetch(`/api/requests/${requestId}/schedule`,  {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -120,6 +125,8 @@ function SeekersContent() {
     if (res.ok) {
       const updated = await res.json();
       setRequests(prev => prev.map(r => r.id === requestId ? { ...r, scheduledAt: updated.scheduledAt } : r));
+    } else {
+      setScheduleErrors(d => ({ ...d, [requestId]: 'something went wrong, try again' }));
     }
     setScheduling(null);
   }
@@ -450,9 +457,12 @@ function SeekersContent() {
                             </div>
 
                             {!r.scheduledAt ? (
-                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <input type="datetime-local" value={scheduleDrafts[r.id] || ''} onChange={e => setScheduleDrafts(d => ({ ...d, [r.id]: e.target.value }))} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, fontFamily: 'inherit' }} />
-                                <button onClick={() => saveSchedule(r.id)} disabled={scheduling === r.id || !scheduleDrafts[r.id]} style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{scheduling === r.id ? 'saving...' : 'save time'}</button>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                  <input type="datetime-local" value={scheduleDrafts[r.id] || ''} onChange={e => { setScheduleDrafts(d => ({ ...d, [r.id]: e.target.value })); setScheduleErrors(d => ({ ...d, [r.id]: '' })); }} style={{ background: BG, border: `1px solid ${scheduleErrors[r.id] ? '#F87171' : BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, fontFamily: 'inherit' }} />
+                                  <button onClick={() => saveSchedule(r.id)} disabled={scheduling === r.id} style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: scheduling === r.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>{scheduling === r.id ? 'saving...' : 'save time'}</button>
+                                </div>
+                                {scheduleErrors[r.id] && <span style={{ color: '#F87171', fontSize: 11 }}>{scheduleErrors[r.id]}</span>}
                               </div>
                             ) : (
                               <span style={{ color: MUTED, fontSize: 12 }}>scheduled: {new Date(r.scheduledAt).toLocaleString()}</span>
