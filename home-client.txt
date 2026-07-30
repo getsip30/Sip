@@ -464,7 +464,7 @@ export default function HomeClient() {
               placeholder="or describe what you need, e.g. 'advice switching into product'"
               style={{ flex: 1, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '13px 18px', color: TEXT, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
             />
-            <button onClick={handleAIMatch} disabled={matching} style={{ background: ACCENT, color: '#fff', border: 'none', borderRadius: 20, padding: '0 22px', fontSize: 14, fontWeight: 600, cursor: matching ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={handleAIMatch} disabled={matching} style={{ background: ACCENT, color: '#fff', border: 'none', borderRadius: 10, padding: '0 22px', fontSize: 14, fontWeight: 600, cursor: matching ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
               {matching ? '...' : 'match me'}
             </button>
           </div>
@@ -662,7 +662,7 @@ export default function HomeClient() {
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleSubmit}
-                      style={{ width: '100%', background: submitting ? 'rgba(59,130,246,0.4)' : ACCENT, color: '#fff', border: 'none', padding: '13px 0', borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'background 0.2s' }}>
+                      style={{ width: '100%', background: submitting ? 'rgba(59,130,246,0.4)' : ACCENT, color: '#fff', border: 'none', padding: '13px 0', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'background 0.2s' }}>
                       {submitting ? 'sending...' : 'send it'}
                     </motion.button>
                   </motion.div>
@@ -759,3 +759,4 @@ export default function HomeClient() {
     </div>
   );
 }
+

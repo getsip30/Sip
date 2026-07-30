@@ -71,6 +71,7 @@ function SeekersContent() {
   const [streak, setStreak] = useState<{ currentStreak: number; longestStreak: number } | null>(null);
   const [myFlags, setMyFlags] = useState<{ id: string; reason: string; createdAt: string }[]>([]);
   const [seekerId, setSeekerId] = useState<string | null>(null);
+  const [seekerProfile, setSeekerProfile] = useState<{ age?: number | null; linkedin?: string | null; interests?: string | null; avatarData?: string | null } | null>(null);
   const [copied, setCopied] = useState(false);
   const [togglingConsent, setTogglingConsent] = useState<string | null>(null);
   const [scheduleDrafts, setScheduleDrafts] = useState<Record<string, string>>({});
@@ -82,13 +83,7 @@ function SeekersContent() {
   const [submittingFeedback, setSubmittingFeedback] = useState<string | null>(null);
   const [showTour, setShowTour] = useState(false);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!localStorage.getItem('sip_tour_seen_seeker')) {
-      setShowTour(true);
-      localStorage.setItem('sip_tour_seen_seeker', '1');
-    }
-  }, []);
+  
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -223,6 +218,7 @@ function SeekersContent() {
           setStreak({ currentStreak: data.currentStreak || 0, longestStreak: data.longestStreak || 0 });
           setSeekerId(data.id);
           setMyFlags(data.flags || []);
+          setSeekerProfile(data);
         }
       }
     } else if (res.status === 401) {
@@ -283,6 +279,34 @@ function SeekersContent() {
 
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '90px 16px 20px' }}>
         <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: -1.5, marginBottom: 20 }}>Find Your Sip</h1>
+        {(() => {
+          if (!seekerProfile) return null;
+          const checklist = [
+            { label: 'Add your age', done: !!seekerProfile.age },
+            { label: 'Add your LinkedIn', done: !!seekerProfile.linkedin },
+            { label: "Tell us what you're into", done: !!seekerProfile.interests },
+            { label: 'Add a profile picture', done: !!seekerProfile.avatarData },
+          ];
+          if (checklist.every(c => c.done)) return null;
+          return (
+            <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '22px 26px', marginBottom: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <div style={{ fontWeight: 600 }}>Finish setting up your profile</div>
+                <Link href="/seekers/onboarding" style={{ color: LINK, fontSize: 13, textDecoration: 'none', fontWeight: 600 }}>edit →</Link>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {checklist.map(item => (
+                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: item.done ? MUTED : TEXT, textDecoration: item.done ? 'line-through' : 'none' }}>
+                    <span style={{ width: 18, height: 18, borderRadius: '50%', border: `1px solid ${item.done ? 'rgba(91,219,138,0.4)' : BORDER}`, background: item.done ? 'rgba(91,219,138,0.15)' : 'transparent', color: '#5BDB8A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0 }}>
+                      {item.done ? '✓' : ''}
+                    </span>
+                    {item.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
         <div style={{ display: 'flex', gap: 10, marginBottom: 32 }}>
           {tabBtn('browse', 'browse mentors')}
           {tabBtn('mine', 'my sips', pending.length)}

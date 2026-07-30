@@ -126,13 +126,7 @@ export default function Dashboard() {
   const [isLive, setIsLive] = useState(false);
   const [showTour, setShowTour] = useState(false);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!localStorage.getItem('sip_tour_seen_mentor')) {
-      setShowTour(true);
-      localStorage.setItem('sip_tour_seen_mentor', '1');
-    }
-  }, []);
+  
   
   const fetchData = useCallback(async () => {
   try {
