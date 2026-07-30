@@ -7,6 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useRoles } from '@/hooks/useRoles';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
+import AppTour, { TourStep } from '@/components/AppTour';
 import RoleSwitchLink from '@/components/RoleSwitchLink';
 import PixelAvatar from '@/components/PixelAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,6 +37,14 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; 
   declined: { bg: 'rgba(248,113,113,0.1)', color: '#F87171', border: 'rgba(248,113,113,0.3)', label: 'declined' },
   cancelled: { bg: 'rgba(248,113,113,0.1)', color: '#F87171', border: 'rgba(248,113,113,0.3)', label: 'cancelled' },
 };
+
+const SEEKER_TOUR_STEPS: TourStep[] = [
+  { icon: '🔍', label: 'Browse', title: 'Find a Mentor', description: "Filter by topic or search by name, role, or company.", bullets: ['Every mentor lists what they\'re actually open to discuss', 'See who\'s live right now', 'No account needed to look around'] },
+  { icon: '✉️', label: 'Request', title: 'Send a Sip Request', description: "Tell them what's on your mind. They'll get back to you if it's a fit.", bullets: ['A couple sentences is enough', 'You\'ll get a calendar link or email once accepted', 'No pressure, they can also just decline'] },
+  { icon: '⚡', label: 'Live Rooms', title: 'Jump Into a Live Sip', description: 'Some mentors go live. Join the queue and get matched in real time.', bullets: ['No request needed, just join the queue', 'Anonymous until the mentor picks you', 'Fastest way to get a conversation going'] },
+  { icon: '📋', label: 'My Sips', title: 'Track Everything in One Place', description: "Every request you've sent lives on your my sips tab.", bullets: ['See pending, accepted, and past sips', 'Schedule a time once accepted', 'Leave feedback so it counts toward their sip count'] },
+  { icon: '🔥', label: 'Streaks', title: 'Build a Streak', description: 'Show up consistently and it shows.', bullets: ['Tracks regular engagement, not just one-off sips', 'Leaderboard ranks the most active seekers', 'Nothing here is required, just a nice-to-have'] },
+];
 
 function SeekersContent() {
   const { user } = useUser();
@@ -71,7 +80,16 @@ function SeekersContent() {
   const [feedbackRatings, setFeedbackRatings] = useState<Record<string, number>>({});
   const [feedbackComments, setFeedbackComments] = useState<Record<string, string>>({});
   const [submittingFeedback, setSubmittingFeedback] = useState<string | null>(null);
-  
+  const [showTour, setShowTour] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!localStorage.getItem('sip_tour_seen_seeker')) {
+      setShowTour(true);
+      localStorage.setItem('sip_tour_seen_seeker', '1');
+    }
+  }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user?.firstName) setForm(f => ({ ...f, name: user.firstName! }));
@@ -254,6 +272,7 @@ function SeekersContent() {
         style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 40px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <Logo />
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', overflowX: 'auto', flexWrap: 'nowrap', maxWidth: '65vw', scrollbarWidth: 'none' }}>
+          <button onClick={() => setShowTour(true)} style={{ background: 'none', border: 'none', color: MUTED, fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: 'inherit' }}>how sip works</button>
           <Link href="/leaderboard" style={{ color: MUTED, textDecoration: 'none', fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap' }}>leaderboard</Link>
           {rolesLoaded && isMentor
             ? <RoleSwitchLink to="/dashboard" role="mentor" label="switch to mentor" style={{ color: LINK, textDecoration: 'none', fontSize: 13, border: '1px solid rgba(112,181,249,0.2)', padding: '6px 12px', borderRadius: 20, flexShrink: 0, whiteSpace: 'nowrap' }} />
@@ -551,6 +570,8 @@ function SeekersContent() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AppTour steps={SEEKER_TOUR_STEPS} open={showTour} onClose={() => setShowTour(false)} />
     </div>
   );
 }
