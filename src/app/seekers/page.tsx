@@ -94,6 +94,17 @@ function SeekersContent() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchMentors(); }, [fetchMentors]);
 
+  useEffect(() => {
+    const mentorId = searchParams.get('mentor');
+    if (mentorId && !loading && mentors.length > 0) {
+      const target = mentors.find(m => m.id === mentorId);
+      if (target) {
+        setModal(target);
+        router.replace('/seekers', { scroll: false });
+      }
+    }
+  }, [mentors, loading, searchParams, router]);
+
   const [liveRooms, setLiveRooms] = useState<LiveRoom[]>([]);
   const fetchLiveRooms = useCallback(async () => {
     try {

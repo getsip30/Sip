@@ -172,6 +172,12 @@ function MentorSignup() {
                   style={{ width: '100%', background: ACCENT, color: 'white', border: 'none', padding: '14px', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.2s' }}>
                   next →
                 </motion.button>
+                <button
+                  disabled={loading}
+                  onClick={() => { if (!form.firstName || !form.lastName || !form.email || !form.role || !form.company) { setError('Please fill in all fields.'); return; } setError(''); handleSubmit(); }}
+                  style={{ display: 'block', margin: '14px auto 0', background: 'none', border: 'none', color: MUTED, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                  {loading ? 'saving...' : "finish later — I'll add my bio and calendar from the dashboard"}
+                </button>
               </motion.div>
             )}
 

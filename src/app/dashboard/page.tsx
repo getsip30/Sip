@@ -349,6 +349,33 @@ export default function Dashboard() {
                 </div>
               </motion.div>
 
+              {/* ACTIVATION CHECKLIST */}
+              {(() => {
+                const checklist = [
+                  { label: 'Complete your profile (bio + topics)', done: !!mentor.bio && !!mentor.topics },
+                  { label: 'Add a calendar link or contact email', done: !!mentor.calendarLink || !!mentor.contactEmail },
+                  { label: 'Answer your first ask', done: asks.some(a => !!a.answer) },
+                  { label: 'Complete your first sip', done: mentor.sipCount > 0 },
+                ];
+                if (checklist.every(c => c.done)) return null;
+                return (
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                    style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '22px 26px', marginBottom: 32 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 14 }}>Get set up</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {checklist.map(item => (
+                        <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: item.done ? MUTED : TEXT, textDecoration: item.done ? 'line-through' : 'none' }}>
+                          <span style={{ width: 18, height: 18, borderRadius: '50%', border: `1px solid ${item.done ? 'rgba(91,219,138,0.4)' : BORDER}`, background: item.done ? 'rgba(91,219,138,0.15)' : 'transparent', color: SUCCESS2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0 }}>
+                            {item.done ? '✓' : ''}
+                          </span>
+                          {item.label}
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                );
+              })()}
+
               {/* STATS */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 16, marginBottom: 32 }}>
                 {[
