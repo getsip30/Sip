@@ -456,7 +456,7 @@ export default function Dashboard() {
               {/* REFERRALS */}
               {referrals?.referralCode && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}
-                  style={{ background: 'rgba(91,219,138,0.06)', border: '1px solid rgba(91,219,138,0.2)', borderRadius: 16, padding: '20px 28px', marginBottom: 32 }}>
+                  style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 28px', marginBottom: 32 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: referrals.totalInvites > 0 ? 16 : 0 }}>
                     <div>
                       <div style={{ fontWeight: 600, marginBottom: 4 }}>Invite other mentors</div>

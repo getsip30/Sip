@@ -413,7 +413,7 @@ function SeekersContent() {
               )}
 
               {seekerId && (
-                <div style={{ background: 'rgba(112,181,249,0.06)', border: '1px solid rgba(112,181,249,0.2)', borderRadius: 16, padding: '20px 28px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 28px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                   <div>
                     <div style={{ fontWeight: 600, marginBottom: 4 }}>Your public profile</div>
                     <div style={{ color: MUTED, fontSize: 13 }}>Share this so people can see who you are, sips you&apos;ve had shared publicly appear here too.</div>
