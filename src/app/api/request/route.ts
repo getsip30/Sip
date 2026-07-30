@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       ? and(eq(requests.mentorId, mentorId), eq(requests.seekerClerkId, userId))
       : and(eq(requests.mentorId, mentorId), eq(requests.seekerEmail, seekerEmail));
     const existingOpen = await db.select().from(requests).where(openRequestConditions);
-    const hasOpenRequest = existingOpen.some(r => r.status === 'pending' || r.status === 'accepted');
+    const hasOpenRequest = existingOpen.some(r => r.status === 'pending' || (r.status === 'accepted' && !r.sipCountedAt));
     if (hasOpenRequest) {
       return NextResponse.json({ error: "You already have an open request with this mentor." }, { status: 409 });
     }
