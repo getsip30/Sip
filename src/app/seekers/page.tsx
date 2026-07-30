@@ -271,13 +271,13 @@ function SeekersContent() {
       <motion.nav initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4 }}
         style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 40px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <Logo />
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', overflowX: 'auto', flexWrap: 'nowrap', maxWidth: '65vw', scrollbarWidth: 'none' }}>
-          <button onClick={() => setShowTour(true)} style={{ background: 'none', border: 'none', color: MUTED, fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: 'inherit' }}>how sip works</button>
-          <Link href="/leaderboard" style={{ color: MUTED, textDecoration: 'none', fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap' }}>leaderboard</Link>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', overflowX: 'auto', flexWrap: 'nowrap', maxWidth: '65vw', scrollbarWidth: 'none' }}>
+          <button onClick={() => setShowTour(true)} style={{ background: 'none', color: MUTED, fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit' }}>how sip works</button>
+          <Link href="/leaderboard" style={{ color: MUTED, textDecoration: 'none', fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 20 }}>leaderboard</Link>
           {rolesLoaded && isMentor
-            ? <RoleSwitchLink to="/dashboard" role="mentor" label="switch to mentor" style={{ color: LINK, textDecoration: 'none', fontSize: 13, border: '1px solid rgba(112,181,249,0.2)', padding: '6px 12px', borderRadius: 20, flexShrink: 0, whiteSpace: 'nowrap' }} />
-            : <Link href="/mentors/signup" style={{ color: MUTED, textDecoration: 'none', fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap' }}>become a mentor</Link>}
-          {rolesLoaded && isSeeker && <Link href="/seekers/onboarding" style={{ color: MUTED, textDecoration: 'none', fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap' }}>edit profile</Link>}
+            ? <RoleSwitchLink to="/dashboard" role="mentor" label="switch to mentor" style={{ color: LINK, textDecoration: 'none', fontSize: 13, border: '1px solid rgba(112,181,249,0.2)', padding: '6px 14px', borderRadius: 20, flexShrink: 0, whiteSpace: 'nowrap' }} />
+            : <Link href="/mentors/signup" style={{ color: MUTED, textDecoration: 'none', fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 20 }}>become a mentor</Link>}
+          {rolesLoaded && isSeeker && <Link href="/seekers/onboarding" style={{ color: MUTED, textDecoration: 'none', fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 20 }}>edit profile</Link>}
         </div>
       </motion.nav>
 
