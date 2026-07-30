@@ -8,6 +8,8 @@ import { motion } from 'framer-motion';
 import Logo from '@/components/Logo';
 import PixelAvatarPicker from '@/components/PixelAvatarPicker';
 
+type Match = { id: string; firstName: string; lastName: string; role: string; company: string; reason: string };
+
 export default function SeekerOnboarding() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
@@ -15,14 +17,20 @@ export default function SeekerOnboarding() {
   const [avatarData, setAvatarData] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isFirstTime, setIsFirstTime] = useState(false);
+  const [screen, setScreen] = useState<'form' | 'matching' | 'results'>('form');
+  const [matches, setMatches] = useState<Match[]>([]);
 
   useEffect(() => {
     fetch('/api/seeker').then(r => r.ok ? r.json() : null).then(data => {
       if (data) {
         setForm({ name: data.firstName || '', age: data.age ? String(data.age) : '', linkedin: data.linkedin || '', interests: data.interests ? data.interests.split(',').filter(Boolean) : [] });
         if (data.avatarData) setAvatarData(data.avatarData);
+        setIsFirstTime(false);
+      } else {
+        if (user?.firstName) setForm(f => ({ ...f, name: user.firstName || '' }));
+        setIsFirstTime(true);
       }
-      else if (user?.firstName) setForm(f => ({ ...f, name: user.firstName || '' }));
     }).catch(err => console.error('fetch seeker failed:', err));
   }, [user]);
 
@@ -57,7 +65,62 @@ export default function SeekerOnboarding() {
       body: JSON.stringify({ firstName: form.name.trim(), age: form.age ? Number(form.age) : null, linkedin: form.linkedin, interests: form.interests.join(','), avatarData }),
     });
     if (!res.ok) { setError('Something went wrong. Try again.'); setLoading(false); return; }
+
+    if (isFirstTime && form.interests.length > 0) {
+      setScreen('matching');
+      try {
+        const matchRes = await fetch('/api/match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: `Looking for a mentor in: ${form.interests.join(', ')}` }),
+        });
+        const matchData = matchRes.ok ? await matchRes.json() : { matches: [] };
+        if (matchData.matches && matchData.matches.length > 0) {
+          setMatches(matchData.matches);
+          setScreen('results');
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error('match fetch failed:', err);
+      }
+    }
     router.push('/seekers');
+  }
+
+  if (screen === 'matching') {
+    return (
+      <div style={{ background: BG, minHeight: '100vh', color: TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: MUTED, fontSize: 15 }}>finding your mentors...</div>
+      </div>
+    );
+  }
+
+  if (screen === 'results') {
+    return (
+      <div style={{ background: BG, minHeight: '100vh', color: TEXT }}>
+        <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <Logo />
+        </nav>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '90px 16px 60px' }}>
+          <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1.5, marginBottom: 12 }}>Mentors picked for you</h1>
+          <p style={{ color: MUTED, fontSize: 15, marginBottom: 28 }}>Based on what you're into.</p>
+
+          {matches.map(m => (
+            <div key={m.id} style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 20, marginBottom: 14 }}>
+              <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 2 }}>{m.firstName} {m.lastName}</div>
+              <div style={{ color: MUTED, fontSize: 14, marginBottom: 10 }}>{m.role}{m.company ? ` @ ${m.company}` : ''}</div>
+              <div style={{ color: TEXT, fontSize: 14, marginBottom: 16 }}>{m.reason}</div>
+              <Link href={`/seekers?mentor=${m.id}`} style={{ display: 'inline-block', background: ACCENT, color: 'white', padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>book a sip</Link>
+            </div>
+          ))}
+
+          <div style={{ textAlign: 'center', marginTop: 24 }}>
+            <Link href="/seekers" style={{ color: LINK, fontSize: 14, textDecoration: 'none' }}>see everyone →</Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
