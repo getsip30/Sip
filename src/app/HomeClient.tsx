@@ -51,6 +51,7 @@ function IconHandshake() {
 }
 
 export default function HomeClient() {
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const { user } = useUser();
   const router = useRouter();
   const { isMentor, isSeeker, loaded: rolesLoaded } = useRoles();
@@ -683,21 +684,43 @@ export default function HomeClient() {
           style={{ marginBottom: 36 }}>
           <h2 style={{ fontSize: 30, fontWeight: 600, letterSpacing: -1, marginBottom: 10 }}>Questions</h2>
         </motion.div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {[
             { q: 'Is Sip free?', a: 'Yes. There\'s no cost to find a mentor or to become one.' },
             { q: 'What if no one\'s open right now?', a: 'You can still send a request, or try the AI match to get pointed toward someone relevant even if they\'re offline.' },
             { q: 'Do I need to be an expert to be a mentor?', a: 'No. If you\'ve got real experience in something and are willing to talk about it, that\'s enough.' },
             { q: 'Is my information private?', a: 'We don\'t sell your data, and you control what\'s shown on your profile. See our Privacy Policy for details.' },
-          ].map(item => (
+          ].map((item, i) => (
             <motion.div
               key={item.q}
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-40px' }}
-              transition={{ duration: 0.4 }}>
-              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>{item.q}</div>
-              <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.65 }}>{item.a}</div>
+              transition={{ duration: 0.4 }}
+              style={{ border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
+              <button
+                onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, background: 'transparent', border: 'none', padding: '18px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                <span style={{ fontSize: 16, fontWeight: 600, color: TEXT }}>{item.q}</span>
+                <motion.span
+                  animate={{ rotate: openFaq === i ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ color: MUTED, fontSize: 14, flexShrink: 0 }}>
+                  ↓
+                </motion.span>
+              </button>
+              <AnimatePresence initial={false}>
+                {openFaq === i && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{ overflow: 'hidden' }}>
+                    <div style={{ color: MUTED, fontSize: 14, lineHeight: 1.65, padding: '0 20px 18px' }}>{item.a}</div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           ))}
         </div>
