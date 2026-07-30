@@ -47,15 +47,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "You can't send a sip request to your own mentor profile." }, { status: 403 });
     }
 
-    const openRequestConditions = userId
-      ? and(eq(requests.mentorId, mentorId), eq(requests.seekerClerkId, userId))
-      : and(eq(requests.mentorId, mentorId), eq(requests.seekerEmail, seekerEmail));
-    const existingOpen = await db.select().from(requests).where(openRequestConditions);
-    const hasOpenRequest = existingOpen.some(r => r.status === 'pending' || r.status === 'accepted');
-    if (hasOpenRequest) {
-      return NextResponse.json({ error: "You already have an open request with this mentor." }, { status: 409 });
-    }
-
     let seekerLinkedin: string | null = null;
     if (userId) {
       const seekerResult = await db.select().from(seekers).where(eq(seekers.clerkId, userId));

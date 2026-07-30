@@ -49,13 +49,13 @@ export async function GET(req: Request) {
   }
 
   const eligible = await db.execute(sql`
-    SELECT DISTINCT r.id, r.mentor_id
+    SELECT r.id, r.mentor_id
     FROM requests r
-    JOIN sip_feedback f ON f.request_id = r.id AND f.rating >= 3
     WHERE r.status = 'accepted'
       AND r.scheduled_at IS NOT NULL
       AND r.scheduled_at < now()
       AND r.sip_counted_at IS NULL
+      AND (SELECT COUNT(*) FROM sip_feedback f where f.request_id = r.id AND f.rating >= 3) = 2
   `);
 
   const completedRows = eligible.rows as { id: string; mentor_id: string }[];

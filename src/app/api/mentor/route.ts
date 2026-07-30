@@ -114,13 +114,13 @@ export async function GET(req: Request) {
   const leaderboard = url.searchParams.get('leaderboard');
 
   if (leaderboard === 'true') {
-    const result = await db.select().from(mentors).orderBy(desc(mentors.xp)).limit(10);
+    const result = await db.select().from(mentors).where(eq(mentors.banned, false)).orderBy(desc(mentors.xp)).limit(10);
     return NextResponse.json(result.map(sanitizeMentor));
   }
 
   if (all === 'true') {
     const { userId: viewerId } = await auth();
-    const result = await db.select().from(mentors).where(eq(mentors.isOpen, true)).orderBy(desc(mentors.createdAt));
+    const result = await db.select().from(mentors).where(and(eq(mentors.isOpen, true), eq(mentors.banned, false))).orderBy(desc(mentors.createdAt));
     return NextResponse.json(result.filter(m => m.clerkId !== viewerId).map(sanitizeMentor));
   }
 
