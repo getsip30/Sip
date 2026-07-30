@@ -180,7 +180,7 @@ export default function RoomPage() {
 
   const myPosition = myEntry?.status === 'waiting' ? waiting.findIndex(w => w.id === myEntry.id) + 1 : 0;
   const isRoomMentor = !!user && !!room && user.id === room.mentorClerkId;
-  const modeBtn = (active: boolean): React.CSSProperties => ({ background: active ? 'rgba(112,181,249,0.15)' : 'transparent', border: `1px solid ${active ? 'rgba(112,181,249,0.4)' : BORDER}`, color: active ? LINK : MUTED, padding: '7px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: modeUpdating || actives.length > 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' });
+  const modeBtn = (active: boolean): React.CSSProperties => ({ background: active ? 'rgba(112,181,249,0.15)' : 'transparent', border: `1px solid ${active ? 'rgba(112,181,249,0.4)' : BORDER}`, color: active ? LINK : MUTED, padding: '7px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: modeUpdating || actives.length > 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' });
 
   if (!userLoaded || !user || !room || !rolesLoaded) return (
     <div style={{ background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED }}>loading room...</div>
@@ -224,11 +224,11 @@ export default function RoomPage() {
                         <button onClick={() => { setFlagTarget({ id: a.seekerClerkId, name: a.seekerName }); setFlagOpen(true); }} style={{ marginLeft: 4, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#FBBF24', padding: '3px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>flag</button>
                       </div>
                     ))}
-                    <button onClick={endBatch} disabled={batchBusy} style={{ marginTop: 10, background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: batchBusy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>end batch</button>
+                    <button onClick={endBatch} disabled={batchBusy} style={{ marginTop: 10, background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: batchBusy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>end batch</button>
                   </div>
                 ) : (
                   <div style={{ marginBottom: 20 }}>
-                    <button onClick={startBatch} disabled={batchBusy || selected.size === 0} style={{ background: selected.size === 0 ? 'rgba(112,181,249,0.08)' : 'rgba(112,181,249,0.15)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: batchBusy || selected.size === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>start batch ({selected.size})</button>
+                    <button onClick={startBatch} disabled={batchBusy || selected.size === 0} style={{ background: selected.size === 0 ? 'rgba(112,181,249,0.08)' : 'rgba(112,181,249,0.15)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: batchBusy || selected.size === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>start batch ({selected.size})</button>
                   </div>
                 )}
 
@@ -293,9 +293,9 @@ export default function RoomPage() {
                     {actives[0].topic && (
                       <div style={{ fontSize: 12, color: MUTED, fontStyle: 'italic', marginTop: 4 }}>&quot;{actives[0].topic}&quot;</div>
                     )}
-                    <button onClick={() => markDone(actives[0].id)} style={{ marginTop: 10, marginRight: 8, background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>mark done</button>
-                    <button onClick={() => requestConnect(actives[0].seekerClerkId, actives[0].seekerName)} disabled={connecting === actives[0].seekerClerkId} style={{ marginTop: 10, marginRight: 8, background: 'rgba(91,219,138,0.1)', border: '1px solid rgba(91,219,138,0.3)', color: '#5BDB8A', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: connecting === actives[0].seekerClerkId ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>{connecting === actives[0].seekerClerkId ? 'sending...' : 'request 1:1'}</button>
-                    <button onClick={() => { setFlagTarget({ id: actives[0].seekerClerkId, name: actives[0].seekerName }); setFlagOpen(true); }} style={{ marginTop: 10, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#FBBF24', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>flag & remove</button>
+                    <button onClick={() => markDone(actives[0].id)} style={{ marginTop: 10, marginRight: 8, background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>mark done</button>
+                    <button onClick={() => requestConnect(actives[0].seekerClerkId, actives[0].seekerName)} disabled={connecting === actives[0].seekerClerkId} style={{ marginTop: 10, marginRight: 8, background: 'rgba(91,219,138,0.1)', border: '1px solid rgba(91,219,138,0.3)', color: '#5BDB8A', padding: '7px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: connecting === actives[0].seekerClerkId ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>{connecting === actives[0].seekerClerkId ? 'sending...' : 'request 1:1'}</button>
+                    <button onClick={() => { setFlagTarget({ id: actives[0].seekerClerkId, name: actives[0].seekerName }); setFlagOpen(true); }} style={{ marginTop: 10, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#FBBF24', padding: '7px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>flag & remove</button>
                   </div>
                 )}
 
@@ -320,7 +320,7 @@ export default function RoomPage() {
                           )}
                         </div>
                         {i === 0 && !actives[0] && (
-                          <button onClick={() => callNext(w.id)} disabled={calling === w.id} style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '9px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: calling === w.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit', minHeight: 40 }}>
+                          <button onClick={() => callNext(w.id)} disabled={calling === w.id} style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '9px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: calling === w.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit', minHeight: 40 }}>
                             {calling === w.id ? 'calling...' : 'call next ?'}
                           </button>
                         )}
@@ -369,7 +369,7 @@ export default function RoomPage() {
               <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '24px 28px' }}>
                 <div style={{ fontSize: 13, color: MUTED, marginBottom: 6 }}>your position</div>
                 <div style={{ fontSize: 32, fontWeight: 700, color: LINK, marginBottom: 16 }}>#{myPosition}</div>
-                <button onClick={leaveQueue} style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '9px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>leave queue</button>
+                <button onClick={leaveQueue} style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '9px 18px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>leave queue</button>
               </div>
             )}
           </>
@@ -389,8 +389,8 @@ export default function RoomPage() {
             </select>
             <textarea value={flagDetails} onChange={e => setFlagDetails(e.target.value)} placeholder="what happened?" rows={4} style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', color: TEXT, borderRadius: 10, padding: 10, marginBottom: 14, fontFamily: 'inherit', resize: 'none' }} />
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setFlagOpen(false)} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: MUTED, padding: '9px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>cancel</button>
-              <button onClick={submitFlag} disabled={flagSubmitting || !flagReason || !flagDetails} style={{ background: '#DC2626', border: 'none', color: 'white', padding: '9px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: flagSubmitting ? 0.6 : 1 }}>submit report</button>
+              <button onClick={() => setFlagOpen(false)} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: MUTED, padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>cancel</button>
+              <button onClick={submitFlag} disabled={flagSubmitting || !flagReason || !flagDetails} style={{ background: '#DC2626', border: 'none', color: 'white', padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: flagSubmitting ? 0.6 : 1 }}>submit report</button>
             </div>
           </div>
         </div>
@@ -398,4 +398,5 @@ export default function RoomPage() {
     </div>
   );
 }
+
 

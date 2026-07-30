@@ -111,7 +111,7 @@ export default function SeekerOnboarding() {
               <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 2 }}>{m.firstName} {m.lastName}</div>
               <div style={{ color: MUTED, fontSize: 14, marginBottom: 10 }}>{m.role}{m.company ? ` @ ${m.company}` : ''}</div>
               <div style={{ color: TEXT, fontSize: 14, marginBottom: 16 }}>{m.reason}</div>
-              <Link href={`/seekers?mentor=${m.id}`} style={{ display: 'inline-block', background: ACCENT, color: 'white', padding: '10px 20px', borderRadius: 20, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>book a sip</Link>
+              <Link href={`/seekers?mentor=${m.id}`} style={{ display: 'inline-block', background: ACCENT, color: 'white', padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>book a sip</Link>
             </div>
           ))}
 
