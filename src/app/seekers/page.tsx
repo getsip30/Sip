@@ -39,11 +39,11 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; 
 };
 
 const SEEKER_TOUR_STEPS: TourStep[] = [
-  { icon: '🔍', label: 'Browse', title: 'Find a Mentor', description: "Filter by topic or search by name, role, or company.", bullets: ['Every mentor lists what they\'re actually open to discuss', 'See who\'s live right now', 'No account needed to look around'] },
-  { icon: '✉️', label: 'Request', title: 'Send a Sip Request', description: "Tell them what's on your mind. They'll get back to you if it's a fit.", bullets: ['A couple sentences is enough', 'You\'ll get a calendar link or email once accepted', 'No pressure, they can also just decline'] },
-  { icon: '⚡', label: 'Live Rooms', title: 'Jump Into a Live Sip', description: 'Some mentors go live. Join the queue and get matched in real time.', bullets: ['No request needed, just join the queue', 'Anonymous until the mentor picks you', 'Fastest way to get a conversation going'] },
-  { icon: '📋', label: 'My Sips', title: 'Track Everything in One Place', description: "Every request you've sent lives on your my sips tab.", bullets: ['See pending, accepted, and past sips', 'Schedule a time once accepted', 'Leave feedback so it counts toward their sip count'] },
-  { icon: '🔥', label: 'Streaks', title: 'Build a Streak', description: 'Show up consistently and it shows.', bullets: ['Tracks regular engagement, not just one-off sips', 'Leaderboard ranks the most active seekers', 'Nothing here is required, just a nice-to-have'] },
+  { label: 'Browse', title: 'Find a Mentor', description: 'Filter by topic, or search by name, role, or company.', bullets: ['Every mentor lists their actual topics', 'Live tag shows who you can talk to right now'] },
+  { label: 'Request', title: 'Send a Sip Request', description: 'Write a couple sentences on what you want to talk about.', bullets: ['They accept or decline', 'Accepted = calendar link or email to book a time'] },
+  { label: 'Live Rooms', title: 'Live Sip Rooms', description: 'Some mentors go live. Join the queue instead of sending a request.', bullets: ['Anonymous until the mentor picks you', 'No scheduling, it just happens'] },
+  { label: 'My Sips', title: 'My Sips Tab', description: 'Every request you send lands here.', bullets: ['Pending, accepted, past — all in one place', 'Leave feedback after so it counts toward the mentor\'s total'] },
+  { label: 'Streaks', title: 'Streaks', description: 'Optional. Tracks how often you show up, ranked on the leaderboard.' },
 ];
 
 function SeekersContent() {
@@ -562,7 +562,7 @@ function SeekersContent() {
                   </div>
                   <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={handleSubmit}
                     style={{ width: '100%', background: submitting ? '#1E3A5F' : ACCENT, color: 'white', border: 'none', padding: '13px 0', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                    {submitting ? 'sending...' : 'send it ✦'}
+                    {submitting ? 'sending...' : 'send it'}
                   </motion.button>
                 </div>
               )}

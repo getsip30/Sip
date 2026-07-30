@@ -39,11 +39,11 @@ const BADGE_META: Record<string, { label: string; color: string }> = {
 };
 
 const MENTOR_TOUR_STEPS: TourStep[] = [
-  { icon: '📥', label: 'Requests', title: 'Your Incoming Sips', description: 'Every seeker who reaches out lands here first.', bullets: ['Accept or decline with one tap', 'Pick calendar or email when you accept', "Nothing shows on your public profile until you say so"] },
-  { icon: '🟢', label: 'Go Live', title: 'Live Sip Rooms', description: 'Skip the back-and-forth. Go live and seekers join a queue instantly, no scheduling.', bullets: ['One click starts a room', "Seekers join anonymously until you pick who's next", 'End it whenever you\'re done'] },
-  { icon: '💬', label: 'Asks', title: 'Answer Quick Questions', description: 'Asks are short questions seekers send you directly, no full sip required.', bullets: ['Answer in your own time', 'Choose to share your answer publicly or keep it private', 'A good way to build trust before someone requests a full sip'] },
-  { icon: '🏅', label: 'XP & Badges', title: 'Sips Given & Badges', description: 'You earn XP and badges only for sips that actually happened.', bullets: ['Counted once both sides confirm and leave feedback', 'Badges unlock as your sip count grows', 'No credit for no-shows or cancellations'] },
-  { icon: '🔗', label: 'Profile', title: 'Share Your Link', description: 'Your public profile is how people find and request you directly.', bullets: ['Copy your link from the dashboard', 'Post it anywhere, LinkedIn, a group chat, your bio', 'Keep your profile open or closed anytime'], ctaHref: '/mentors/signup', ctaLabel: 'Edit your profile →' },
+  { label: 'Requests', title: 'Incoming Sips', description: 'Every seeker who reaches out lands here.', bullets: ['Accept or decline', 'Pick calendar or email when you accept'] },
+  { label: 'Go Live', title: 'Live Sip Rooms', description: 'Start a room and seekers join a queue in real time, no scheduling.', bullets: ['One click to start, one click to end', 'Seekers stay anonymous until you pick who\'s next'] },
+  { label: 'Asks', title: 'Asks', description: 'Short questions seekers send you directly, no full sip needed.', bullets: ['Answer whenever', 'Choose to share the answer publicly or keep it private'] },
+  { label: 'XP & Badges', title: 'Sips Given', description: 'Only counts once both sides confirm the sip and leave feedback.', bullets: ['No credit for no-shows or cancellations'] },
+  { label: 'Profile', title: 'Your Public Link', description: 'This is how people find and request you.', ctaHref: '/mentors/signup', ctaLabel: 'Edit your profile →' },
 ];
 
 export default function Dashboard() {

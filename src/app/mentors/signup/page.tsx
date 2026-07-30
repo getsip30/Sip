@@ -125,7 +125,7 @@ function MentorSignup() {
 
         {!isLoaded ? null : !user ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: 'center', padding: '60px 0' }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>🔐</div>
+            
             <p style={{ color: MUTED, marginBottom: 24 }}>Sign in first to create your mentor profile</p>
             <Link href="/sign-in">
               <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} style={{ background: ACCENT, color: 'white', border: 'none', padding: '12px 32px', borderRadius: 24, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>sign in to continue</motion.button>
@@ -272,7 +272,7 @@ function MentorSignup() {
                     style={{ flex: 2, background: loading ? '#1E3A5F' : ACCENT, color: 'white', border: 'none', padding: '14px', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'background 0.2s' }}>
                     {loading ? (
                       <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1, repeat: Infinity }}>saving...</motion.span>
-                    ) : 'go live ✦'}
+                    ) : 'go live'}
                   </motion.button>
                 </div>
               </motion.div>

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT } from '@/lib/theme';
 
 export type TourStep = {
-  icon: string;
   label: string;
   title: string;
   description: string;
@@ -37,8 +36,7 @@ export default function AppTour({ steps, open, onClose }: { steps: TourStep[]; o
             ))}
           </div>
 
-          <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-            <div style={{ fontSize: 30 }}>{step.icon}</div>
+          <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px', display: 'flex', alignItems: 'center', marginBottom: 20 }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: ACCENT, textTransform: 'uppercase' }}>{step.label}</div>
           </div>
 
