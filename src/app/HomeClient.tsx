@@ -474,7 +474,7 @@ export default function HomeClient() {
                 <p style={{ color: MUTED, fontSize: 14 }}>no strong matches right now - try the directory below.</p>
               ) : (
                 aiMatches.map(m => (
-                  <div key={m.id} onClick={() => window.location.href = `/mentors/${m.id}`} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '16px 20px', cursor: 'pointer' }}>
+                  <div key={m.id} onClick={() => window.location.href = `/mentors/${m.id}`} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '16px 20px', cursor: 'pointer' }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{m.firstName} {m.lastName} · {m.role} @ {m.company}</div>
                     <div style={{ color: ACCENT, fontSize: 13, marginTop: 4 }}>{m.reason}</div>
                   </div>

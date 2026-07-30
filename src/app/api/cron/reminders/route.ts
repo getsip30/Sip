@@ -3,6 +3,7 @@ import { requests, mentors } from '@/db/schema';
 import { eq, sql, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
+import { escapehtml } from '@/lib/utils';
 
 type Row = {
   id: string; seeker_email: string; seeker_name: string; scheduled_at: string;
@@ -33,13 +34,13 @@ export async function GET(req: Request) {
         from: `Sip <${process.env.GMAIL_USER}>`,
         to: row.seeker_email,
         subject: `Reminder: your sip is tomorrow`,
-        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;"><div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div><h2 style="font-size:22px;margin-bottom:16px;">Sip tomorrow</h2><p style="color:#C9D1D9;font-size:15px;line-height:1.7;">Your sip with ${row.mentor_first_name} ${row.mentor_last_name} is scheduled for ${when}.</p></div>`,
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;"><div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div><h2 style="font-size:22px;margin-bottom:16px;">Sip tomorrow</h2><p style="color:#C9D1D9;font-size:15px;line-height:1.7;">Your sip with ${escapeHtml(row.mentor_first_name)} ${escapeHtml(row.mentor_last_name)} is scheduled for ${when}.</p></div>`,
       });
       await transporter.sendMail({
         from: `Sip <${process.env.GMAIL_USER}>`,
         to: row.mentor_email,
         subject: `Reminder: your sip is tomorrow`,
-        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;"><div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div><h2 style="font-size:22px;margin-bottom:16px;">Sip tomorrow</h2><p style="color:#C9D1D9;font-size:15px;line-height:1.7;">Your sip with ${row.seeker_name} is scheduled for ${when}.</p></div>`,
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;"><div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div><h2 style="font-size:22px;margin-bottom:16px;">Sip tomorrow</h2><p style="color:#C9D1D9;font-size:15px;line-height:1.7;">Your sip with ${escapeHtml(row.seeker_name)} is scheduled for ${when}.</p></div>`,
       });
       await db.update(requests).set({ reminderSentAt: new Date() }).where(eq(requests.id, row.id));
       sent++;

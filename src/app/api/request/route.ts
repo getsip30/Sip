@@ -39,6 +39,12 @@ export async function POST(req: Request) {
     if (userId) {
       const seekerCheck = await db.select().from(seekers).where(eq(seekers.clerkId, userId));
       if (seekerCheck[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
+    } else {
+      const emailOwnedBySeeker = await db.select().from(seekers).where(eq(seekers.email, seekerEmail));
+      const emailOwnedByMentor = await db.select().from(mentors).where(eq(mentors.email, seekerEmail));
+      if (emailOwnedBySeeker.length > 0 || emailOwnedByMentor.length > 0) {
+        return NextResponse.json({ error: 'This email belongs to an existing account. Please sign in to send this request.' }, { status: 403 });
+      }
     }
     if (userId && mentor.clerkId === userId) {
       return NextResponse.json({ error: "You can't send a sip request to your own mentor profile." }, { status: 403 });

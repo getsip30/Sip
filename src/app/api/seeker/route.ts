@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { seekers, mentors, referralEvents, flags } from '@/db/schema';
 import { eq, ne, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
-import { generateReferralCode } from '@/lib/referral';
+import { generateUniqueReferralCode } from '@/lib/referral';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
 
@@ -56,6 +56,7 @@ export async function POST(req: Request) {
     invitedByClerkId = referrerSeeker[0]?.clerkId || referrerMentor[0]?.clerkId || null;
   }
 
+  const referralCode = await generateUniqueReferralCode();
   const created = await db.insert(seekers).values({
     clerkId: userId,
     firstName: firstName || user.firstName || '',
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
     linkedin,
     interests,
     avatarData: avatarData || null,
-    referralCode: generateReferralCode(),
+    referralCode,
     invitedByClerkId,
   }).returning();
 

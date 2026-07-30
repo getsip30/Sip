@@ -32,7 +32,7 @@ export async function GET(req: Request) {
             <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>
             <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">Quick check-in</h2>
             <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;">
-              It's been a month since you joined Sip. What's changed since then? New goals, new questions, new direction? Might be a good time to sip with someone new.
+              It's been a couple of weeks since you joined Sip. What's changed since then? New goals, new questions, new direction? Might be a good time to sip with someone new.
             </p>
             <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/seekers" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">See who's open →</a>
           </div>

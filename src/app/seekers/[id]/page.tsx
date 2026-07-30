@@ -61,7 +61,6 @@ export default function SeekerProfile() {
             )}
             <div style={{ flex: 1 }}>
               <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1, margin: 0, marginBottom: 8 }}>{seeker.firstName} {seeker.lastName}</h1>
-              
             </div>
           </div>
 

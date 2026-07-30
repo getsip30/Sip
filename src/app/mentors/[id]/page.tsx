@@ -461,7 +461,7 @@ export default function MentorProfile() {
                 style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '12px 14px', color: TEXT, fontSize: 13.5, lineHeight: 1.6, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: 16 }} />
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => { navigator.clipboard.writeText(linkedinDraft); setLiCopied(true); setTimeout(() => setLiCopied(false), 2000); }}
-                  style={{ flex: 1, background: liCopied ? 'rgba(91,219,138,0.15)' : 'rgba(255,255,255,0.05)', color: liCopied ? '#5BDB8A' : TEXT, border: `1px solid ${liCopied ? 'rgba(91,219,138,0.3)' : BORDER}`, padding: '12px 0', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ flex: 1, background: liCopied ? 'rgba(91,219,138,0.15)' : 'rgba(255,255,255,0.05)', color: liCopied ? '#5BDB8A' : TEXT, border: `1px solid ${liCopied ? 'rgba(91,219,138,0.3)' : BORDER}`, padding: '12px 0', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                   {liCopied ? 'copied ✓' : 'copy text'}
                 </button>
                 <a href="https://www.linkedin.com/feed/?shareActive=true" target="_blank" rel="noopener noreferrer"

@@ -25,6 +25,8 @@ export const readLimiter = new Ratelimit({
 });
 
 export function getIp(req: Request): string {
+  const vercelForwarded = req.headers.get('x-vercel-forwarded-for');
+  if (vercelForwarded) return vercelForwarded.split(',')[0].trim();
   const forwarded = req.headers.get('x-forwarded-for');
   return forwarded ? forwarded.split(',')[0].trim() : 'unknown';
 }

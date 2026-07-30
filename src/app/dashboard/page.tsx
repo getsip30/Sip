@@ -273,7 +273,7 @@ export default function Dashboard() {
                 style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 14px', color: TEXT, fontSize: 13.5, lineHeight: 1.6, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: 16 }} />
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => { navigator.clipboard.writeText(shareNoteDraft); setShareNoteCopied(true); setTimeout(() => setShareNoteCopied(false), 2000); }}
-                  style={{ flex: 1, background: shareNoteCopied ? 'rgba(91,219,138,0.15)' : 'rgba(255,255,255,0.05)', color: shareNoteCopied ? '#5BDB8A' : TEXT, border: `1px solid ${shareNoteCopied ? 'rgba(91,219,138,0.3)' : 'rgba(255,255,255,0.1)'}`, padding: '12px 0', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ flex: 1, background: shareNoteCopied ? 'rgba(91,219,138,0.15)' : 'rgba(255,255,255,0.05)', color: shareNoteCopied ? '#5BDB8A' : TEXT, border: `1px solid ${shareNoteCopied ? 'rgba(91,219,138,0.3)' : 'rgba(255,255,255,0.1)'}`, padding: '12px 0', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                   {shareNoteCopied ? 'copied ✓' : 'copy text'}
                 </button>
                 <a href="https://www.linkedin.com/feed/?shareActive=true" target="_blank" rel="noopener noreferrer"
@@ -628,7 +628,7 @@ export default function Dashboard() {
                               </motion.button>
                               <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
                                 onClick={() => cancelRequest(r.id)} disabled={cancelling === r.id}
-                                style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: DANGER, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: cancelling === r.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                                style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: DANGER, padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: cancelling === r.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                                 {cancelling === r.id ? 'cancelling...' : 'cancel'}
                               </motion.button>
                               {r.scheduledAt && (
