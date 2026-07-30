@@ -49,9 +49,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "You can't leave a note on your own mentor profile." }, { status: 403 });
     }
 
-    const priorRequest = await db.select().from(requests).where(and(eq(requests.mentorId, mentorId), eq(requests.seekerEmail, seekerEmail)));
+    const priorRequest = await db.select().from(requests).where(and(eq(requests.mentorId, mentorId), eq(requests.seekerEmail, seekerEmail), eq(requests.status, 'accepted')));
     if (priorRequest.length === 0) {
-      return NextResponse.json({ error: "We couldn't find a sip request from that email with this mentor." }, { status: 403 });
+      return NextResponse.json({ error: "You can only leave a note after an accepted sip with this mentor." }, { status: 403 });
     }
 
     const created = await db.insert(sipNotes).values({ mentorId, seekerName, seekerEmail, note, status: 'pending' }).returning();
