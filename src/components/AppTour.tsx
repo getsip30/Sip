@@ -8,7 +8,7 @@ export type TourStep = {
   label: string;
   title: string;
   description: string;
-  bullets: string[];
+  bullets?: string[];
   ctaHref?: string;
   ctaLabel?: string;
 };
@@ -42,13 +42,15 @@ export default function AppTour({ steps, open, onClose }: { steps: TourStep[]; o
 
           <h3 style={{ fontSize: 21, fontWeight: 700, marginBottom: 8 }}>{step.title}</h3>
           <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 14 }}>{step.description}</p>
-          <ul style={{ margin: '0 0 22px', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {step.bullets.map(b => (
-              <li key={b} style={{ display: 'flex', gap: 8, fontSize: 13.5, color: TEXT }}>
-                <span style={{ color: ACCENT }}>•</span>{b}
-              </li>
-            ))}
-          </ul>
+          {step.bullets && (
+            <ul style={{ margin: '0 0 22px', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {step.bullets.map(b => (
+                <li key={b} style={{ display: 'flex', gap: 8, fontSize: 13.5, color: TEXT }}>
+                  <span style={{ color: ACCENT }}>•</span>{b}
+                </li>
+              ))}
+            </ul>
+          )}
 
           {step.ctaHref && (
             <button onClick={() => { close(); router.push(step.ctaHref!); }}
