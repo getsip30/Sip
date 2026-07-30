@@ -576,7 +576,7 @@ export default function HomeClient() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '32px 36px', marginBottom: 80, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+            style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '32px 36px', marginBottom: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontWeight: 600, fontSize: 17, marginBottom: 6 }}>These are just the top mentors right now</div>
               <div style={{ color: MUTED, fontSize: 14 }}>Sign up free to see everyone open, filter by topic, and request a sip.</div>
