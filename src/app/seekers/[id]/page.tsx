@@ -61,9 +61,7 @@ export default function SeekerProfile() {
             )}
             <div style={{ flex: 1 }}>
               <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1, margin: 0, marginBottom: 8 }}>{seeker.firstName} {seeker.lastName}</h1>
-              {seeker.linkedin && (
-                <a href={seeker.linkedin.startsWith('http') ? seeker.linkedin : `https://${seeker.linkedin}`} target="_blank" rel="noopener noreferrer" style={{ color: LINK, textDecoration: 'none', fontSize: 14 }}>LinkedIn ↗</a>
-              )}
+              
             </div>
           </div>
 

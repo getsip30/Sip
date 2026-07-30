@@ -25,6 +25,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (m[0]) sips.push({ mentorId: m[0].id, firstName: m[0].firstName, lastName: m[0].lastName, role: m[0].role, company: m[0].company });
   }
 
-  const { clerkId, email, invitedByClerkId, ...safe } = seeker;
+  const { clerkId, email, invitedByClerkId, linkedin, ...safe } = seeker;
   return NextResponse.json({ ...safe, sips });
 }
