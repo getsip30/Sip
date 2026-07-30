@@ -20,6 +20,8 @@ type FeedbackEntry = { id: string; requestId: string; mentorId: string; role: st
 type Ask = { id: string; mentorId: string; seekerClerkId: string; seekerName: string; seekerEmail: string; question: string; answer: string | null; status: string; createdAt: string; answeredAt: string | null };
 type Note = { id: string; mentorId: string; seekerName: string; seekerEmail: string | null; note: string; status: string; createdAt: string };
 type Referral = { id: string; referrerClerkId: string; referredClerkId: string; referredRole: string; milestone: string; createdAt: string };
+type Follow = { id: string; seekerClerkId: string; mentorId: string; createdAt: string };
+type Consent = { id: string; clerkId: string; roomId: string | null; context: string; createdAt: string };
 type Overview = {
   stats: {
     totalMentors: number; bannedMentors: number; openMentors: number;
@@ -30,10 +32,10 @@ type Overview = {
     totalReferralSignups: number; totalReferralConversions: number; totalFollows: number; totalConsents: number;
   };
   mentors: Mentor[]; seekers: Seeker[]; rooms: Room[]; requests: Req[]; feedback: FeedbackEntry[];
-  asks: Ask[]; notes: Note[]; referrals: Referral[]; follows: unknown[]; consents: unknown[];
+  asks: Ask[]; notes: Note[]; referrals: Referral[]; follows: Follow[]; consents: Consent[];
 };
 
-const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Flags'] as const;
+const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Follows', 'Consents', 'Flags'] as const;
 type Tab = typeof TABS[number];
 
 const card: React.CSSProperties = { background: '#121923', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20 };
