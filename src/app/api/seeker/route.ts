@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   const existing = await db.select().from(seekers).where(eq(seekers.clerkId, userId));
   if (existing.length > 0) {
     const updated = await db.update(seekers)
-      .set({ firstName: firstName || existing[0].firstName, age, linkedin, interests, ...(avatarData ? { avatarData } : {}) })
+      .set({ firstName: firstName || existing[0].firstName, age, linkedin, interests, avatarData: avatarData || null })
       .where(eq(seekers.clerkId, userId))
       .returning();
     return NextResponse.json(updated[0]);

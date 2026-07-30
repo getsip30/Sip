@@ -15,6 +15,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (!success) return NextResponse.json({ error: 'Slow down a bit.' }, { status: 429 });
 
     const { id } = await params;
+    const { userId: viewerId } = await auth();
     const staleCutoff = new Date(Date.now() - STALE_WAITING_MS);
     await db.update(queueEntries).set({ status: 'left' })
       .where(and(eq(queueEntries.roomId, id), eq(queueEntries.status, 'waiting'), lt(queueEntries.joinedAt, staleCutoff)));
@@ -56,11 +57,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       flagCounts = Object.fromEntries(flagRows.map(f => [f.reportedClerkId as string, f.count]));
     }
 
-    const attach = (e: typeof allEntries[number]) => ({
-      ...e,
-      visitCount: e.seekerClerkId ? (visitCounts[e.seekerClerkId] || 0) : 0,
-      flagCount: e.seekerClerkId ? (flagCounts[e.seekerClerkId] || 0) : 0,
-    });
+    let viewerIsMentor = false;
+    if (viewerId) {
+      const room = await db.select().from(rooms).where(eq(rooms.id, id));
+      const mentorRow = room[0] ? await db.select().from(mentors).where(eq(mentors.id, room[0].mentorId)) : [];
+      viewerIsMentor = mentorRow[0]?.clerkId === viewerId;
+    }
+
+    const attach = (e: typeof allEntries[number]) => {
+      const base = { id: e.id, roomId: e.roomId, seekerName: e.seekerName, topic: e.topic, status: e.status, joinedAt: e.joinedAt, calledAt: e.calledAt, doneAt: e.doneAt };
+      if (!viewerIsMentor) return base;
+      return {
+        ...base,
+        seekerClerkId: e.seekerClerkId,
+        visitCount: e.seekerClerkId ? (visitCounts[e.seekerClerkId] || 0) : 0,
+        flagCount: e.seekerClerkId ? (flagCounts[e.seekerClerkId] || 0) : 0,
+      };
+    };
 
     return NextResponse.json({
       waiting: result.map(attach),
