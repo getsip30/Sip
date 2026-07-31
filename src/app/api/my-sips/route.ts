@@ -1,7 +1,7 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { requests, mentors, sipFeedback } from '@/db/schema';
-import { eq, and, getTableColumns } from 'drizzle-orm';
+import { eq, and, or, getTableColumns } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 
@@ -29,7 +29,7 @@ export async function GET() {
       .from(requests)
       .leftJoin(mentors, eq(requests.mentorId, mentors.id))
       .leftJoin(sipFeedback, and(eq(sipFeedback.requestId, requests.id), eq(sipFeedback.role, 'seeker')))
-      .where(eq(requests.seekerEmail, email));
+      .where(or(eq(requests.seekerClerkId, userId), eq(requests.seekerEmail, email)));
 
     const enriched = rows.map(r => ({
       ...r,

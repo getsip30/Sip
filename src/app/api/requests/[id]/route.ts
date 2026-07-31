@@ -54,14 +54,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const r = updated[0];
     if (!r) return NextResponse.json({ error: 'Request already responded to' }, { status: 409 });
 
-    const [avgRow] = await db.execute(sql`
+    db.execute(sql`
       SELECT AVG(EXTRACT(EPOCH FROM (responded_at - created_at)) / 60)::int AS avg_minutes
       FROM requests
       WHERE mentor_id = ${mentor.id} AND responded_at IS NOT NULL
-    `).then(r => r.rows as { avg_minutes: number | null }[]);
-    if (avgRow?.avg_minutes != null) {
-      await db.update(mentors).set({ avgResponseMinutes: avgRow.avg_minutes }).where(eq(mentors.id, mentor.id));
-    }
+    `).then(r => {
+      const avg = (r.rows as { avg_minutes: number | null }[])[0]?.avg_minutes;
+      if (avg != null) return db.update(mentors).set({ avgResponseMinutes: avg }).where(eq(mentors.id, mentor.id));
+    }).catch(err => console.error('avgResponseMinutes update failed:', err));
 
     if (status === 'accepted') {
       const bookingSeeker = await db.select().from(seekers).where(eq(seekers.email, r.seekerEmail));
