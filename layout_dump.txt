@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import { FeedbackWidget } from '@/components/feedback-widget';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ClerkThemeBridge } from '@/components/clerk-theme-bridge';
-import { ThemeToggle } from '@/components/theme-toggle';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -74,9 +73,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ClerkThemeBridge>
             {children}
           </ClerkThemeBridge>
-          <div style={{ position: 'fixed', top: 16, right: 16, zIndex: 200 }}>
-            <ThemeToggle />
-          </div>
           <FeedbackWidget />
         </ThemeProvider>
       </body>

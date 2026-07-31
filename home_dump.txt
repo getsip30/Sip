@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
 import Logo from '@/components/Logo';
 import PixelAvatar from '@/components/PixelAvatar';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, AVATARS } from '@/lib/theme';
 
 type Mentor = {
@@ -222,6 +223,7 @@ export default function HomeClient() {
               <Link href="/mentors/signup" className="desktop-only" style={{ color: MUTED, textDecoration: 'none', fontSize: 14 }}>become a mentor</Link>
             </>
           )}
+          <ThemeToggle />
           {!user && (
             <>
               <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
