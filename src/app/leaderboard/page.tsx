@@ -47,7 +47,7 @@ export default function Leaderboard() {
         </div>
       </motion.nav>
 
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '90px 16px 60px' }}>
+      <div id="main-content" style={{ maxWidth: 800, margin: '0 auto', padding: '90px 16px 60px' }}>
 
         {/* HEADER */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ marginBottom: 56, textAlign: 'center' }}>

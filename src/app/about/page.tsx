@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function About() {
   return (
     <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "'Space Grotesk', sans-serif", padding: '60px 20px' }}>
-      <div style={{ maxWidth: 640, margin: '0 auto', animation: 'fadeInUp 0.5s ease-out' }}>
+      <div id="main-content" style={{ maxWidth: 640, margin: '0 auto', animation: 'fadeInUp 0.5s ease-out' }}>
         <div style={{ marginBottom: 32 }}><Logo /></div>
         <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 20 }}>About Sip</h1>
         <p style={{ color: MUTED, fontSize: 15, lineHeight: 1.8, marginBottom: 16 }}>
