@@ -372,24 +372,24 @@ export default function Dashboard() {
                         <div style={{ position: 'absolute', top: '110%', right: 0, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 8, zIndex: 50, minWidth: 210, display: 'flex', flexDirection: 'column', gap: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
                           <button onClick={async () => {
                             setShowGoLiveMenu(false);
-                            const res = await fetch('/api/rooms', { method: 'POST', headers: { 'Content-type': 'application/json' }, body: json.stringify({ title: `${mentor.firstname}'s sip room` }) });
-                            if (res.ok) { setislive(true); const room = await res.json(); setliveroomid(room.id); router.push(`/rooms/${room.id}`); }
-                          }} style={{ textalign: 'left', background: 'none', border: 'none', color: text, padding: '10px 12px', borderradius: 8, fontsize: 13, fontweight: 600, cursor: 'pointer', fontfamily: 'inherit' }}>
+                            const res = await fetch('/api/rooms', { method: 'POST', headers: { 'Content-type': 'application/json' }, body: JSON.stringify({ title: `${mentor.firstName}'s Sip Room` }) });
+                            if (res.ok) { setIsLive(true); const room = await res.json(); setLiveRoomId(room.id); router.push(`/rooms/${room.id}`); }
+                          }} style={{ textAlign: 'left', background: 'none', border: 'none', color: TEXT, padding: '10px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                             go live now
                           </button>
-                          <button onclick={() => { setshowgolivemenu(false); setshowscheduleform(true); }}
-                            style={{ textalign: 'left', background: 'none', border: 'none', color: text, padding: '10px 12px', borderradius: 8, fontsize: 13, fontweight: 600, cursor: 'pointer', fontfamily: 'inherit' }}>
+                          <button onClick={() => { setShowGoLiveMenu(false); setShowScheduleForm(true); }}
+                            style={{ textAlign: 'left', background: 'none', border: 'none', color: TEXT, padding: '10px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                             schedule for later
                           </button>
                         </div>
                       )}
                     </div>
                   )}
-                  {scheduledroom && (
-                    <div style={{ display: 'flex', alignitems: 'center', gap: 8 }}>
-                      <span style={{ color: link, fontsize: 13 }}>scheduled: {new date(scheduledroom.scheduledat).tolocalestring()}</span>
-                      <button onclick={async () => { await fetch('/api/rooms/schedule', { method: 'delete' }); setscheduledroom(null); }}
-                        style={{ background: 'rgba(139,148,158,0.1)', border: '1px solid rgba(139,148,158,0.2)', color: muted, padding: '8px 14px', borderradius: 20, fontsize: 12, fontweight: 600, cursor: 'pointer', fontfamily: 'inherit' }}>
+                  {scheduledRoom && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ color: LINK, fontSize: 13 }}>scheduled: {new Date(scheduledRoom.scheduledAt).toLocaleString()}</span>
+                      <button onClick={async () => { await fetch('/api/rooms/schedule', { method: 'DELETE' }); setScheduledRoom(null); }}
+                        style={{ background: 'rgba(139,148,158,0.1)', border: '1px solid rgba(139,148,158,0.2)', color: MUTED, padding: '8px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                         cancel
                       </button>
                     </div>
