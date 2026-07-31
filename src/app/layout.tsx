@@ -68,6 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body>
+        <a href="#main-content" className="skip-link">Skip to main content</a>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <ClerkThemeBridge>
             {children}
