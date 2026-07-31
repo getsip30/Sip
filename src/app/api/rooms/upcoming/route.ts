@@ -1,6 +1,6 @@
 import { db } from '@/db';
 import { rooms, mentors } from '@/db/schema';
-import { eq, and, gt, asc } from 'drizzle-orm';
+import { eq, and, gt, lte, asc } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { readLimiter, getIp } from '@/lib/ratelimit';
@@ -10,6 +10,10 @@ export async function GET(req: Request) {
     const ip = getIp(req);
     const { success } = await readLimiter.limit(ip);
     if (!success) return NextResponse.json({ error: 'Slow down a bit.' }, { status: 429 });
+
+    await db.update(rooms)
+      .set({ status: 'live', startedAt: new Date() })
+      .where(and(eq(rooms.status, 'scheduled'), lte(rooms.scheduledAt, new Date())));
 
     const result = await db
       .select({
