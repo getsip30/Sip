@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { MessageSquarePlus, X } from "lucide-react";
+import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, SUCCESS2 } from "@/lib/theme";
 
 export function FeedbackWidget() {
   const [open, setOpen] = useState(false);
@@ -26,25 +27,26 @@ export function FeedbackWidget() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50">
+    <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 150, fontFamily: "'Space Grotesk', sans-serif" }}>
       {open ? (
-        <div className="w-72 rounded-lg border bg-background p-3 shadow-lg">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Send feedback</span>
-            <button onClick={() => setOpen(false)} aria-label="Close feedback">
-              <X className="h-4 w-4" />
+        <div style={{ width: 288, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>Send feedback</span>
+            <button onClick={() => setOpen(false)} aria-label="Close feedback" style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", padding: 2, display: "flex" }}>
+              <X size={16} />
             </button>
           </div>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="What's on your mind?"
-            className="w-full resize-none rounded-md border p-2 text-sm h-24"
+            rows={4}
+            style={{ width: "100%", resize: "none", background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 12px", color: TEXT, fontSize: 13, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
           />
           <button
             onClick={submit}
             disabled={status === "sending"}
-            className="mt-2 w-full rounded-md bg-primary text-primary-foreground py-1.5 text-sm disabled:opacity-50"
+            style={{ marginTop: 10, width: "100%", background: status === "sent" ? SUCCESS2 : ACCENT, color: "white", border: "none", borderRadius: 12, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: status === "sending" ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: status === "sending" ? 0.7 : 1, transition: "background 0.2s" }}
           >
             {status === "sent" ? "Sent ✓" : status === "sending" ? "Sending..." : "Send"}
           </button>
@@ -53,9 +55,9 @@ export function FeedbackWidget() {
         <button
           onClick={() => setOpen(true)}
           aria-label="Give feedback"
-          className="rounded-full bg-primary text-primary-foreground p-3 shadow-lg hover:opacity-90"
+          style={{ borderRadius: "50%", background: ACCENT, color: "white", border: "none", padding: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
         >
-          <MessageSquarePlus className="h-5 w-5" />
+          <MessageSquarePlus size={20} />
         </button>
       )}
     </div>
