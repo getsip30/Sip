@@ -19,6 +19,7 @@ export default function ConfirmDialog({
           <motion.div initial={{ scale: 0.9, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 24 }}
             onClick={e => e.stopPropagation()}
+            role="dialog" aria-modal="true" aria-label={title || 'Confirm'}
             style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '28px 28px 24px', width: 340, maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
             {title && <div style={{ fontSize: 17, fontWeight: 700, color: TEXT, marginBottom: 8, fontFamily: 'Space Mono' }}>{title}</div>}
             <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 22 }}>{message}</p>

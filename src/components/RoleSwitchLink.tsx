@@ -33,7 +33,7 @@ export default function RoleSwitchLink({ to, role, label, style }: { to: string;
         <AnimatePresence>
           {switching && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 9999, background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              style={{ position: 'fixed', inset: 0, zIndex: 9999, background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }} role="status" aria-live="polite">
               <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 200 }}
                 style={{ textAlign: 'center' }}>
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}

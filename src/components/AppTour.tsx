@@ -28,6 +28,7 @@ export default function AppTour({ steps, open, onClose }: { steps: TourStep[]; o
         onClick={e => { if (e.target === e.currentTarget) close(); }}
         style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         <motion.div key={i} initial={{ scale: 0.94, opacity: 0, y: 16 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.94, opacity: 0 }}
+          role="dialog" aria-modal="true" aria-label="App tour"
           style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 28, width: '100%', maxWidth: 460 }}>
 
           <div style={{ display: 'flex', gap: 5, marginBottom: 22 }}>

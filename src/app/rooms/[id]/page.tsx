@@ -378,8 +378,8 @@ export default function RoomPage() {
 
       {flagOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 420 }}>
-            <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 16 }}>Report {flagTarget?.name}</h3>
+          <div role="dialog" aria-modal="true" aria-labelledby="reportDialogTitle" style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 420 }}>
+            <h3 id="reportDialogTitle" style={{ fontSize: 17, fontWeight: 700, marginBottom: 16 }}>Report {flagTarget?.name}</h3>
             <select value={flagReason} onChange={e => setFlagReason(e.target.value)} style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', color: TEXT, borderRadius: 10, padding: 10, marginBottom: 10, fontFamily: 'inherit' }}>
               <option value="">select reason</option>
               <option value="harassment">Harassment / abuse</option>
