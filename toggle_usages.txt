@@ -1,2 +1,0 @@
-﻿D:\Sip\src\app\HomeClient.tsx
-D:\Sip\src\components\theme-toggle.tsx
