@@ -22,7 +22,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const mentor = mentorResult[0];
     if (mentor.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
 
-    const { status, contactMethod } = await req.json();
+    const { status, contactMethod, mentorNote } = await req.json();
     if (!['accepted', 'declined'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
@@ -47,7 +47,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const respondedAt = new Date();
     const updated = await db.update(requests)
-      .set({ status, respondedAt })
+      .set({ status, respondedAt, mentorNote: status === 'accepted' ? (mentorNote?.slice(0, 300) || null) : null })
       .where(and(eq(requests.id, id), eq(requests.status, 'pending')))
       .returning();
 
@@ -84,6 +84,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const contactBlock = useCalendar
         ? `<a href="${mentor.calendarLink}" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">Book Your Sip →</a>`
         : `<p style="color:#70B5F9;font-size:16px;font-weight:600;margin-bottom:0;">Book a Google Meet on this email only: ${escapeHtml(mentor.contactEmail || '')}</p>`;
+      const noteBlock = r.mentorNote
+        ? `<div style="background:#161B22;border:1px solid rgba(112,181,249,0.3);border-radius:12px;padding:16px 18px;margin-top:20px;"><p style="color:#8B949E;font-size:12px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Note from ${escapeHtml(mentor.firstName)}</p><p style="color:#E6EDF3;font-size:14px;line-height:1.6;margin:0;">${escapeHtml(r.mentorNote)}</p></div>`
+        : '';
 
       transporter.sendMail({
         from: `Sip <${process.env.GMAIL_USER}>`,
@@ -97,6 +100,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             <strong style="color:#E6EDF3;">${escapeHtml(mentor.firstName)} ${escapeHtml(mentor.lastName)}</strong> (${escapeHtml(mentor.role)} @ ${escapeHtml(mentor.company)}) accepted your sip request.
             </p>
             ${contactBlock}
+            ${noteBlock}
             <p style="color:#8B949E;font-size:13px;margin-top:24px;">Show up curious. That's all they ask.</p>
           </div>
         `,

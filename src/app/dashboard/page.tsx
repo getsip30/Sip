@@ -69,6 +69,7 @@ export default function Dashboard() {
   const [togglingConsent, setTogglingConsent] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
   const [choosingContactFor, setChoosingContactFor] = useState<string | null>(null);
+  const [acceptNote, setAcceptNote] = useState('');
   const [shareNoteDraft, setShareNoteDraft] = useState('');
   const [showShareNote, setShowShareNote] = useState(false);
   const [shareNoteCopied, setShareNoteCopied] = useState(false);
@@ -77,15 +78,16 @@ export default function Dashboard() {
   const [feedbackComments, setFeedbackComments] = useState<Record<string, string>>({});
   const [submittingFeedback, setSubmittingFeedback] = useState<string | null>(null);
 
-  async function acceptRequest(requestId: string, contactMethod?: 'calendar' | 'email') {
+  async function acceptRequest(requestId: string, contactMethod?: 'calendar' | 'email', mentorNote?: string) {
     setAccepting(requestId);
     const res = await fetch(`/api/requests/${requestId}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'accepted', contactMethod }),
+      body: JSON.stringify({ status: 'accepted', contactMethod, mentorNote }),
     });
     if (res.ok) setRequests(prev => prev.map(x => x.id === requestId ? { ...x, status: 'accepted' } : x));
     setAccepting(null);
     setChoosingContactFor(null);
+    setAcceptNote('');
   }
 
   async function cancelRequest(requestId: string) {
@@ -242,18 +244,25 @@ export default function Dashboard() {
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 380 }}>
-              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>How should they reach you?</h3>
-              <p style={{ color: MUTED, fontSize: 13, marginBottom: 20 }}>Pick what gets sent to this seeker.</p>
+              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>Accept this request</h3>
+              <p style={{ color: MUTED, fontSize: 13, marginBottom: 16 }}>Not free right now? Add a note so they know when to book.</p>
+              <textarea value={acceptNote} onChange={e => setAcceptNote(e.target.value)} maxLength={300} rows={2}
+                placeholder="e.g. I'm free next week after 6pm, book then!"
+                style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 12px', color: TEXT, fontSize: 13, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: 16 }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <button onClick={() => acceptRequest(choosingContactFor, 'calendar')} disabled={accepting === choosingContactFor}
-                 style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '12px 16px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: accepting === choosingContactFor ? 'not-allowed' : 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                  Calendar link
-                </button>
-                <button onClick={() => acceptRequest(choosingContactFor, 'email')} disabled={accepting === choosingContactFor}
-                   style={{ background: 'rgba(91,219,138,0.12)', border: '1px solid rgba(91,219,138,0.3)', color: SUCCESS2, padding: '12px 16px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: accepting === choosingContactFor ? 'not-allowed' : 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                  Email only
-                </button>
-                <button onClick={() => setChoosingContactFor(null)} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: MUTED, padding: '10px 16px', borderRadius: 20, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>cancel</button>
+                {mentor?.calendarLink && (
+                  <button onClick={() => acceptRequest(choosingContactFor, 'calendar', acceptNote)} disabled={accepting === choosingContactFor}
+                   style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '12px 16px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: accepting === choosingContactFor ? 'not-allowed' : 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                    Send calendar link
+                  </button>
+                )}
+                {mentor?.contactEmail && (
+                  <button onClick={() => acceptRequest(choosingContactFor, 'email', acceptNote)} disabled={accepting === choosingContactFor}
+                     style={{ background: 'rgba(91,219,138,0.12)', border: '1px solid rgba(91,219,138,0.3)', color: SUCCESS2, padding: '12px 16px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: accepting === choosingContactFor ? 'not-allowed' : 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                    Send email contact
+                  </button>
+                )}
+                <button onClick={() => { setChoosingContactFor(null); setAcceptNote(''); }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: MUTED, padding: '10px 16px', borderRadius: 20, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>cancel</button>
               </div>
             </motion.div>
           </motion.div>
@@ -600,10 +609,7 @@ export default function Dashboard() {
                           <div style={{ display: 'flex', gap: 8, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16 }}>
                             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
                               disabled={accepting === r.id}
-                              onClick={() => {
-                                if (mentor?.calendarLink && mentor?.contactEmail) setChoosingContactFor(r.id);
-                                else acceptRequest(r.id);
-                              }}
+                              onClick={() => setChoosingContactFor(r.id)}
                               style={{ background: 'rgba(91,219,138,0.15)', border: '1px solid rgba(91,219,138,0.3)', color: SUCCESS2, padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: accepting === r.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                               {accepting === r.id ? 'accepting...' : 'accept ✓'}
                             </motion.button>

@@ -24,7 +24,7 @@ type SipRequest = {
   status: 'pending' | 'accepted' | 'declined' | 'cancelled'; createdAt: string; originRoomId?: string | null;
   seekerConsentToShow: boolean; mentorConsentToShow: boolean;
   scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null;
-  seekerFeedbackGiven?: boolean;
+  seekerFeedbackGiven?: boolean; mentorNote?: string | null;
   mentor?: { firstName: string; lastName: string; role: string; company: string; calendarLink: string; contactEmail?: string; };
 };
 
@@ -489,6 +489,12 @@ function SeekersContent() {
 
                         {r.status === 'accepted' && (
                           <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {r.mentorNote && (
+                              <div style={{ background: 'rgba(112,181,249,0.08)', border: '1px solid rgba(112,181,249,0.25)', borderRadius: 10, padding: '10px 14px' }}>
+                                <p style={{ color: LINK, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Note from {r.mentor?.firstName}</p>
+                                <p style={{ color: TEXT, fontSize: 13, lineHeight: 1.5, margin: 0 }}>{r.mentorNote}</p>
+                              </div>
+                            )}
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                               <button onClick={() => toggleConsent(r.id, r.seekerConsentToShow)} disabled={togglingConsent === r.id}
                                 style={{ background: r.seekerConsentToShow ? 'rgba(91,219,138,0.1)' : 'transparent', border: `1px solid ${r.seekerConsentToShow ? 'rgba(91,219,138,0.3)' : BORDER}`, color: r.seekerConsentToShow ? '#5BDB8A' : MUTED, padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>

@@ -89,6 +89,7 @@ export const requests = pgTable('requests', {
   mentorConsentToShow: boolean('mentor_consent_to_show').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   respondedAt: timestamp('responded_at'),
+  mentorNote: text('mentor_note'),
   scheduledAt: timestamp('scheduled_at'),
   cancelledAt: timestamp('cancelled_at'),
   cancelledBy: text('cancelled_by'),
