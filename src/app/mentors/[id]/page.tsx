@@ -60,6 +60,10 @@ export default function MentorProfile() {
   const [askError, setAskError] = useState('');
   const [submittingAsk, setSubmittingAsk] = useState(false);
   const [activeTab, setActiveTab] = useState<'request' | 'note' | 'ask'>('request');
+
+  useEffect(() => {
+    if (mentor && !mentor.isOpen) setActiveTab('ask');
+  }, [mentor]);
   const [pendingSubmit, setPendingSubmit] = useState<null | 'request' | 'note' | 'ask'>(null);
   const [isMobile, setIsMobile] = useState(false);
 
