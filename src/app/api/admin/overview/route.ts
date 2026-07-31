@@ -10,8 +10,8 @@ export async function GET() {
     if (!(await isAdmin())) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const [allMentors, allSeekers, allRooms, recentRequests, openFlags, activeQueues, allFeedback, allAsks, allSipNotes, allReferrals, allConsents, allFollows] = await Promise.all([
-      db.select().from(mentors).orderBy(desc(mentors.createdAt)),
-      db.select().from(seekers).orderBy(desc(seekers.createdAt)),
+      db.select().from(mentors).orderBy(desc(mentors.createdAt)).limit(1000),
+      db.select().from(seekers).orderBy(desc(seekers.createdAt)).limit(1000),
       db.select().from(rooms).orderBy(desc(rooms.startedAt)).limit(200),
       db.select().from(requests).orderBy(desc(requests.createdAt)).limit(300),
       db.select().from(flags).where(eq(flags.status, 'open')),

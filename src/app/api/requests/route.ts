@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { requests, mentors, sipFeedback } from '@/db/schema';
-import { eq, and, getTableColumns } from 'drizzle-orm';
+import { eq, and, getTableColumns, desc } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
@@ -20,7 +20,8 @@ export async function GET() {
     .from(requests)
     .leftJoin(sipFeedback, and(eq(sipFeedback.requestId, requests.id), eq(sipFeedback.role, 'mentor')))
     .where(eq(requests.mentorId, mentor.id))
-    .orderBy(requests.createdAt);
+    .orderBy(desc(requests.createdAt))
+    .limit(300);
 
   const result = rows.map(r => ({ ...r, mentorFeedbackGiven: r.mentorFeedbackGiven !== null }));
   return NextResponse.json(result.reverse());
