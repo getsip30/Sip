@@ -1,14 +1,14 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { auth } from '@clerk/nextjs/server';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { db } from '@/db';
 import { siteFeedback } from '@/db/schema';
 import { handleApiError } from '@/lib/api-handler';
 
-export async function POST(req: Request) {
+export async function post(req: request) {
   try {
-    const { userId } = await auth();
-    const limitKey = userId || req.headers.get('x-forwarded-for') || 'anon';
+    const { userid } = await auth();
+    const limitkey = userid || req.headers.get('x-forwarded-for') || 'anon';
     const { success } = await mutationLimiter.limit(limitKey);
     if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 

@@ -22,7 +22,6 @@ type Note = { id: string; mentorId: string; seekerName: string; seekerEmail: str
 type Referral = { id: string; referrerClerkId: string; referredClerkId: string; referredRole: string; milestone: string; createdAt: string };
 type Follow = { id: string; seekerClerkId: string; mentorId: string; createdAt: string };
 type Consent = { id: string; clerkId: string; roomId: string | null; context: string; createdAt: string };
-type SiteFeedbackEntry = { id: string; clerkId: string | null; path: string | null; message: string; createdAt: string };
 type Overview = {
   stats: {
     totalMentors: number; bannedMentors: number; openMentors: number;
@@ -36,7 +35,7 @@ type Overview = {
   asks: Ask[]; notes: Note[]; referrals: Referral[]; follows: Follow[]; consents: Consent[];
 };
 
-const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Follows', 'Consents', 'Flags', 'Feedback'] as const;
+const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Follows', 'Consents', 'Flags'] as const;
 type Tab = typeof TABS[number];
 
 const card: React.CSSProperties = { background: '#121923', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20 };
@@ -46,21 +45,18 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('Overview');
   const [data, setData] = useState<Overview | null>(null);
   const [flags, setFlags] = useState<Flag[]>([]);
-  const [siteFeedback, setSiteFeedback] = useState<SiteFeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
 
   const fetchAll = useCallback(async () => {
     try {
-      const [ov, fl, sf] = await Promise.all([
+      const [ov, fl] = await Promise.all([
         fetch('/api/admin/overview'),
         fetch('/api/admin/flags'),
-        fetch('/api/admin/site-feedback'),
       ]);
-      if (ov.status === 403 || fl.status === 403 || sf.status === 403) { setForbidden(true); setLoading(false); return; }
+      if (ov.status === 403 || fl.status === 403) { setForbidden(true); setLoading(false); return; }
       if (ov.ok) setData(await ov.json());
       if (fl.ok) setFlags(await fl.json());
-      if (sf.ok) setSiteFeedback(await sf.json());
       setLoading(false);
     } catch (err) {
       console.error('fetchAll failed:', err);
@@ -111,7 +107,7 @@ export default function AdminPage() {
           {TABS.map(t => (
             <button key={t} onClick={() => setTab(t)}
               style={{ ...btn, background: tab === t ? 'rgba(112,181,249,0.15)' : 'transparent', borderColor: tab === t ? 'rgba(112,181,249,0.4)' : 'rgba(255,255,255,0.1)', color: tab === t ? '#70B5F9' : '#8A93A3', padding: '8px 16px', fontSize: 13 }}>
-              {t}{t === 'Flags' && openFlags.length > 0 ? ` (${openFlags.length})` : ''}{t === 'Feedback' && siteFeedback.length > 0 ? ` (${siteFeedback.length})` : ''}
+              {t}{t === 'Flags' && openFlags.length > 0 ? ` (${openFlags.length})` : ''}
             </button>
           ))}
         </div>
@@ -130,20 +126,6 @@ export default function AdminPage() {
               <div key={label as string} style={card}>
                 <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 6 }}>{label}</div>
                 <div style={{ fontSize: 28, fontWeight: 700 }}>{val}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {tab === 'Feedback' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {siteFeedback.length === 0 && <div style={{ color: '#8A93A3' }}>No feedback yet.</div>}
-            {siteFeedback.map(f => (
-              <div key={f.id} style={card}>
-                <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 8 }}>
-                  {new Date(f.createdAt).toLocaleString()} · {f.path || 'unknown page'}{f.clerkId ? ` · ${f.clerkId}` : ' · anonymous'}
-                </div>
-                <div style={{ whiteSpace: 'pre-wrap' }}>{f.message}</div>
               </div>
             ))}
           </div>

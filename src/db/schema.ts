@@ -185,6 +185,16 @@ export const consents = pgTable('consents', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const siteFeedback = pgTable('site_feedback', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  clerkId: text('clerk_id'),
+  path: text('path'),
+  message: text('message').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('site_feedback_created_at_idx').on(t.createdAt),
+]);
+
 export const flags = pgTable('flags', {
   id: uuid('id').defaultRandom().primaryKey(),
   roomId: uuid('room_id').references(() => rooms.id, { onDelete: 'cascade' }).notNull(),
