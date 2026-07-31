@@ -1,8 +1,9 @@
 ﻿import { ClerkProvider } from '@clerk/nextjs';
-import { dark } from '@clerk/themes';
 import type { Metadata } from 'next';
-import { ACCENT, BG } from '@/lib/theme';
-import './globals.css';;
+import { FeedbackWidget } from '@/components/feedback-widget';
+import { ThemeProvider } from '@/components/theme-provider';
+import { ClerkThemeBridge } from '@/components/clerk-theme-bridge';
+import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://getsip.co'),
@@ -62,20 +63,18 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider appearance={{
-      theme: dark,
-      variables: {
-        colorPrimary: ACCENT,
-        colorBackground: BG,
-        borderRadius: '10px',
-      },
-    }}>
-    <html lang="en">
-        <head>
-          <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
-        </head>
-        <body>{children}</body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+      </head>
+      <body>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} value={{ light: "light", dark: "" }}>
+          <ClerkThemeBridge>
+            {children}
+          </ClerkThemeBridge>
+          <FeedbackWidget />
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }

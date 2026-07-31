@@ -1,6 +1,46 @@
 /* src/app/globals.css */
 @import "tailwindcss";
 
+:root {
+  --bg: #0a0e16;
+  --surface: #121923;
+  --border: rgba(255,255,255,0.08);
+  --text: #edeff3;
+  --muted: #8a93a3;
+  --accent: #3b82f6;
+  --accent-soft: rgba(59,130,246,0.12);
+  --link: #70b5f9;
+  --success: #4caf7d;
+  --success2: #5bdb8a;
+  --success-soft: rgba(91,219,138,0.12);
+  --warning: #f59e0b;
+  --danger: #f87171;
+  --danger-soft: rgba(220,38,38,0.1);
+  --purple: #7c3aed;
+  --scrollbar-thumb: rgba(255,255,255,0.15);
+  --scrollbar-thumb-hover: rgba(255,255,255,0.25);
+}
+
+.light {
+  --bg: #fafbfc;
+  --surface: #ffffff;
+  --border: rgba(0,0,0,0.08);
+  --text: #0f1420;
+  --muted: #5a6472;
+  --accent: #2563eb;
+  --accent-soft: rgba(37,99,235,0.10);
+  --link: #1d4ed8;
+  --success: #1f9d5a;
+  --success2: #16a34a;
+  --success-soft: rgba(22,163,74,0.10);
+  --warning: #b45309;
+  --danger: #dc2626;
+  --danger-soft: rgba(220,38,38,0.08);
+  --purple: #6d28d9;
+  --scrollbar-thumb: rgba(0,0,0,0.15);
+  --scrollbar-thumb-hover: rgba(0,0,0,0.25);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -16,9 +56,10 @@ h1, h2, h3, h4, p, span, div {
 }
 
 body {
-  background: #0A0E16 !important;
-  color: #EDEFF3 !important;
+  background: var(--bg) !important;
+  color: var(--text) !important;
   font-family: 'Space Grotesk', sans-serif;
+  transition: background 0.2s ease, color 0.2s ease;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -65,11 +106,11 @@ input, textarea, button, select {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.15);
+  background: var(--scrollbar-thumb);
   border-radius: 10px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.25);
+  background: var(--scrollbar-thumb-hover);
 }
 
 @media (max-width: 639px) {
