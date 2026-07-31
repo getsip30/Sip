@@ -1,9 +1,8 @@
 ﻿import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from 'next';
 import { FeedbackWidget } from '@/components/feedback-widget';
-import { ThemeProvider } from '@/components/theme-provider';
+
 import { ClerkThemeBridge } from '@/components/clerk-theme-bridge';
-import { ThemeToggle } from '@/components/theme-toggle';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -70,15 +69,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <a href="#main-content" className="skip-link">Skip to main content</a>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-          <ClerkThemeBridge>
-            {children}
-          </ClerkThemeBridge>
-          <div style={{ position: 'fixed', top: 16, right: 16, zIndex: 200 }}>
-            <ThemeToggle />
-          </div>
-          <FeedbackWidget />
-        </ThemeProvider>
+        <ClerkThemeBridge>
+          {children}
+        </ClerkThemeBridge>
+        <FeedbackWidget />
       </body>
     </html>
   );

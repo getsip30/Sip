@@ -1,4 +1,4 @@
-/* src/app/globals.css */
+﻿/* src/app/globals.css */
 @import "tailwindcss";
 
 :root {
@@ -21,7 +21,25 @@
   --scrollbar-thumb-hover: rgba(255,255,255,0.25);
 }
 
-
+.light {
+  --bg: #fafbfc;
+  --surface: #ffffff;
+  --border: rgba(0,0,0,0.08);
+  --text: #0f1420;
+  --muted: #5a6472;
+  --accent: #2563eb;
+  --accent-soft: rgba(37,99,235,0.10);
+  --link: #1d4ed8;
+  --success: #1f9d5a;
+  --success2: #16a34a;
+  --success-soft: rgba(22,163,74,0.10);
+  --warning: #b45309;
+  --danger: #dc2626;
+  --danger-soft: rgba(220,38,38,0.08);
+  --purple: #6d28d9;
+  --scrollbar-thumb: rgba(0,0,0,0.15);
+  --scrollbar-thumb-hover: rgba(0,0,0,0.25);
+}
 
 *, *::before, *::after {
   box-sizing: border-box;
