@@ -127,13 +127,19 @@ export default function Dashboard() {
   }
   const [isLive, setIsLive] = useState(false);
   const [liveRoomId, setLiveRoomId] = useState<string | null>(null);
+  const [scheduledRoom, setScheduledRoom] = useState<{ id: string; scheduledAt: string } | null>(null);
+  const [showGoLiveMenu, setShowGoLiveMenu] = useState(false);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [scheduleAtDraft, setScheduleAtDraft] = useState('');
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduleError, setScheduleError] = useState('');
   const [showTour, setShowTour] = useState(false);
 
   
   
   const fetchData = useCallback(async () => {
   try {
-    const [mRes, rRes, liveRes, aRes, refRes] = await Promise.all([fetch('/api/mentor'), fetch('/api/requests'), fetch('/api/rooms'), fetch('/api/asks'), fetch('/api/referrals/me')]);
+    const [mRes, rRes, liveRes, aRes, refRes, schedRes] = await Promise.all([fetch('/api/mentor'), fetch('/api/requests'), fetch('/api/rooms'), fetch('/api/asks'), fetch('/api/referrals/me'), fetch('/api/rooms/schedule')]);
     if (refRes.ok) setReferrals(await refRes.json());
     if (mRes.ok) {
       const m = await mRes.json();
@@ -144,6 +150,7 @@ export default function Dashboard() {
         setIsLive(!!mine);
         setLiveRoomId(mine?.id || null);
       }
+      if (schedRes.ok) setScheduledRoom(await schedRes.json());
       const notesRes = await fetch(`/api/sip-notes?mentorId=${m.id}&mine=true`);
       if (notesRes.ok) setPendingNotes(await notesRes.json());
       const liveNotesRes = await fetch(`/api/sip-notes?mentorId=${m.id}`);
@@ -354,15 +361,38 @@ export default function Dashboard() {
                       style={{ width: 8, height: 8, borderRadius: '50%', background: mentor.isOpen ? SUCCESS2 : MUTED, display: 'inline-block' }} />
                     {togglingOpen ? '...' : mentor.isOpen ? 'open' : 'closed'}
                   </motion.button>
-                  {!isLive && (
-                    <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                      onClick={async () => {
-                        const res = await fetch('/api/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: `${mentor.firstName}'s Sip Room` }) });
-                        if (res.ok) { setIsLive(true); const room = await res.json(); setLiveRoomId(room.id); router.push(`/rooms/${room.id}`); }
-                      }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.3)', color: DANGER, padding: '10px 20px', borderRadius: 24, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: DANGER, display: 'inline-block' }} /> go live
-                    </motion.button>
+                  {!isLive && !scheduledRoom && (
+                    <div style={{ position: 'relative' }}>
+                      <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                        onClick={() => setShowGoLiveMenu(v => !v)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.3)', color: DANGER, padding: '10px 20px', borderRadius: 24, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: DANGER, display: 'inline-Block' }} /> go live
+                      </motion.button>
+                      {showGoLiveMenu && (
+                        <div style={{ position: 'absolute', top: '110%', right: 0, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 8, zIndex: 50, minWidth: 210, display: 'flex', flexDirection: 'column', gap: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+                          <button onClick={async () => {
+                            setShowGoLiveMenu(false);
+                            const res = await fetch('/api/rooms', { method: 'POST', headers: { 'Content-type': 'application/json' }, body: json.stringify({ title: `${mentor.firstname}'s sip room` }) });
+                            if (res.ok) { setislive(true); const room = await res.json(); setliveroomid(room.id); router.push(`/rooms/${room.id}`); }
+                          }} style={{ textalign: 'left', background: 'none', border: 'none', color: text, padding: '10px 12px', borderradius: 8, fontsize: 13, fontweight: 600, cursor: 'pointer', fontfamily: 'inherit' }}>
+                            go live now
+                          </button>
+                          <button onclick={() => { setshowgolivemenu(false); setshowscheduleform(true); }}
+                            style={{ textalign: 'left', background: 'none', border: 'none', color: text, padding: '10px 12px', borderradius: 8, fontsize: 13, fontweight: 600, cursor: 'pointer', fontfamily: 'inherit' }}>
+                            schedule for later
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {scheduledroom && (
+                    <div style={{ display: 'flex', alignitems: 'center', gap: 8 }}>
+                      <span style={{ color: link, fontsize: 13 }}>scheduled: {new date(scheduledroom.scheduledat).tolocalestring()}</span>
+                      <button onclick={async () => { await fetch('/api/rooms/schedule', { method: 'delete' }); setscheduledroom(null); }}
+                        style={{ background: 'rgba(139,148,158,0.1)', border: '1px solid rgba(139,148,158,0.2)', color: muted, padding: '8px 14px', borderradius: 20, fontsize: 12, fontweight: 600, cursor: 'pointer', fontfamily: 'inherit' }}>
+                        cancel
+                      </button>
+                    </div>
                   )}
                   {isLive && liveRoomId && (
                     <Link href={`/rooms/${liveRoomId}`} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(91,219,138,0.12)', border: '1px solid rgba(91,219,138,0.3)', color: SUCCESS2, padding: '10px 20px', borderRadius: 24, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
@@ -381,6 +411,35 @@ export default function Dashboard() {
                   </motion.div>
                 </div>
               </motion.div>
+
+              {showScheduleForm && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300 }}>
+                  <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 28, width: '90%', maxWidth: 380 }}>
+                    <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 16 }}>Schedule a sip</h3>
+                    <input type="datetime-local" value={scheduleAtDraft} onChange={e => { setScheduleAtDraft(e.target.value); setScheduleError(''); }}
+                      style={{ width: '100%', background: BG, border: `1px solid ${scheduleError ? DANGER : BORDER}`, borderRadius: 10, padding: '10px 12px', color: TEXT, fontSize: 14, marginBottom: 10, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                    {scheduleError && <div style={{ color: DANGER, fontSize: 12, marginBottom: 10 }}>{scheduleError}</div>}
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button onClick={() => { setShowScheduleForm(false); setScheduleAtDraft(''); setScheduleError(''); }}
+                        style={{ background: 'transparent', border: `1px solid ${BORDER}`, color: MUTED, padding: '9px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        cancel
+                      </button>
+                      <button onClick={async () => {
+                        if (!scheduleAtDraft) { setScheduleError('pick a date and time'); return; }
+                        setScheduling(true);
+                        const res = await fetch('/api/rooms/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scheduledAt: new Date(scheduleAtDraft).toISOString(), title: `${mentor.firstName}'s Sip Room` }) });
+                        const data = await res.json();
+                        setScheduling(false);
+                        if (res.ok) { setScheduledRoom(data); setShowScheduleForm(false); setScheduleAtDraft(''); }
+                        else setScheduleError(data.error || 'something went wrong');
+                      }} disabled={scheduling}
+                        style={{ background: ACCENT, border: 'none', color: 'white', padding: '9px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: scheduling ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                        {scheduling ? 'scheduling...' : 'schedule'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* ACTIVATION CHECKLIST */}
               {(() => {
