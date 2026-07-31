@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
 import Logo from '@/components/Logo';
 import PixelAvatar from '@/components/PixelAvatar';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, AVATARS } from '@/lib/theme';
 
 type Mentor = {
@@ -215,33 +216,26 @@ export default function HomeClient() {
         transition={{ duration: 0.5, ease: 'easeOut' }}
         style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 20px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: scrolled ? 'rgba(10,14,22,0.85)' : 'rgba(10,14,22,0.3)', backdropFilter: 'blur(24px) saturate(160%)', WebkitBackdropFilter: 'blur(24px) saturate(160%)', borderBottom: scrolled ? `1px solid ${BORDER}` : '1px solid transparent', transition: 'background 0.4s ease, border-color 0.4s ease' }}>
         <Logo />
-        {!user && (
-          <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-            <Link href="/leaderboard" className="desktop-only" style={{ color: MUTED, textDecoration: 'none', fontSize: 14 }}>leaderboard</Link>
-            <Link href="/mentors/signup" className="desktop-only" style={{ color: MUTED, textDecoration: 'none', fontSize: 14 }}>become a mentor</Link>
-            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-              <Link href="/sign-in" style={{ background: TEXT, color: BG, padding: '9px 20px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'block' }}>sign in</Link>
-            </motion.div>
-            <button onClick={() => setMobileMenu(m => !m)} className="mobile-only" style={{ background: 'transparent', border: 'none', color: TEXT, cursor: 'pointer', padding: 4, display: 'none' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke={TEXT} strokeWidth="2" strokeLinecap="round"/></svg>
-            </button>
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+          {!user && (
+            <>
+              <Link href="/leaderboard" className="desktop-only" style={{ color: MUTED, textDecoration: 'none', fontSize: 14 }}>leaderboard</Link>
+              <Link href="/mentors/signup" className="desktop-only" style={{ color: MUTED, textDecoration: 'none', fontSize: 14 }}>become a mentor</Link>
+            </>
+          )}
+          <ThemeToggle />
+          {!user && (
+            <>
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                <Link href="/sign-in" style={{ background: TEXT, color: BG, padding: '9px 20px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'block' }}>sign in</Link>
+              </motion.div>
+              <button onClick={() => setMobileMenu(m => !m)} className="mobile-only" style={{ background: 'transparent', border: 'none', color: TEXT, cursor: 'pointer', padding: 4, display: 'none' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke={TEXT} strokeWidth="2" strokeLinecap="round"/></svg>
+              </button>
+            </>
+          )}
+        </div>
       </motion.nav>
-
-      <AnimatePresence>
-        {mobileMenu && !user && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="mobile-only"
-            style={{ position: 'fixed', top: 72, left: 0, right: 0, zIndex: 99, background: 'rgba(10,14,22,0.98)', backdropFilter: 'blur(24px)', borderBottom: `1px solid ${BORDER}`, padding: 20, flexDirection: 'column', gap: 16 }}>
-            <Link href="/leaderboard" onClick={() => setMobileMenu(false)} style={{ color: TEXT, textDecoration: 'none', fontSize: 15 }}>leaderboard</Link>
-            <Link href="/mentors/signup" onClick={() => setMobileMenu(false)} style={{ color: TEXT, textDecoration: 'none', fontSize: 15 }}>become a mentor</Link>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {mobileMenu && !user && (
