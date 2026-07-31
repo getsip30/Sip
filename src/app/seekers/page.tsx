@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Suspense } from 'react';
 
 type LiveRoom = { id: string; title: string; firstName: string; lastName: string; role: string; company: string };
+type UpcomingRoom = { id: string; title: string; scheduledAt: string; firstName: string; lastName: string; role: string; company: string };
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
@@ -133,6 +134,22 @@ function SeekersContent() {
     const t = setInterval(fetchLiveRooms, 15000);
     return () => clearInterval(t);
   }, [fetchLiveRooms]);
+
+  const [upcomingRooms, setUpcomingRooms] = useState<UpcomingRoom[]>([]);
+  const fetchUpcomingRooms = useCallback(async () => {
+    try {
+      const res = await fetch('/api/rooms/upcoming');
+      if (res.ok) setUpcomingRooms(await res.json());
+    } catch (e) {
+      console.warn('fetchUpcomingRooms failed', e);
+    }
+  }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchUpcomingRooms();
+    const t = setInterval(fetchUpcomingRooms, 60000);
+    return () => clearInterval(t);
+  }, [fetchUpcomingRooms]);
   
   async function saveSchedule(requestId: string) {
     const scheduledAt = scheduleDrafts[requestId];
@@ -312,6 +329,24 @@ function SeekersContent() {
           {tabBtn('mine', 'my sips', pending.length)}
         </div>
       </div>
+
+      {tab === 'browse' && upcomingRooms.length > 0 && (
+        <section style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px 8px' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: LINK, display: 'inline-block' }} />
+            Going Live Soon
+          </h2>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+            {upcomingRooms.map(r => (
+              <Link key={r.id} href={`/rooms/${r.id}`} style={{ textDecoration: 'none', background: 'rgba(112,181,249,0.08)', border: '1px solid rgba(112,181,249,0.25)', borderRadius: 14, padding: '14px 20px', color: TEXT, minWidth: 220 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{r.firstName} {r.lastName}</div>
+                <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>{r.role} @ {r.company}</div>
+                <div style={{ color: LINK, fontSize: 12, marginTop: 6, fontWeight: 600 }}>live at {new Date(r.scheduledAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {tab === 'browse' && liveRooms.length > 0 && (
         <section style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px 8px' }}>

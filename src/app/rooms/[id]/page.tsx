@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useRoles } from '@/hooks/useRoles';
 import { ConsentGate } from '@/components/ConsentGate';
 
-type Room = { id: string; title: string; roomUrl: string; status: string; mode: string; firstName: string; lastName: string; role: string; company: string; mentorClerkId: string };
+type Room = { id: string; title: string; roomUrl: string; status: string; mode: string; scheduledAt: string | null; firstName: string; lastName: string; role: string; company: string; mentorClerkId: string };
 type QueueEntry = { id: string; seekerClerkId: string; seekerName: string; topic?: string; status: string; visitCount?: number; flagCount?: number; doneAt?: string | null };
 
 export default function RoomPage() {
@@ -37,6 +37,7 @@ export default function RoomPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [batchBusy, setBatchBusy] = useState(false);
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
   const popupRef = useRef<Window | null>(null);
 
   const fetchRoom = useCallback(async () => {
@@ -127,6 +128,15 @@ export default function RoomPage() {
     setConnecting(null);
   }
 
+  async function goLiveNow() {
+    setStarting(true);
+    const res = await fetch(`/api/rooms/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start' }),
+    });
+    if (res.ok) { const updated = await res.json(); setRoom(prev => prev ? { ...prev, status: updated.status } : prev); }
+    setStarting(false);
+  }
+
   async function setMode(mode: 'individual' | 'batch') {
     if (actives.length > 0) return;
     setModeUpdating(true);
@@ -180,6 +190,7 @@ export default function RoomPage() {
 
   const myPosition = myEntry?.status === 'waiting' ? waiting.findIndex(w => w.id === myEntry.id) + 1 : 0;
   const isRoomMentor = !!user && !!room && user.id === room.mentorClerkId;
+  const isScheduled = room?.status === 'scheduled';
   const modeBtn = (active: boolean): React.CSSProperties => ({ background: active ? 'rgba(112,181,249,0.15)' : 'transparent', border: `1px solid ${active ? 'rgba(112,181,249,0.4)' : BORDER}`, color: active ? LINK : MUTED, padding: '7px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: modeUpdating || actives.length > 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' });
 
   if (!userLoaded || !user || !room || !rolesLoaded) return (
@@ -204,7 +215,19 @@ export default function RoomPage() {
             {room.role && room.company ? ` · ${room.role} @ ${room.company}` : ''}
           </p>
 
-        {isRoomMentor ? (
+        {isScheduled ? (
+          <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '24px 28px' }}>
+            <div style={{ fontSize: 13, color: MUTED, marginBottom: 6 }}>{isRoomMentor ? 'this sip is scheduled' : 'not started yet'}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, marginBottom: isRoomMentor ? 16 : 0 }}>
+              {room.scheduledAt ? `starts ${new Date(room.scheduledAt).toLocaleString()}` : 'starting soon'}
+            </div>
+            {isRoomMentor && (
+              <button onClick={goLiveNow} disabled={starting} style={{ background: ACCENT, color: 'white', border: 'none', padding: '10px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: starting ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                {starting ? 'starting...' : 'go live now'}
+              </button>
+            )}
+          </div>
+        ) : isRoomMentor ? (
           <>
             <a href={room.roomUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', background: ACCENT, color: 'white', padding: '12px 24px', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 14, marginBottom: 20 }}>start call</a>
 
