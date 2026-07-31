@@ -196,7 +196,7 @@ export default function MentorProfile() {
         <button onClick={() => window.history.length > 1 ? window.history.back() : window.location.href = '/'} style={{ background: 'none', border: 'none', color: MUTED, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>← back</button>
       </motion.nav>
 
-      <div style={{ flex: 1, minHeight: 0, maxWidth: 1200, width: '100%', margin: '0 auto', padding: isMobile ? '16px' : '20px 24px', display: 'flex', flexDirection: 'column', gap: 16, boxSizing: 'border-box', overflowY: isMobile ? 'visible' : 'auto' }}>
+      <div id="main-content" style={{ flex: 1, minHeight: 0, maxWidth: 1200, width: '100%', margin: '0 auto', padding: isMobile ? '16px' : '20px 24px', display: 'flex', flexDirection: 'column', gap: 16, boxSizing: 'border-box', overflowY: isMobile ? 'visible' : 'auto' }}>
 
         {/* TOP ROW */}
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 16, flex: isMobile ? '0 0 auto' : '1 1 45%', minHeight: 0 }}>
@@ -353,13 +353,13 @@ export default function MentorProfile() {
                           </div>
                         )}
                         <div style={{ marginBottom: 12 }}>
-                          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Your name" autoComplete="name" name="name" style={inputStyle} />
+                          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Your name" autoComplete="name" name="name" aria-label="Your name" style={inputStyle} />
                         </div>
                         <div style={{ marginBottom: 12 }}>
-                          <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} type="email" placeholder="Your email" autoComplete="email" name="email" style={inputStyle} />
+                          <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} type="email" placeholder="Your email" autoComplete="email" name="email" aria-label="Your email" style={inputStyle} />
                         </div>
                         <div style={{ marginBottom: 16 }}>
-                          <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder="What are you trying to figure out?" rows={3} style={{ ...inputStyle, resize: 'none' }} />
+                          <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder="What are you trying to figure out?" rows={3} aria-label="What are you trying to figure out?" style={{ ...inputStyle, resize: 'none' }} />
                         </div>
                         {requestError && (
                           <div style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 10, padding: '10px 14px', color: '#F87171', fontSize: 13, marginBottom: 16 }}>
@@ -385,10 +385,10 @@ export default function MentorProfile() {
                       <div>
                         <p style={{ color: MUTED, fontSize: 13, marginBottom: 16 }}>Had a sip with {mentor.firstName}? Leave a quick note.</p>
                         <div style={{ marginBottom: 12 }}>
-                          <input value={noteForm.name} onChange={e => setNoteForm(f => ({ ...f, name: e.target.value }))} placeholder="Your name" style={inputStyle} />
+                          <input value={noteForm.name} onChange={e => setNoteForm(f => ({ ...f, name: e.target.value }))} placeholder="Your name" aria-label="Your name" style={inputStyle} />
                         </div>
                         <div style={{ marginBottom: 16 }}>
-                          <textarea value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="What'd you take away?" rows={3} maxLength={1000} style={{ ...inputStyle, resize: 'none' }} />
+                          <textarea value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="What'd you take away?" rows={3} maxLength={1000} aria-label="What'd you take away?" style={{ ...inputStyle, resize: 'none' }} />
                         </div>
                         {noteError && (
                           <div style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 10, padding: '10px 14px', color: '#F87171', fontSize: 13, marginBottom: 16 }}>
@@ -414,7 +414,7 @@ export default function MentorProfile() {
                       <div>
                         <p style={{ color: MUTED, fontSize: 13, marginBottom: 16 }}>Not ready for a full sip? Ask something quick. Limited to 2 per mentor per week.</p>
                         <div style={{ marginBottom: 12 }}>
-                          <textarea value={askText} onChange={e => setAskText(e.target.value)} placeholder="What do you want to know?" rows={3} maxLength={500} style={{ ...inputStyle, resize: 'none' }} />
+                          <textarea value={askText} onChange={e => setAskText(e.target.value)} placeholder="What do you want to know?" rows={3} maxLength={500} aria-label="What do you want to know?" style={{ ...inputStyle, resize: 'none' }} />
                         </div>
                         <div style={{ marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                           <input type="checkbox" id="askConsent" checked={askConsent} onChange={e => setAskConsent(e.target.checked)} style={{ marginTop: 3, accentColor: ACCENT, cursor: 'pointer' }} />
@@ -458,6 +458,7 @@ export default function MentorProfile() {
             onClick={e => { if (e.target === e.currentTarget) setShowLinkedInPrompt(false); }}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
             <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              role="dialog" aria-modal="true" aria-label="Share this on LinkedIn"
               style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 32, width: '100%', maxWidth: 460 }}>
               <div style={{ fontWeight: 700, fontSize: 19, marginBottom: 6 }}>share this on LinkedIn?</div>
               <div style={{ color: MUTED, fontSize: 13, marginBottom: 16 }}>Copy the draft, then paste it into a new LinkedIn post.</div>

@@ -277,7 +277,7 @@ function SeekersContent() {
         </div>
       </motion.nav>
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '90px 16px 20px' }}>
+      <div id="main-content" style={{ maxWidth: 1280, margin: '0 auto', padding: '90px 16px 20px' }}>
         <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: -1.5, marginBottom: 20 }}>Find Your Sip</h1>
         {(() => {
           if (!seekerProfile) return null;
@@ -334,7 +334,7 @@ function SeekersContent() {
       {tab === 'browse' ? (
         <section style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px 60px' }}>
           <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="search by name, role, company, topic..."
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="search by name, role, company, topic..." aria-label="Search mentors by name, role, company, or topic"
               style={{ flex: 1, minWidth: 240, background: SURFACE, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '12px 16px', color: TEXT, fontSize: 14, outline: 'none', fontFamily: 'inherit' }} />
           </div>
           <div className="filter-scroll" style={{ display: 'flex', gap: 8, marginBottom: 28, overflowX: 'auto', paddingBottom: 4 }}>
@@ -519,7 +519,7 @@ function SeekersContent() {
                             {!r.scheduledAt ? (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                                  <input type="datetime-local" value={scheduleDrafts[r.id] || ''} onChange={e => { setScheduleDrafts(d => ({ ...d, [r.id]: e.target.value })); setScheduleErrors(d => ({ ...d, [r.id]: '' })); }} style={{ background: BG, border: `1px solid ${scheduleErrors[r.id] ? '#F87171' : BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, fontFamily: 'inherit' }} />
+                                  <input type="datetime-local" value={scheduleDrafts[r.id] || ''} onChange={e => { setScheduleDrafts(d => ({ ...d, [r.id]: e.target.value })); setScheduleErrors(d => ({ ...d, [r.id]: '' })); }} aria-label="Scheduled date and time" style={{ background: BG, border: `1px solid ${scheduleErrors[r.id] ? '#F87171' : BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, fontFamily: 'inherit' }} />
                                   <button onClick={() => saveSchedule(r.id)} disabled={scheduling === r.id} style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: scheduling === r.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>{scheduling === r.id ? 'saving...' : 'save time'}</button>
                                 </div>
                                 {scheduleErrors[r.id] && <span style={{ color: '#F87171', fontSize: 11 }}>{scheduleErrors[r.id]}</span>}
@@ -532,14 +532,15 @@ function SeekersContent() {
                               <span style={{ color: '#5BDB8A', fontSize: 12 }}>feedback sent ✓</span>
                             ) : (
                               <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                <div style={{ display: 'flex', gap: 4 }}>
+                                <div role="radiogroup" aria-label="Rating" style={{ display: 'flex', gap: 4 }}>
                                   {[1, 2, 3, 4, 5].map(n => (
-                                    <span key={n} onClick={() => setFeedbackRatings(d => ({ ...d, [r.id]: n }))}
-                                      style={{ cursor: 'pointer', fontSize: 18, color: (feedbackRatings[r.id] || 0) >= n ? '#F59E0B' : 'rgba(255,255,255,0.2)' }}>★</span>
+                                    <button key={n} type="button" role="radio" aria-checked={(feedbackRatings[r.id] || 0) === n} aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                                      onClick={() => setFeedbackRatings(d => ({ ...d, [r.id]: n }))}
+                                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 18, color: (feedbackRatings[r.id] || 0) >= n ? '#F59E0B' : 'rgba(255,255,255,0.2)' }}>★</button>
                                   ))}
                                 </div>
                                 <textarea value={feedbackComments[r.id] || ''} onChange={e => setFeedbackComments(d => ({ ...d, [r.id]: e.target.value }))}
-                                  placeholder="optional comment..." rows={2} maxLength={1000}
+                                  placeholder="optional comment..." aria-label="Optional feedback comment" rows={2} maxLength={1000}
                                   style={{ width: '100%', background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
                                 <button onClick={() => submitFeedback(r.id)} disabled={submittingFeedback === r.id || !feedbackRatings[r.id]}
                                   style={{ alignSelf: 'flex-end', background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>                                  {submittingFeedback === r.id ? 'sending...' : 'submit feedback'}
@@ -564,6 +565,7 @@ function SeekersContent() {
             onClick={e => { if (e.target === e.currentTarget) setModal(null); }}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
             <motion.div initial={{ scale: 0.92, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0, y: 20 }}
+              role="dialog" aria-modal="true" aria-label="Request a sip"
               style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 22, padding: 36, width: '100%', maxWidth: 440 }}>
               <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 4 }}>request a sip</div>
               <div style={{ color: MUTED, fontSize: 14, marginBottom: 28 }}>sending to {modal.firstName} {modal.lastName} · {modal.role} @ {modal.company}</div>
@@ -575,18 +577,18 @@ function SeekersContent() {
               ) : (
                 <div>
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 13, color: MUTED, display: 'block', marginBottom: 6 }}>your name</label>
-                    <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                    <label htmlFor="seekerReqName" style={{ fontSize: 13, color: MUTED, display: 'block', marginBottom: 6 }}>your name</label>
+                    <input id="seekerReqName" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                       style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: TEXT, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
                   </div>
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 13, color: MUTED, display: 'block', marginBottom: 6 }}>your email</label>
-                    <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} type="email"
+                    <label htmlFor="seekerReqEmail" style={{ fontSize: 13, color: MUTED, display: 'block', marginBottom: 6 }}>your email</label>
+                    <input id="seekerReqEmail" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} type="email"
                       style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: TEXT, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
                   </div>
                   <div style={{ marginBottom: 28 }}>
-                  <label style={{ fontSize: 13, color: MUTED, display: 'block', marginBottom: 6 }}>what&apos;s on your mind?</label>
-                    <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3}
+                  <label htmlFor="seekerReqMessage" style={{ fontSize: 13, color: MUTED, display: 'block', marginBottom: 6 }}>what&apos;s on your mind?</label>
+                    <textarea id="seekerReqMessage" value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3}
                       style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: TEXT, fontSize: 14, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
                   </div>
                   <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={handleSubmit}

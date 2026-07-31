@@ -95,7 +95,7 @@ function MentorSignup() {
         <Link href="/dashboard" style={{ color: MUTED, textDecoration: 'none', fontSize: 14 }}>← back to dashboard</Link>
       </motion.nav>
 
-      <div style={{ maxWidth: 560, margin: '0 auto', padding: '90px 16px 60px' }}>
+      <div id="main-content" style={{ maxWidth: 560, margin: '0 auto', padding: '90px 16px 60px' }}>
 
         {/* HEADER */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} style={{ marginBottom: 48 }}>
@@ -142,26 +142,26 @@ function MentorSignup() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, marginBottom: 16 }}>
                   <div>
-                    <label style={label}>First name</label>
-                    <input value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="your first name" style={input} />
+                    <label style={label} htmlFor="firstName">First name</label>
+                    <input id="firstName" value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="your first name" style={input} />
                   </div>
                   <div>
-                    <label style={label}>Last name</label>
-                    <input value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="your last name" style={input} />
+                    <label style={label} htmlFor="lastName">Last name</label>
+                    <input id="lastName" value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="your last name" style={input} />
                   </div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={label}>Email</label>
-                  <input value={form.email} onChange={e => set('email', e.target.value)} type="email" placeholder="where seekers can reach you" style={input} />
+                  <label style={label} htmlFor="mentorEmail">Email</label>
+                  <input id="mentorEmail" value={form.email} onChange={e => set('email', e.target.value)} type="email" placeholder="where seekers can reach you" style={input} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, marginBottom: 24 }}>
                   <div>
-                    <label style={label}>Your role</label>
-                    <input value={form.role} onChange={e => set('role', e.target.value)} placeholder="e.g. SWE, Founder, PM" style={input} />
+                    <label style={label} htmlFor="role">Your role</label>
+                    <input id="role" value={form.role} onChange={e => set('role', e.target.value)} placeholder="e.g. SWE, Founder, PM" style={input} />
                   </div>
                   <div>
-                    <label style={label}>Company</label>
-                    <input value={form.company} onChange={e => set('company', e.target.value)} placeholder="where you work" style={input} />
+                    <label style={label} htmlFor="company">Company</label>
+                    <input id="company" value={form.company} onChange={e => set('company', e.target.value)} placeholder="where you work" style={input} />
                   </div>
                 </div>
                 {error && <div style={{ color: '#F87171', fontSize: 13, marginBottom: 12 }}>{error}</div>}
@@ -185,8 +185,8 @@ function MentorSignup() {
             {step === 2 && (
               <motion.div key="step2" variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: 'easeInOut' }}>
                 <div style={{ marginBottom: 20 }}>
-                  <label style={label}>Your one-liner bio</label>
-                  <textarea value={form.bio} onChange={e => set('bio', e.target.value)} placeholder="what do you actually want to talk about? be real, not corporate." rows={3} style={{ ...input, resize: 'none' }} />
+                  <label style={label} htmlFor="bio">Your one-liner bio</label>
+                  <textarea id="bio" value={form.bio} onChange={e => set('bio', e.target.value)} placeholder="what do you actually want to talk about? be real, not corporate." rows={3} style={{ ...input, resize: 'none' }} />
                   <div style={{ color: MUTED, fontSize: 12, marginTop: 6 }}>{form.bio.length}/200 chars</div>
                 </div>
                 <div style={{ marginBottom: 28 }}>
@@ -212,15 +212,15 @@ function MentorSignup() {
             {step === 3 && (
               <motion.div key="step3" variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: 'easeInOut' }}>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={label}>Calendar link (optional)</label>
-                  <input value={form.calendarLink} onChange={e => set('calendarLink', e.target.value)} placeholder="calendly.com/yourname" style={input} />
+                  <label style={label} htmlFor="calendarLink">Calendar link (optional)</label>
+                  <input id="calendarLink" value={form.calendarLink} onChange={e => set('calendarLink', e.target.value)} placeholder="calendly.com/yourname" style={input} />
                   {form.calendarLink && !/^(https?:\/\/)?(www\.)?calendly\.com\/.+/i.test(form.calendarLink.trim()) && (
                     <div style={{ color: '#F87171', fontSize: 12, marginTop: 6 }}>Must be a calendly.com link.</div>
                   )}
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={label}>Contact email (optional)</label>
-                  <input value={form.contactEmail} onChange={e => set('contactEmail', e.target.value)} type="email" placeholder="you@example.com" style={input} />
+                  <label style={label} htmlFor="contactEmail">Contact email (optional)</label>
+                  <input id="contactEmail" value={form.contactEmail} onChange={e => set('contactEmail', e.target.value)} type="email" placeholder="you@example.com" style={input} />
                   {form.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail.trim()) && (
                     <div style={{ color: '#F87171', fontSize: 12, marginTop: 6 }}>Enter a valid email.</div>
                   )}
@@ -232,8 +232,8 @@ function MentorSignup() {
                   )}
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={label}>LinkedIn profile (optional)</label>
-                  <input value={form.linkedin} onChange={e => set('linkedin', e.target.value)} placeholder="linkedin.com/in/yourname" style={input} />
+                  <label style={label} htmlFor="linkedin">LinkedIn profile (optional)</label>
+                  <input id="linkedin" value={form.linkedin} onChange={e => set('linkedin', e.target.value)} placeholder="linkedin.com/in/yourname" style={input} />
                   {form.linkedin && !/^(https?:\/\/)?(www\.)?linkedin\.com\/.+/i.test(form.linkedin.trim()) && (
                     <div style={{ color: '#F87171', fontSize: 12, marginTop: 6 }}>Please enter a valid LinkedIn profile URL.</div>
                   )}

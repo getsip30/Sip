@@ -136,16 +136,16 @@ export default function SeekerOnboarding() {
           <PixelAvatarPicker value={avatarData} onChange={setAvatarData} />
         </div>
         <div style={{ marginBottom: 16 }}>
-          <label style={label}>Your name</label>
-          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="what do people call you?" style={input} />
+          <label style={label} htmlFor="seekerName">Your name</label>
+          <input id="seekerName" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="what do people call you?" style={input} />
         </div>
         <div style={{ marginBottom: 16 }}>
-          <label style={label}>Age</label>
-          <input value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value.replace(/\D/g, '') }))} placeholder="optional" style={input} />
+          <label style={label} htmlFor="seekerAge">Age</label>
+          <input id="seekerAge" value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value.replace(/\D/g, '') }))} placeholder="optional" style={input} />
         </div>
         <div style={{ marginBottom: 16 }}>
-          <label style={label}>LinkedIn profile</label>
-          <input value={form.linkedin} onChange={e => setForm(f => ({ ...f, linkedin: e.target.value }))} placeholder="linkedin.com/in/yourname" style={input} />
+          <label style={label} htmlFor="seekerLinkedin">LinkedIn profile</label>
+          <input id="seekerLinkedin" value={form.linkedin} onChange={e => setForm(f => ({ ...f, linkedin: e.target.value }))} placeholder="linkedin.com/in/yourname" style={input} />
         </div>
         <div style={{ marginBottom: 28 }}>
           <label style={label}>What are you into?</label>

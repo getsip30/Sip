@@ -229,7 +229,7 @@ export default function HomeClient() {
               <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                 <Link href="/sign-in" style={{ background: TEXT, color: BG, padding: '9px 20px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'block' }}>sign in</Link>
               </motion.div>
-              <button onClick={() => setMobileMenu(m => !m)} className="mobile-only" style={{ background: 'transparent', border: 'none', color: TEXT, cursor: 'pointer', padding: 4, display: 'none' }}>
+              <button onClick={() => setMobileMenu(m => !m)} className="mobile-only" aria-label={mobileMenu ? 'Close menu' : 'Open menu'} aria-expanded={mobileMenu} style={{ background: 'transparent', border: 'none', color: TEXT, cursor: 'pointer', padding: 4, display: 'none' }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke={TEXT} strokeWidth="2" strokeLinecap="round"/></svg>
               </button>
             </>
@@ -252,7 +252,7 @@ export default function HomeClient() {
       </AnimatePresence>
 
       {/* HERO */}
-      <section style={{ position: 'relative', minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '100px 20px 40px', maxWidth: 1100, margin: '0 auto', textAlign: 'left', overflow: 'hidden' }}>
+      <section id="main-content" style={{ position: 'relative', minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '100px 20px 40px', maxWidth: 1100, margin: '0 auto', textAlign: 'left', overflow: 'hidden' }}>
 
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -444,6 +444,7 @@ export default function HomeClient() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="search by name, role, company, topic..."
+            aria-label="Search mentors by name, role, company, or topic"
             style={{ width: '100%', background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '13px 20px 13px 44px', color: TEXT, fontSize: 15, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
           />
           <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)' }}><IconSearch /></span>
@@ -457,6 +458,7 @@ export default function HomeClient() {
               onChange={e => setAiQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAIMatch()}
               placeholder="or describe what you need, e.g. 'advice switching into product'"
+              aria-label="Describe what you need for an AI mentor match"
               style={{ flex: 1, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '13px 18px', color: TEXT, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
             />
             <button onClick={handleAIMatch} disabled={matching} style={{ background: ACCENT, color: '#fff', border: 'none', borderRadius: 20, padding: '0 22px', fontSize: 14, fontWeight: 600, cursor: matching ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
@@ -469,7 +471,7 @@ export default function HomeClient() {
                 <p style={{ color: MUTED, fontSize: 14 }}>no strong matches right now - try the directory below.</p>
               ) : (
                 aiMatches.map(m => (
-                  <div key={m.id} onClick={() => window.location.href = `/mentors/${m.id}`} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '16px 20px', cursor: 'pointer' }}>
+                  <div key={m.id} onClick={() => window.location.href = `/mentors/${m.id}`} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.location.href = `/mentors/${m.id}`; } }} aria-label={`View ${m.firstName} ${m.lastName}, ${m.role} at ${m.company}`} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '16px 20px', cursor: 'pointer' }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{m.firstName} {m.lastName} · {m.role} @ {m.company}</div>
                     <div style={{ color: ACCENT, fontSize: 13, marginTop: 4 }}>{m.reason}</div>
                   </div>
@@ -529,6 +531,9 @@ export default function HomeClient() {
                   transition={{ duration: 0.3, delay: i * 0.05 }}
                   whileHover={{ y: -4, borderColor: ACCENT, boxShadow: `0 8px 30px ${ACCENT}1a` }}
                   onClick={() => window.location.href = `/mentors/${mentor.id}`}
+                  tabIndex={0}
+                  onKeyDown={e => { if (e.key === 'Enter' && e.target === e.currentTarget) { window.location.href = `/mentors/${mentor.id}`; } }}
+                  aria-label={`View ${mentor.firstName} ${mentor.lastName}, ${mentor.role} at ${mentor.company}`}
                   style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 24, cursor: 'pointer', transition: 'border-color 0.3s, box-shadow 0.3s' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                     {mentor.avatarData ? <PixelAvatar data={mentor.avatarData} size={44} /> : <div style={{ width: 44, height: 44, borderRadius: 10, background: AVATARS[i % AVATARS.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0, color: '#fff' }}>{INITIALS(mentor)}</div>}
@@ -596,6 +601,7 @@ export default function HomeClient() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+              role="dialog" aria-modal="true" aria-label="No mentors currently open"
               style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 36, width: '100%', maxWidth: 400, textAlign: 'center' }}>
               <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>no one in {noMatchInterest} is open right now</div>
               <p style={{ color: MUTED, fontSize: 14, marginBottom: 28 }}>want to talk to someone from a different area instead?</p>
@@ -622,6 +628,7 @@ export default function HomeClient() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+              role="dialog" aria-modal="true" aria-label="Request a sip"
               style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 36, width: '100%', maxWidth: 440 }}>
               <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 4 }}>request a sip</div>
               <div style={{ color: MUTED, fontSize: 14, marginBottom: 28 }}>sending to {modal.firstName} {modal.lastName} · {modal.role} @ {modal.company}</div>
@@ -638,15 +645,15 @@ export default function HomeClient() {
                   <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <div style={{ marginBottom: 16 }}>
                       <label style={{ fontSize: 13, color: MUTED, display: 'block', marginBottom: 6 }}>your name</label>
-                      <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="what do people call you?" autoComplete="name" name="name" style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '11px 14px', color: TEXT, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+                      <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="what do people call you?" autoComplete="name" name="name" aria-label="Your name" style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '11px 14px', color: TEXT, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
                     </div>
                     <div style={{ marginBottom: 16 }}>
                       <label style={{ fontSize: 13, color: MUTED, display: 'block', marginBottom: 6 }}>your email</label>
-                      <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="so they can reach back" type="email" autoComplete="email" name="email" style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '11px 14px', color: TEXT, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+                      <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="so they can reach back" type="email" autoComplete="email" name="email" aria-label="Your email" style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '11px 14px', color: TEXT, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
                     </div>
                     <div style={{ marginBottom: 28 }}>
                       <label style={{ fontSize: 13, color: MUTED, display: 'block', marginBottom: 6 }}>what&apos;s on your mind?</label>
-                      <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder="one or two sentences - what are you trying to figure out?" rows={3} style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '11px 14px', color: TEXT, fontSize: 14, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+                      <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder="one or two sentences - what are you trying to figure out?" rows={3} aria-label="What are you trying to figure out?" style={{ width: '100%', background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '11px 14px', color: TEXT, fontSize: 14, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
                     </div>
                     {modalError && (
                       <div style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 8, padding: '10px 14px', color: '#F87171', fontSize: 13, marginBottom: 16 }}>
