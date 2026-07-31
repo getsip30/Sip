@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const { message, path } = await req.json();
   if (!message?.trim() || message.length > 1000) return NextResponse.json({ error: "Empty or too long" }, { status: 400 });
 
-  await transporter.sendmail({
+  await transporter.sendMail({
     to: "your-email@getsip.co", // replace
     subject: "New Sip feedback",
     text: `Path: ${path}\n\n${message}`,
