@@ -243,8 +243,9 @@ export default function Dashboard() {
             onClick={e => { if (e.target === e.currentTarget) setChoosingContactFor(null); }}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              role="dialog" aria-modal="true" aria-label="Accept this request"
               style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 380 }}>
-              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>Accept this request</h3>
+              <p role="heading" aria-level={2} style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>Accept this request</p>
               <p style={{ color: MUTED, fontSize: 13, marginBottom: 16 }}>Not free right now? Add a note so they know when to book.</p>
               <textarea value={acceptNote} onChange={e => setAcceptNote(e.target.value)} maxLength={300} rows={2}
                 placeholder="e.g. I'm free next week after 6pm, book then!"
@@ -275,6 +276,7 @@ export default function Dashboard() {
             onClick={e => { if (e.target === e.currentTarget) setShowShareNote(false); }}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
             <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              role="dialog" aria-modal="true" aria-label="Share this on LinkedIn"
               style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 32, width: '100%', maxWidth: 460 }}>
               <div style={{ fontWeight: 700, fontSize: 19, marginBottom: 6 }}>share this on LinkedIn?</div>
               <div style={{ color: MUTED, fontSize: 13, marginBottom: 16 }}>Copy the draft, then paste it into a new LinkedIn post.</div>
@@ -313,7 +315,7 @@ export default function Dashboard() {
         </div>
       </motion.nav>
 
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '90px 16px 60px' }}>
+      <div id="main-content" style={{ maxWidth: 900, margin: '0 auto', padding: '90px 16px 60px' }}>
         <AnimatePresence mode="wait">
           {!mentor ? (
             <motion.div key="no-profile" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: 'center', padding: '80px 0' }}>
@@ -644,10 +646,11 @@ export default function Dashboard() {
 
                             {!r.mentorFeedbackGiven ? (
                               <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                <div style={{ display: 'flex', gap: 4 }}>
+                                <div role="radiogroup" aria-label="Rating" style={{ display: 'flex', gap: 4 }}>
                                   {[1, 2, 3, 4, 5].map(n => (
-                                    <span key={n} onClick={() => setFeedbackRatings(d => ({ ...d, [r.id]: n }))}
-                                      style={{ cursor: 'pointer', fontSize: 18, color: (feedbackRatings[r.id] || 0) >= n ? WARNING : 'rgba(255,255,255,0.2)' }}>★</span>
+                                    <button key={n} type="button" role="radio" aria-checked={(feedbackRatings[r.id] || 0) === n} aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                                      onClick={() => setFeedbackRatings(d => ({ ...d, [r.id]: n }))}
+                                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 18, color: (feedbackRatings[r.id] || 0) >= n ? WARNING : 'rgba(255,255,255,0.2)' }}>★</button>
                                   ))}
                                 </div>
                                 <textarea value={feedbackComments[r.id] || ''} onChange={e => setFeedbackComments(d => ({ ...d, [r.id]: e.target.value }))}
