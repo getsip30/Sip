@@ -126,6 +126,7 @@ export default function Dashboard() {
     setTogglingConsent(null);
   }
   const [isLive, setIsLive] = useState(false);
+  const [liveRoomId, setLiveRoomId] = useState<string | null>(null);
   const [showTour, setShowTour] = useState(false);
 
   
@@ -139,7 +140,9 @@ export default function Dashboard() {
       setMentor(m);
       if (liveRes.ok) {
         const liveRooms = await liveRes.json();
-        setIsLive(liveRooms.some((r: { mentorId: string }) => r.mentorId === m.id));
+        const mine = liveRooms.find((r: { id: string; mentorId: string }) => r.mentorId === m.id);
+        setIsLive(!!mine);
+        setLiveRoomId(mine?.id || null);
       }
       const notesRes = await fetch(`/api/sip-notes?mentorId=${m.id}&mine=true`);
       if (notesRes.ok) setPendingNotes(await notesRes.json());
@@ -355,15 +358,20 @@ export default function Dashboard() {
                     <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
                       onClick={async () => {
                         const res = await fetch('/api/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: `${mentor.firstName}'s Sip Room` }) });
-                        if (res.ok) { setIsLive(true); const room = await res.json(); router.push(`/rooms/${room.id}`); }
+                        if (res.ok) { setIsLive(true); const room = await res.json(); setLiveRoomId(room.id); router.push(`/rooms/${room.id}`); }
                       }}
                       style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.3)', color: DANGER, padding: '10px 20px', borderRadius: 24, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: DANGER, display: 'inline-block' }} /> go live
                     </motion.button>
                   )}
+                  {isLive && liveRoomId && (
+                    <Link href={`/rooms/${liveRoomId}`} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(91,219,138,0.12)', border: '1px solid rgba(91,219,138,0.3)', color: SUCCESS2, padding: '10px 20px', borderRadius: 24, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: SUCCESS2, display: 'inline-block' }} /> rejoin room
+                    </Link>
+                  )}
                   {isLive && (
                     <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                      onClick={async () => { await fetch('/api/rooms', { method: 'DELETE' }); setIsLive(false); }}
+                      onClick={async () => { await fetch('/api/rooms', { method: 'DELETE' }); setIsLive(false); setLiveRoomId(null); }}
                       style={{ background: 'rgba(139,148,158,0.1)', border: '1px solid rgba(139,148,158,0.2)', color: MUTED, padding: '10px 20px', borderRadius: 24, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                       end sip
                     </motion.button>
