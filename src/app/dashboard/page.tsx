@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useUser, SignOutButton } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
@@ -10,7 +10,7 @@ import RoleSwitchLink from '@/components/RoleSwitchLink';
 import AppTour, { TourStep } from '@/components/AppTour';
 import PixelAvatar from '@/components/PixelAvatar';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, SUCCESS2, WARNING, DANGER, PURPLE } from '@/lib/theme';
+import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, SUCCESS2, WARNING, DANGER, CLAY } from '@/lib/theme';
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
@@ -33,7 +33,7 @@ type SipNote = {
 const BADGE_META: Record<string, { label: string; color: string }> = {
   'first-sip': { label: 'First Sip', color: '#D97706' },
   'regular':   { label: 'Regular',   color: '#DC2626' },
-  'veteran':   { label: 'Veteran',   color: PURPLE },
+  'veteran':   { label: 'Veteran',   color: CLAY },
   'legend':    { label: 'Legend',    color: '#0891B2' },
   'goat':      { label: 'GOAT',      color: '#059669' },
 };
@@ -474,7 +474,7 @@ export default function Dashboard() {
                   { label: 'Total Requests', value: requests.length, color: LINK },
                   { label: 'Pending', value: requests.filter(r => r.status === 'pending').length, color: WARNING },
                   { label: 'XP Earned', value: mentor.xp.toLocaleString(), color: SUCCESS2 },
-                  { label: 'Sips Given', value: mentor.sipCount, color: PURPLE },
+                  { label: 'Sips Given', value: mentor.sipCount, color: CLAY },
                 ].map((stat, i) => (
                   <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.07 }}
                     whileHover={{ y: -4, borderColor: 'rgba(255,255,255,0.15)' }}
@@ -621,7 +621,7 @@ export default function Dashboard() {
                           style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: TEXT, fontSize: 14, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: 10 }} />
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 12 }}>
                           <input type="checkbox" id={`share-${a.id}`} checked={!!shareDrafts[a.id]} onChange={e => setShareDrafts(d => ({ ...d, [a.id]: e.target.checked }))} style={{ marginTop: 3, accentColor: ACCENT, cursor: 'pointer' }} />
-                          <label htmlFor={`share-${a.id}`} style={{ fontSize: 12, color: MUTED, cursor: 'pointer', lineHeight: 1.5 }}>Ok to feature on the public answers page (only shows if they also opted in — only their first name is shown)</label>
+                          <label htmlFor={`share-${a.id}`} style={{ fontSize: 12, color: MUTED, cursor: 'pointer', lineHeight: 1.5 }}>Ok to feature on the public answers page (only shows if they also opted in, and only their first name is shown)</label>
                         </div>
                         <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => submitAnswer(a.id)} disabled={submittingAnswer === a.id}
                           style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '8px 20px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: submittingAnswer === a.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>

@@ -1,10 +1,11 @@
-﻿import { auth } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { requests, mentors, seekers, rooms, queueEntries } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { NextResponse, after } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
+import { logSwallowed } from '@/lib/logger';
 import { escapeHtml } from '@/lib/utils';
 import { isUuid } from '@/lib/validate';
 import { mutationLimiter } from '@/lib/ratelimit';
@@ -85,7 +86,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">View in Dashboard →</a>
         </div>
       `,
-    }).catch(err => console.error('connect-request email failed:', err)));
+    }).catch(err => logSwallowed('email.connect_request_failed', err, { roomId, seekerClerkId })));
 
     return NextResponse.json(created[0]);
   } catch (err) {

@@ -1,4 +1,4 @@
-﻿import { ClerkProvider } from '@clerk/nextjs';
+import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from 'next';
 import { FeedbackWidget } from '@/components/feedback-widget';
 
@@ -8,10 +8,10 @@ import './globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://getsip.co'),
   title: {
-    default: 'Sip — Find Your People',
+    default: 'Sip: real conversations with people who did it',
     template: '%s | Sip',
   },
-  description: 'Real conversations, zero cold messages. Sip connects you with mentors for live, no-pressure conversations — no scheduling, no cold outreach.',
+  description: 'Real conversations, zero cold messages. Sip connects you with mentors for live, no-pressure conversations. No scheduling, no cold outreach.',
   keywords: [
     'mentorship platform',
     'live mentorship',
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     apple: '/logo.png',
   },
   openGraph: {
-    title: 'Sip — Find Your People',
+    title: 'Sip: real conversations with people who did it',
     description: 'Real conversations, zero cold messages.',
     url: 'https://getsip.co',
     siteName: 'Sip',
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Sip — Find Your People',
+    title: 'Sip: real conversations with people who did it',
     description: 'Real conversations, zero cold messages.',
     images: ['/logo.png'],
   },

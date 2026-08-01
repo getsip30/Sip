@@ -3,10 +3,14 @@ import { db } from '@/db';
 import { requests, mentors, sipFeedback } from '@/db/schema';
 import { eq, and, getTableColumns, desc } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { privateReadLimiter, limitKey, tooManyRequests } from '@/lib/ratelimit';
 
-export async function GET() {
+export async function GET(req: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { success, reset } = await privateReadLimiter.limit(limitKey(req, userId));
+    if (!success) return tooManyRequests(reset);
+
 
   const mentorResult = await db.select().from(mentors).where(eq(mentors.clerkId, userId));
   if (mentorResult.length === 0) return NextResponse.json([]);

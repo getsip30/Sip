@@ -5,6 +5,8 @@ import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
+import { logSwallowed } from '@/lib/logger';
+import { recordAbuseSignal } from '@/lib/abuse';
 import { escapeHtml } from '@/lib/utils';
 import { isUuid, cleanText } from '@/lib/validate';
 import { mutationLimiter } from '@/lib/ratelimit';
@@ -31,7 +33,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const existing = await db.select().from(asks).where(eq(asks.id, id));
     if (!existing[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    if (existing[0].mentorId !== mentor.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (existing[0].mentorId !== mentor.id) {
+      void recordAbuseSignal('auth_denied', userId, { route: 'asks.answer', askId: id });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const updated = await db.update(asks)
       .set({ answer: cleanAnswer, status: 'answered', answeredAt: new Date(), mentorConsentToShow: !!showPublicly })
@@ -54,7 +59,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           <p style="color:#C9D1D9;font-size:14px;line-height:1.7;margin-bottom:24px;">"${escapeHtml(a.answer ?? '')}"</p>        
         </div>
       `,
-    }).catch(err => console.error('answer email failed:', err));
+    }).catch(err => logSwallowed('email.answer_failed', err, { askId: id }));
 
     return NextResponse.json(a);
   } catch (err) {

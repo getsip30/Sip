@@ -1,4 +1,5 @@
-﻿import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
+import { getClerkUser } from '@/lib/clerk';
 import { db } from '@/db';
 import { asks, mentors } from '@/db/schema';
 import { eq, and, gte } from 'drizzle-orm';
@@ -9,6 +10,7 @@ import { moderateQuestion } from '@/lib/groq';
 import { escapeHtml } from '@/lib/utils';
 import { isUuid, cleanText } from '@/lib/validate';
 import { handleApiError } from '@/lib/api-handler';
+import { recordAbuseSignal } from '@/lib/abuse';
 import { seekers, flags } from '@/db/schema';
 import { ne } from 'drizzle-orm';
 
@@ -39,10 +41,9 @@ export async function POST(req: Request) {
     const seekerCheck = await db.select().from(seekers).where(eq(seekers.clerkId, userId));
     if (seekerCheck[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
 
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const seekerEmail = user.emailAddresses[0]?.emailAddress || '';
-    const seekerName = user.firstName || 'Someone';
+    const clerkUser = await getClerkUser(userId);
+    const seekerEmail = clerkUser?.emailAddresses?.[0]?.emailAddress || '';
+    const seekerName = clerkUser?.firstName || 'Someone';
 
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const recentAsks = await db.select().from(asks).where(and(eq(asks.seekerClerkId, userId), eq(asks.mentorId, mentorId), gte(asks.createdAt, weekAgo)));
@@ -55,6 +56,7 @@ export async function POST(req: Request) {
     // treated a Groq outage as "safe".
     const moderation = await moderateQuestion(cleanQuestion);
     if (moderation.flagged) {
+      void recordAbuseSignal('moderation_flagged', userId, { mentorId });
       return NextResponse.json({ error: 'That question was flagged by our moderation filter. Please rephrase it.' }, { status: 400 });
     }
     if (moderation.unavailable) {

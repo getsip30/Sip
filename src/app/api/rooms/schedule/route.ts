@@ -4,6 +4,7 @@ import { rooms, mentors, follows } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { NextResponse, after } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
+import { logSwallowed } from '@/lib/logger';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { transporter } from '@/lib/mailer';
 import { escapeHtml } from '@/lib/utils';
@@ -83,8 +84,8 @@ export async function POST(req: Request) {
             subject: `${mentor.firstName} scheduled a sip for ${whenStr}`,
             html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;"><div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div><h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">${escapeHtml(mentor.firstName)} ${escapeHtml(mentor.lastName)} is going live ${whenStr}</h2><p style="color:#8B949E;font-size:14px;line-height:1.7;margin-bottom:24px;">Line up in the queue right when it starts.</p><a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/rooms/${created[0].id}" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">View session →</a></div>`,
           });
-        } catch (e) {
-          console.error('scheduled-session follower notify failed:', e);
+        } catch (err) {
+          logSwallowed('email.scheduled_follower_notify_failed', err, { mentorId: mentor.id });
         }
       }
     });

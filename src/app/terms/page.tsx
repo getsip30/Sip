@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { BG, TEXT, MUTED, LINK } from '@/lib/theme';
 import Logo from '@/components/Logo';
 import Link from 'next/link';

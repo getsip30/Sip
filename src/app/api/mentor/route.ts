@@ -1,4 +1,4 @@
-﻿import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { mentors, seekers, referralEvents } from '@/db/schema';
 import { eq, desc, sql, and } from 'drizzle-orm';
@@ -7,8 +7,10 @@ import { transporter } from '@/lib/mailer';
 import { generateUniqueReferralCode } from '@/lib/referral';
 import { publicMentor } from '@/lib/mentor';
 import { escapeHtml, safeExternalUrl } from '@/lib/utils';
-import { mutationLimiter } from '@/lib/ratelimit';
+import { mutationLimiter, limitKey } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
+import { logSwallowed } from '@/lib/logger';
+import { recordAbuseSignal } from '@/lib/abuse';
 
 async function notifyMatchingSeekers(mentor: typeof mentors.$inferSelect) {
   const mentorTopics = mentor.topics.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
@@ -121,7 +123,8 @@ export async function POST(req: Request) {
     });
   }
 
-  after(() => notifyMatchingSeekers(mentor[0]).catch(err => console.error('notifyMatchingSeekers failed:', err)));
+  void recordAbuseSignal('signup', limitKey(req, userId), { role: 'mentor' });
+  after(() => notifyMatchingSeekers(mentor[0]).catch(err => logSwallowed('email.new_mentor_match_failed', err, { mentorId: mentor[0].id })));
 
   return NextResponse.json(mentor[0]);
   } catch (err) {
@@ -183,7 +186,7 @@ export async function PATCH(req: Request) {
 
   if (isOpen && !wasOpen && canNotify) {
     await db.update(mentors).set({ lastOpenNotifiedAt: new Date() }).where(eq(mentors.id, updated[0].id));
-    after(() => notifyMatchingSeekers(updated[0]).catch(err => console.error('notifyMatchingSeekers failed:', err)));
+    after(() => notifyMatchingSeekers(updated[0]).catch(err => logSwallowed('email.reopened_mentor_match_failed', err, { mentorId: updated[0].id })));
   }
 
   return NextResponse.json(updated[0]);

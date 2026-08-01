@@ -2,7 +2,8 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { queueEntries, rooms, seekers, flags, mentors } from '@/db/schema';
 import { eq, and, sql, inArray, ne, lt } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
+import { runOnce } from '@/lib/lock';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter, readLimiter, getIp } from '@/lib/ratelimit';
 import { isUuid, cleanText } from '@/lib/validate';
@@ -19,52 +20,63 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (!isUuid(id)) return NextResponse.json({ waiting: [], active: [], done: [] });
 
     const { userId: viewerId } = await auth();
-    const staleCutoff = new Date(Date.now() - STALE_WAITING_MS);
-    await db.update(queueEntries).set({ status: 'left' })
-      .where(and(eq(queueEntries.roomId, id), eq(queueEntries.status, 'waiting'), lt(queueEntries.joinedAt, staleCutoff)));
 
-    const result = await db.select().from(queueEntries)
-      .where(and(eq(queueEntries.roomId, id), eq(queueEntries.status, 'waiting')))
-      .orderBy(queueEntries.joinedAt);
-    const active = await db.select().from(queueEntries)
-      .where(and(eq(queueEntries.roomId, id), eq(queueEntries.status, 'active')));
-    const done = await db.select().from(queueEntries)
-      .where(and(eq(queueEntries.roomId, id), eq(queueEntries.status, 'done')))
-      .orderBy(sql`${queueEntries.doneAt} desc`)
-      .limit(50);
+    // Every viewer polls this every 4s, so the stale-entry sweep runs behind a
+    // per-room lock and off the response path rather than on every request.
+    after(() =>
+      runOnce(`queue:sweep:${id}`, 60, async () => {
+        const staleCutoff = new Date(Date.now() - STALE_WAITING_MS);
+        await db.update(queueEntries).set({ status: 'left' })
+          .where(and(eq(queueEntries.roomId, id), eq(queueEntries.status, 'waiting'), lt(queueEntries.joinedAt, staleCutoff)));
+      })
+    );
+
+    // The room (and its owner) is resolved once, joined, rather than being
+    // re-fetched separately for the counts and for the viewer check.
+    const [entries, roomRow] = await Promise.all([
+      db.select().from(queueEntries)
+        .where(and(eq(queueEntries.roomId, id), inArray(queueEntries.status, ['waiting', 'active', 'done'])))
+        .orderBy(queueEntries.joinedAt),
+      db.select({ mentorId: rooms.mentorId, mentorClerkId: mentors.clerkId })
+        .from(rooms)
+        .innerJoin(mentors, eq(rooms.mentorId, mentors.id))
+        .where(eq(rooms.id, id)),
+    ]);
+
+    const result = entries.filter(e => e.status === 'waiting');
+    const active = entries.filter(e => e.status === 'active');
+    const done = entries
+      .filter(e => e.status === 'done')
+      .sort((a, b) => (b.doneAt?.getTime() ?? 0) - (a.doneAt?.getTime() ?? 0))
+      .slice(0, 50);
 
     const allEntries = [...result, ...active, ...done];
     const clerkIds = [...new Set(allEntries.map(e => e.seekerClerkId).filter(Boolean))] as string[];
 
+    const viewerIsMentor = !!viewerId && roomRow[0]?.mentorClerkId === viewerId;
+
     let visitCounts: Record<string, number> = {};
     let flagCounts: Record<string, number> = {};
 
-    if (clerkIds.length > 0) {
-      const room = await db.select().from(rooms).where(eq(rooms.id, id));
-      const mentorId = room[0]?.mentorId;
-
-      if (mentorId) {
-        const mentorRooms = await db.select({ id: rooms.id }).from(rooms).where(eq(rooms.mentorId, mentorId));
-        const roomIds = mentorRooms.map(r => r.id);
-        const visits = await db.select({ seekerClerkId: queueEntries.seekerClerkId, count: sql<number>`count(*)::int` })
-          .from(queueEntries)
-          .where(and(inArray(queueEntries.roomId, roomIds), inArray(queueEntries.seekerClerkId, clerkIds)))
-          .groupBy(queueEntries.seekerClerkId);
-        visitCounts = Object.fromEntries(visits.map(v => [v.seekerClerkId as string, v.count]));
-      }
-
-      const flagRows = await db.select({ reportedClerkId: flags.reportedClerkId, count: sql<number>`count(*)::int` })
-        .from(flags)
-        .where(and(inArray(flags.reportedClerkId, clerkIds), ne(flags.status, 'dismissed')))
-        .groupBy(flags.reportedClerkId);
+    // These two aggregates are only ever rendered for the host, so skip the work
+    // entirely for the seekers who make up nearly all of this route's traffic.
+    if (viewerIsMentor && clerkIds.length > 0) {
+      const mentorId = roomRow[0]?.mentorId;
+      const [visits, flagRows] = await Promise.all([
+        mentorId
+          ? db.select({ seekerClerkId: queueEntries.seekerClerkId, count: sql<number>`count(*)::int` })
+              .from(queueEntries)
+              .innerJoin(rooms, eq(queueEntries.roomId, rooms.id))
+              .where(and(eq(rooms.mentorId, mentorId), inArray(queueEntries.seekerClerkId, clerkIds)))
+              .groupBy(queueEntries.seekerClerkId)
+          : Promise.resolve([]),
+        db.select({ reportedClerkId: flags.reportedClerkId, count: sql<number>`count(*)::int` })
+          .from(flags)
+          .where(and(inArray(flags.reportedClerkId, clerkIds), ne(flags.status, 'dismissed')))
+          .groupBy(flags.reportedClerkId),
+      ]);
+      visitCounts = Object.fromEntries(visits.map(v => [v.seekerClerkId as string, v.count]));
       flagCounts = Object.fromEntries(flagRows.map(f => [f.reportedClerkId as string, f.count]));
-    }
-
-    let viewerIsMentor = false;
-    if (viewerId) {
-      const room = await db.select().from(rooms).where(eq(rooms.id, id));
-      const mentorRow = room[0] ? await db.select().from(mentors).where(eq(mentors.id, room[0].mentorId)) : [];
-      viewerIsMentor = mentorRow[0]?.clerkId === viewerId;
     }
 
     const attach = (e: typeof allEntries[number]) => {

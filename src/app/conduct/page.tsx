@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { BG, TEXT, MUTED, LINK } from '@/lib/theme';
 import Logo from '@/components/Logo';
 import Link from 'next/link';
@@ -21,7 +21,7 @@ export default function Conduct() {
             <li>No recording, screenshotting, or sharing any part of a call without explicit consent from everyone involved.</li>
             <li>No harassment, discrimination, or inappropriate language or behavior.</li>
             <li>Show up when you say you will. Repeated no-shows can affect your standing.</li>
-            <li>Use the flag button if something feels wrong — reports are reviewed, not ignored.</li>
+            <li>Use the flag button if something feels wrong. reports are reviewed, not ignored.</li>
             <li>Violations can result in a warning, suspension, or permanent ban depending on severity.</li>
           </ul>
         </div>

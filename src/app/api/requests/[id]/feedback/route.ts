@@ -1,4 +1,5 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
+import { getUserEmail } from '@/lib/clerk';
 import { db } from '@/db';
 import { requests, mentors, sipFeedback } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -37,9 +38,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (mentor.clerkId === userId) {
       role = 'mentor';
     } else {
-      const client = await clerkClient();
-      const user = await client.users.getUser(userId);
-      const email = user.emailAddresses[0]?.emailAddress;
+      const email = await getUserEmail(userId);
       if (!email || email.toLowerCase() !== r.seekerEmail.toLowerCase()) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }

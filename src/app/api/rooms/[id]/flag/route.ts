@@ -4,6 +4,7 @@ import { flags, mentors, queueEntries, rooms, seekers } from '@/db/schema';
 import { eq, and, ne } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
+import { logSwallowed } from '@/lib/logger';
 import { transporter } from '@/lib/mailer';
 import { mutationLimiter } from '@/lib/ratelimit';
 
@@ -112,8 +113,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     try {
       const reportedUser = await client.users.getUser(reportedClerkId);
       reportedEmail = reportedUser.emailAddresses[0]?.emailAddress || null;
-    } catch (e) {
-      console.error('Could not fetch reported user email', e);
+    } catch (err) {
+      logSwallowed('flag.reported_email_lookup_failed', err, { reportedClerkId });
     }
 
     if (reportedEmail) {

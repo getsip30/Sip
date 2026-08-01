@@ -1,12 +1,13 @@
-﻿import type { Metadata } from 'next';
-import HomeClient from './HomeClient';
+import type { Metadata } from 'next';
+import Landing from './Landing';
 
 export const metadata: Metadata = {
-  title: 'Sip — Find Your People',
-  description: 'Real conversations, zero cold messages. Join a live queue and talk to a mentor right now — no scheduling, no waiting on replies.',
+  title: 'Sip: talk to someone who already did the thing',
+  description:
+    'Sip puts students in front of people working the jobs they want. Say what you are stuck on, see who can help, and have the conversation this week.',
   openGraph: {
-    title: 'Sip — Find Your People',
-    description: 'Real conversations, zero cold messages.',
+    title: 'Sip: talk to someone who already did the thing',
+    description: 'Students and mentors, matched for real conversations. No cold outreach.',
     url: 'https://getsip.co',
   },
 };
@@ -18,16 +19,14 @@ export default function Page() {
     name: 'Sip',
     url: 'https://getsip.co',
     logo: 'https://getsip.co/logo.png',
-    description: 'Live mentorship platform connecting mentors and seekers for real-time conversations, no scheduling required.',
+    description:
+      'Live mentorship platform connecting students with working professionals for real-time conversations.',
   };
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <HomeClient />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <Landing />
     </>
   );
 }

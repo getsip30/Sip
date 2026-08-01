@@ -4,6 +4,7 @@ import { requests, mentors } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { handleApiError } from "@/lib/api-handler";
+import { recordAbuseSignal } from '@/lib/abuse';
 import { mutationLimiter } from "@/lib/ratelimit";
 import { isUuid } from '@/lib/validate';
 
@@ -36,6 +37,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json(updated[0]);
     }
 
+    void recordAbuseSignal('auth_denied', userId, { route: 'requests.consent', requestId: id });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   } catch (err) {
     return handleApiError(err, 'PATCH /api/requests/[id]/consent');

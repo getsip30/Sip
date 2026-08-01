@@ -1,11 +1,13 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
+import { getClerkUser } from '@/lib/clerk';
 import { db } from '@/db';
 import { seekers, mentors, referralEvents, flags } from '@/db/schema';
 import { eq, ne, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { generateUniqueReferralCode } from '@/lib/referral';
-import { mutationLimiter } from '@/lib/ratelimit';
+import { mutationLimiter, limitKey } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
+import { recordAbuseSignal } from '@/lib/abuse';
 import { safeExternalUrl } from '@/lib/utils';
 
 export async function GET() {
@@ -48,10 +50,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid avatar' }, { status: 400 });
   }
 
-  const client = await clerkClient();
-  const user = await client.users.getUser(userId);
-  const email = user.emailAddresses[0]?.emailAddress || '';
-
   const existing = await db.select().from(seekers).where(eq(seekers.clerkId, userId));
   if (existing[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
 
@@ -63,6 +61,10 @@ export async function POST(req: Request) {
     return NextResponse.json(updated[0]);
   }
 
+  // Only new profiles need the Clerk record, so this stays off the update path.
+  const clerkUser = await getClerkUser(userId);
+  const email = clerkUser?.emailAddresses?.[0]?.emailAddress || '';
+
   let invitedByClerkId: string | null = null;
   if (ref) {
     const referrerSeeker = await db.select().from(seekers).where(eq(seekers.referralCode, ref));
@@ -73,8 +75,8 @@ export async function POST(req: Request) {
   const referralCode = await generateUniqueReferralCode();
   const created = await db.insert(seekers).values({
     clerkId: userId,
-    firstName: firstName || user.firstName || '',
-    lastName: user.lastName || '',
+    firstName: firstName || clerkUser?.firstName || '',
+    lastName: clerkUser?.lastName || '',
     email,
     age,
     linkedin: safeLinkedin,
@@ -93,6 +95,7 @@ export async function POST(req: Request) {
     });
   }
 
+  void recordAbuseSignal('signup', limitKey(req, userId), { role: 'seeker' });
   return NextResponse.json(created[0]);
   } catch (err) {
     return handleApiError(err, 'POST /api/seeker');

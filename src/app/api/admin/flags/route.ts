@@ -2,12 +2,16 @@ import { db } from '@/db';
 import { flags } from '@/db/schema';
 import { desc } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { adminLimiter, limitKey, tooManyRequests } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
 import { isAdmin } from '@/lib/admin';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     if (!(await isAdmin())) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const { success, reset } = await adminLimiter.limit(limitKey(req, 'admin'));
+    if (!success) return tooManyRequests(reset);
+
     const result = await db.select().from(flags).orderBy(desc(flags.createdAt));
     return NextResponse.json(result);
   } catch (err) {

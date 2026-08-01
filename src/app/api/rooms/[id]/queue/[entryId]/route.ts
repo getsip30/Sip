@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { queueEntries, rooms, mentors } from '@/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { mutationLimiter, limitKey, tooManyRequests } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
 import { isUuid } from '@/lib/validate';
 
@@ -20,6 +21,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!isUuid(id) || !isUuid(entryId)) return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { success, reset } = await mutationLimiter.limit(limitKey(req, userId));
+    if (!success) return tooManyRequests(reset);
 
     const mentor = await assertMentorOwnsRoom(userId, id);
     if (!mentor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

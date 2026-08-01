@@ -1,4 +1,5 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
+import { getUserEmail } from '@/lib/clerk';
 import { db } from '@/db';
 import { requests, mentors } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -6,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { isUuid } from '@/lib/validate';
 import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
+import { logSwallowed } from '@/lib/logger';
 import { escapeHtml } from '@/lib/utils';
 import { mutationLimiter } from '@/lib/ratelimit';
 
@@ -33,9 +35,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (mentor.clerkId === userId) {
       cancelledBy = 'mentor';
     } else {
-      const client = await clerkClient();
-      const user = await client.users.getUser(userId);
-      const email = user.emailAddresses[0]?.emailAddress;
+      const email = await getUserEmail(userId);
       if (!email || email.toLowerCase() !== r.seekerEmail.toLowerCase()) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
@@ -63,12 +63,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>
           <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">Sip cancelled</h2>
           <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;">
-          ${escapeHtml(cancellerName)} cancelled your upcoming sip. Sorry about that — check back on Sip whenever you're ready.
+          ${escapeHtml(cancellerName)} cancelled your upcoming sip. Sorry about that. Check back on Sip whenever you're ready.
           </p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" style="display:inline-block;background:#161B22;color:#70B5F9;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid rgba(112,181,249,0.3);">Back to Sip →</a>
         </div>
       `,
-    }).catch(err => console.error('cancel email failed:', err));
+    }).catch(err => logSwallowed('email.cancel_failed', err, { requestId: id }));
 
     return NextResponse.json(updated[0]);
   } catch (err) {

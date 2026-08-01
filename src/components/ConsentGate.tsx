@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { BG, SURFACE, TEXT, MUTED, ACCENT } from '@/lib/theme';
 
 export function ConsentGate({ onAccept, onDecline }: { onAccept: () => void; onDecline: () => void }) {
@@ -8,7 +8,7 @@ export function ConsentGate({ onAccept, onDecline }: { onAccept: () => void; onD
         <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: TEXT }}>Before you join a call</h3>
         <ul style={{ fontSize: 14, color: MUTED, lineHeight: 1.8, marginBottom: 22, paddingLeft: 18 }}>
           <li>No recording, screenshotting, or sharing this call without consent</li>
-          <li>Be respectful — harassment or inappropriate behavior gets you removed</li>
+          <li>Be respectful. Harassment or inappropriate behavior gets you removed</li>
           <li>Sessions may be reported and reviewed if flagged</li>
           <li>Use the flag button if anything feels off</li>
           <li>Repeated violations result in a permanent ban</li>

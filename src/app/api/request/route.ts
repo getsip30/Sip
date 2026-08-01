@@ -1,11 +1,13 @@
-﻿import { db } from '@/db';
+import { db } from '@/db';
 import { requests, mentors, seekers } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
+import { getUserEmail } from '@/lib/clerk';
 import { emailLimiter } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
+import { logSwallowed } from '@/lib/logger';
 import { escapeHtml } from '@/lib/utils';
 import { isUuid } from '@/lib/validate';
 import { flags } from '@/db/schema';
@@ -43,9 +45,7 @@ export async function POST(req: Request) {
     // The email is taken from the verified Clerk identity, never from the body.
     // requests.seekerEmail is later used to authorise cancel/schedule/feedback,
     // so it must not be attacker-supplied.
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const seekerEmail = user.emailAddresses[0]?.emailAddress;
+    const seekerEmail = await getUserEmail(userId);
     if (!seekerEmail) return NextResponse.json({ error: 'No email on your account.' }, { status: 400 });
 
     const mentorResult = await db.select().from(mentors).where(eq(mentors.id, mentorId));
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
           <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">View in Dashboard →</a>
         </div>
       `,
-    }).catch(err => console.error('request email failed:', err));
+    }).catch(err => logSwallowed('email.new_request_failed', err, { mentorId }));
 
     return NextResponse.json(created[0]);
   } catch (err) {
