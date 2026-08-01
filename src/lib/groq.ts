@@ -41,7 +41,13 @@ export async function matchMentors(
   }
 }
 
-export async function moderateQuestion(question: string): Promise<{ flagged: boolean; reason?: string }> {
+/**
+ * Returns flagged=true for abusive content. On provider failure it returns
+ * `unavailable: true` so callers can fail CLOSED — previously any Groq outage
+ * silently disabled moderation entirely.
+ */
+export async function moderateQuestion(question: string): Promise<{ flagged: boolean; reason?: string; unavailable?: boolean }> {
+  try {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -62,13 +68,18 @@ export async function moderateQuestion(question: string): Promise<{ flagged: boo
     }),
   });
 
-  if (!res.ok) return { flagged: false };
+    if (!res.ok) return { flagged: false, unavailable: true };
 
-  const data = await res.json();
-  const reply = data.choices?.[0]?.message?.content?.trim() || 'SAFE';
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+    if (!reply) return { flagged: false, unavailable: true };
 
-  if (reply.startsWith('FLAGGED')) {
-    return { flagged: true, reason: reply.replace('FLAGGED:', '').trim() };
+    if (reply.startsWith('FLAGGED')) {
+      return { flagged: true, reason: reply.replace('FLAGGED:', '').trim() };
+    }
+    return { flagged: false };
+  } catch (err) {
+    console.error('moderateQuestion failed:', err);
+    return { flagged: false, unavailable: true };
   }
-  return { flagged: false };
 }

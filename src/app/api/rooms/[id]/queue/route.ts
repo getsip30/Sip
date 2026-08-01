@@ -5,6 +5,7 @@ import { eq, and, sql, inArray, ne, lt } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter, readLimiter, getIp } from '@/lib/ratelimit';
+import { isUuid, cleanText } from '@/lib/validate';
 
 const STALE_WAITING_MS = 30 * 60 * 1000;
 
@@ -15,6 +16,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (!success) return NextResponse.json({ error: 'Slow down a bit.' }, { status: 429 });
 
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ waiting: [], active: [], done: [] });
+
     const { userId: viewerId } = await auth();
     const staleCutoff = new Date(Date.now() - STALE_WAITING_MS);
     await db.update(queueEntries).set({ status: 'left' })
@@ -65,7 +68,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     const attach = (e: typeof allEntries[number]) => {
-      const base = { id: e.id, roomId: e.roomId, seekerName: e.seekerName, topic: e.topic, status: e.status, joinedAt: e.joinedAt, calledAt: e.calledAt, doneAt: e.doneAt };
+      // `isMine` lets a seeker find their own entry without exposing anyone
+      // else's clerkId. Without it non-mentors had no way to identify themselves,
+      // so their queue position reset to null on every poll.
+      const base = {
+        id: e.id, roomId: e.roomId, seekerName: e.seekerName, topic: e.topic, status: e.status,
+        joinedAt: e.joinedAt, calledAt: e.calledAt, doneAt: e.doneAt,
+        isMine: !!viewerId && e.seekerClerkId === viewerId,
+      };
       if (!viewerIsMentor) return base;
       return {
         ...base,
@@ -88,6 +98,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: 'Room not found or ended' }, { status: 404 });
+
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -113,14 +125,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (alreadyIn) return NextResponse.json(alreadyIn);
 
     const { seekerName, topic } = await req.json();
-    if (!seekerName) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
-    if (topic && typeof topic === 'string' && topic.length > 140) {
+    const cleanName = cleanText(seekerName, 100);
+    if (!cleanName) return NextResponse.json({ error: 'Name is required and must be under 100 characters' }, { status: 400 });
+    if (topic !== undefined && topic !== null && topic !== '' && !cleanText(topic, 140)) {
       return NextResponse.json({ error: 'Topic is too long' }, { status: 400 });
     }
 
     try {
       const created = await db.insert(queueEntries).values({
-        roomId: id, seekerClerkId: userId, seekerName, topic: topic || null, status: 'waiting',
+        roomId: id, seekerClerkId: userId, seekerName: cleanName, topic: cleanText(topic, 140), status: 'waiting',
       }).returning();
       return NextResponse.json(created[0]);
     } catch (insertErr: any) {
@@ -141,6 +154,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ ok: true });
+
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

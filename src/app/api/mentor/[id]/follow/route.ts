@@ -5,10 +5,12 @@ import { eq, and, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter } from '@/lib/ratelimit';
+import { isUuid } from '@/lib/validate';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: 'Mentor not found' }, { status: 404 });
     const { userId } = await auth();
 
     const countResult = await db.select({ count: sql<number>`count(*)::int` }).from(follows).where(eq(follows.mentorId, id));
@@ -29,6 +31,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: 'Mentor not found' }, { status: 404 });
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -53,6 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: 'Mentor not found' }, { status: 404 });
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

@@ -1,6 +1,6 @@
 import { db } from '@/db';
 import { rooms, mentors } from '@/db/schema';
-import { eq, and, gt, lte, asc } from 'drizzle-orm';
+import { eq, and, gt, asc } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { readLimiter, getIp } from '@/lib/ratelimit';
@@ -11,10 +11,9 @@ export async function GET(req: Request) {
     const { success } = await readLimiter.limit(ip);
     if (!success) return NextResponse.json({ error: 'Slow down a bit.' }, { status: 429 });
 
-    await db.update(rooms)
-      .set({ status: 'live', startedAt: new Date() })
-      .where(and(eq(rooms.status, 'scheduled'), lte(rooms.scheduledAt, new Date())));
-
+    // No write here. This is an unauthenticated, frequently-polled read; it used
+    // to run an unscoped table-wide UPDATE. Flipping rooms live is owned by
+    // /api/cron/go-live and the lazy flip in GET /api/rooms/[id].
     const result = await db
       .select({
         id: rooms.id, title: rooms.title, scheduledAt: rooms.scheduledAt,

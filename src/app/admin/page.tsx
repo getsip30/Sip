@@ -75,7 +75,7 @@ export default function AdminPage() {
     return () => clearInterval(t);
   }, [fetchAll]);
 
-  async function resolveFlag(id: string, action: 'dismiss' | 'action') {
+  async function resolveFlag(id: string, action: 'dismiss' | 'action' | 'ban') {
     await fetch(`/api/admin/flags/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
     });
@@ -287,6 +287,7 @@ export default function AdminPage() {
                     <div style={{ fontSize: 14, marginBottom: 12 }}>{f.details}</div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button onClick={() => resolveFlag(f.id, 'action')} style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.3)', color: '#F87171', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>take action</button>
+                      <button onClick={() => { if (confirm(`Ban ${f.reportedName}? This suspends their mentor and seeker accounts.`)) resolveFlag(f.id, 'ban'); }} style={{ background: '#DC2626', border: '1px solid rgba(220,38,38,0.4)', color: 'white', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>action &amp; ban</button>
                       <button onClick={() => resolveFlag(f.id, 'dismiss')} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#8A93A3', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>dismiss</button>
                     </div>
                   </div>

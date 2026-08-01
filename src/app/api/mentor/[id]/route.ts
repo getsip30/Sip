@@ -2,18 +2,13 @@ import { db } from '@/db';
 import { mentors } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
-
-function sanitizeMentor(m: typeof mentors.$inferSelect) {
-  const { linkedin, showLinkedin, clerkId, email, ...rest } = m;
-  return { ...rest, linkedin: showLinkedin ? linkedin : null, showLinkedin };
-}
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { publicMentor } from '@/lib/mentor';
+import { isUuid } from '@/lib/validate';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return NextResponse.json(null, { status: 404 });
+  if (!isUuid(id)) return NextResponse.json(null, { status: 404 });
   const result = await db.select().from(mentors).where(eq(mentors.id, id));
   if (result.length === 0) return NextResponse.json(null, { status: 404 });
-  return NextResponse.json(sanitizeMentor(result[0]));
+  return NextResponse.json(publicMentor(result[0]));
 }

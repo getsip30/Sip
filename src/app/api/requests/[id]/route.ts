@@ -5,12 +5,15 @@ import { eq, and, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
-import { escapeHtml } from '@/lib/utils';
+import { escapeHtml, safeExternalUrl } from '@/lib/utils';
 import { mutationLimiter } from '@/lib/ratelimit';
+import { isUuid } from '@/lib/validate';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: 'Request not found' }, { status: 404 });
+
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -80,9 +83,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         }
       }
 
-      const useCalendar = mentor.calendarLink && (contactMethod === 'calendar' || !mentor.contactEmail);
+      const safeCalendarLink = safeExternalUrl(mentor.calendarLink);
+      const useCalendar = safeCalendarLink && (contactMethod === 'calendar' || !mentor.contactEmail);
       const contactBlock = useCalendar
-        ? `<a href="${mentor.calendarLink}" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">Book Your Sip →</a>`
+        ? `<a href="${escapeHtml(safeCalendarLink)}" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">Book Your Sip →</a>`
         : `<p style="color:#70B5F9;font-size:16px;font-weight:600;margin-bottom:0;">Book a Google Meet on this email only: ${escapeHtml(mentor.contactEmail || '')}</p>`;
       const noteBlock = r.mentorNote
         ? `<div style="background:#161B22;border:1px solid rgba(112,181,249,0.3);border-radius:12px;padding:16px 18px;margin-top:20px;"><p style="color:#8B949E;font-size:12px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Note from ${escapeHtml(mentor.firstName)}</p><p style="color:#E6EDF3;font-size:14px;line-height:1.6;margin:0;">${escapeHtml(r.mentorNote)}</p></div>`

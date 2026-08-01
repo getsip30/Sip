@@ -2,7 +2,7 @@ import { Webhook } from 'svix';
 import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { mentors, seekers, requests, asks, follows, queueEntries, referralEvents, flags } from '@/db/schema';
+import { mentors, seekers, requests, asks, follows, queueEntries, referralEvents, flags, consents, siteFeedback, sipFeedback, sipNotes } from '@/db/schema';
 import { eq, or } from 'drizzle-orm';
 
 export async function POST(req: Request) {
@@ -37,14 +37,31 @@ export async function POST(req: Request) {
   if (evt.type === 'user.deleted') {
     const { id } = evt.data;
     if (id) {
-      // mentors cascade-delete their requests/asks/rooms/sipNotes/follows via FK,
-      // but clerkId-text-only columns below have no FK and must be cleaned up manually
+      // Rows owned by a mentor row cascade via FK. Everything below stores the
+      // Clerk id (or email) as loose text with no FK, so it has to be cleaned up
+      // by hand or it outlives the account.
+      const [mentorRow, seekerRow] = await Promise.all([
+        db.select({ id: mentors.id, email: mentors.email }).from(mentors).where(eq(mentors.clerkId, id)),
+        db.select({ id: seekers.id, email: seekers.email }).from(seekers).where(eq(seekers.clerkId, id)),
+      ]);
+      const emails = [mentorRow[0]?.email, seekerRow[0]?.email].filter(Boolean) as string[];
+
       await db.delete(requests).where(eq(requests.seekerClerkId, id));
       await db.delete(asks).where(eq(asks.seekerClerkId, id));
       await db.delete(follows).where(eq(follows.seekerClerkId, id));
       await db.delete(queueEntries).where(eq(queueEntries.seekerClerkId, id));
       await db.delete(referralEvents).where(or(eq(referralEvents.referrerClerkId, id), eq(referralEvents.referredClerkId, id)));
-      await db.delete(flags).where(eq(flags.reporterClerkId, id));
+      await db.delete(consents).where(eq(consents.clerkId, id));
+      await db.delete(siteFeedback).where(eq(siteFeedback.clerkId, id));
+      await db.delete(sipFeedback).where(eq(sipFeedback.raterClerkId, id));
+      // Both sides of a flag: reports they filed and reports filed about them.
+      await db.delete(flags).where(or(eq(flags.reporterClerkId, id), eq(flags.reportedClerkId, id)));
+
+      // Requests/notes created while logged out are keyed only by email.
+      for (const email of emails) {
+        await db.delete(requests).where(eq(requests.seekerEmail, email));
+        await db.delete(sipNotes).where(eq(sipNotes.seekerEmail, email));
+      }
 
       await db.delete(mentors).where(eq(mentors.clerkId, id));
       await db.delete(seekers).where(eq(seekers.clerkId, id));

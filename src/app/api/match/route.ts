@@ -1,15 +1,11 @@
 import { db } from '@/db';
 import { mentors } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { matchMentors } from '@/lib/groq';
 import { handleApiError } from '@/lib/api-handler';
 import { emailLimiter, getIp } from '@/lib/ratelimit';
-
-function sanitizeMentor(m: typeof mentors.$inferSelect) {
-  const { linkedin, showLinkedin, clerkId, email, ...rest } = m;
-  return { ...rest, linkedin: showLinkedin ? linkedin : null, showLinkedin };
-}
+import { publicMentor } from '@/lib/mentor';
 
 export async function POST(req: Request) {
   try {
@@ -21,7 +17,7 @@ export async function POST(req: Request) {
     if (!query || typeof query !== 'string') return NextResponse.json({ error: 'query is required' }, { status: 400 });
     if (query.length > 500) return NextResponse.json({ error: 'Query is too long' }, { status: 400 });
 
-    const openMentors = await db.select().from(mentors).where(eq(mentors.isOpen, true));
+    const openMentors = await db.select().from(mentors).where(and(eq(mentors.isOpen, true), eq(mentors.banned, false)));
     if (openMentors.length === 0) return NextResponse.json({ matches: [] });
 
     const matches = await matchMentors(query, openMentors);
@@ -29,7 +25,7 @@ export async function POST(req: Request) {
     const enriched = matches
       .map(m => {
         const mentor = openMentors.find(om => om.id === m.id);
-        return mentor ? { ...sanitizeMentor(mentor), reason: m.reason } : null;
+        return mentor ? { ...publicMentor(mentor), reason: m.reason } : null;
       })
       .filter(Boolean);
 

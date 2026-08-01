@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "seed": "npx tsx --env-file=.env.local src/db/seed.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.5.2",

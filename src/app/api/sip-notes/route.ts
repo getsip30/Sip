@@ -5,6 +5,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
+import { isUuid, cleanText } from '@/lib/validate';
 
 export async function GET(req: Request) {
   try {
@@ -13,14 +14,25 @@ export async function GET(req: Request) {
     const mine = searchParams.get('mine');
     if (!mentorId) return NextResponse.json({ error: 'mentorId required' }, { status: 400 });
 
+    if (!isUuid(mentorId)) return NextResponse.json([]);
+
     if (mine === 'true') {
+      // Pending notes are unmoderated and carry the seeker's email, so being
+      // signed in is not enough — the caller must own this mentor profile.
       const { userId } = await auth();
       if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const mentorSelf = await db.select({ id: mentors.id }).from(mentors).where(eq(mentors.clerkId, userId));
+      if (mentorSelf[0]?.id !== mentorId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       const result = await db.select().from(sipNotes).where(and(eq(sipNotes.mentorId, mentorId), eq(sipNotes.status, 'pending'))).orderBy(desc(sipNotes.createdAt));
       return NextResponse.json(result);
     }
 
-    const result = await db.select().from(sipNotes).where(and(eq(sipNotes.mentorId, mentorId), eq(sipNotes.status, 'approved'))).orderBy(desc(sipNotes.createdAt));
+    // Public branch: never include seekerEmail — this renders on the open profile page.
+    const result = await db
+      .select({ id: sipNotes.id, mentorId: sipNotes.mentorId, seekerName: sipNotes.seekerName, note: sipNotes.note, status: sipNotes.status, createdAt: sipNotes.createdAt })
+      .from(sipNotes)
+      .where(and(eq(sipNotes.mentorId, mentorId), eq(sipNotes.status, 'approved')))
+      .orderBy(desc(sipNotes.createdAt));
     return NextResponse.json(result);
   } catch (err) {
     return handleApiError(err, 'GET /api/sip-notes');
@@ -45,10 +57,15 @@ export async function POST(req: Request) {
 
     const { mentorId, seekerName, note } = await req.json();
     if (!mentorId || !seekerName || !note) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
-    if (note.length > 1000) return NextResponse.json({ error: 'Note is too long' }, { status: 400 });
+    if (!isUuid(mentorId)) return NextResponse.json({ error: 'Mentor not found' }, { status: 404 });
+    const cleanNote = cleanText(note, 1000);
+    if (!cleanNote) return NextResponse.json({ error: 'Note is required and must be under 1000 characters' }, { status: 400 });
+    const cleanName = cleanText(seekerName, 100);
+    if (!cleanName) return NextResponse.json({ error: 'Name is required and must be under 100 characters' }, { status: 400 });
 
     const targetMentor = await db.select().from(mentors).where(eq(mentors.id, mentorId));
-    if (targetMentor[0]?.clerkId === userId) {
+    if (!targetMentor[0]) return NextResponse.json({ error: 'Mentor not found' }, { status: 404 });
+    if (targetMentor[0].clerkId === userId) {
       return NextResponse.json({ error: "You can't leave a note on your own mentor profile." }, { status: 403 });
     }
 
@@ -57,11 +74,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "You can only leave a note after an accepted sip with this mentor." }, { status: 403 });
     }
 
-    const created = await db.insert(sipNotes).values({ mentorId, seekerName, seekerEmail, note, status: 'pending' }).returning();
+    const created = await db.insert(sipNotes).values({ mentorId, seekerName: cleanName, seekerEmail, note: cleanNote, status: 'pending' }).returning();
 
+    // Key the streak off clerkId. seekers.email has no unique constraint, so
+    // looking up by email could silently update a different person's row.
     let streakInfo = null;
-    const seekerRows = await db.select().from(seekers).where(eq(seekers.email, seekerEmail));
-    const seeker = seekerRows[0];
+    const seeker = seekerSelf[0];
     if (seeker) {
       const now = new Date();
       let newStreak = 1;

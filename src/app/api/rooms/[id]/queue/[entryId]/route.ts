@@ -4,6 +4,7 @@ import { queueEntries, rooms, mentors } from '@/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
+import { isUuid } from '@/lib/validate';
 
 async function assertMentorOwnsRoom(userId: string, roomId: string) {
   const mentorResult = await db.select().from(mentors).where(eq(mentors.clerkId, userId));
@@ -16,6 +17,7 @@ async function assertMentorOwnsRoom(userId: string, roomId: string) {
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; entryId: string }> }) {
   try {
     const { id, entryId } = await params;
+    if (!isUuid(id) || !isUuid(entryId)) return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

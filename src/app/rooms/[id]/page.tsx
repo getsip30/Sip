@@ -8,7 +8,7 @@ import { useRoles } from '@/hooks/useRoles';
 import { ConsentGate } from '@/components/ConsentGate';
 
 type Room = { id: string; title: string; roomUrl: string; status: string; mode: string; scheduledAt: string | null; firstName: string; lastName: string; role: string; company: string; mentorClerkId: string };
-type QueueEntry = { id: string; seekerClerkId: string; seekerName: string; topic?: string; status: string; visitCount?: number; flagCount?: number; doneAt?: string | null };
+type QueueEntry = { id: string; seekerClerkId: string; seekerName: string; topic?: string; status: string; isMine?: boolean; visitCount?: number; flagCount?: number; doneAt?: string | null };
 
 export default function RoomPage() {
   const { id } = useParams<{ id: string }>();
@@ -58,8 +58,15 @@ export default function RoomPage() {
       setActives(data.active);
       setRecap(data.done || []);
       if (user) {
-        const mine = [...data.waiting, ...data.active].find((e: QueueEntry) => e.seekerClerkId === user.id);
-        setMyEntry(mine || null);
+        // Match on the server-computed `isMine` — seekers don't receive
+        // seekerClerkId, so the old comparison never matched and wiped the entry
+        // on every poll.
+        const live = [...data.waiting, ...data.active].find((e: QueueEntry) => e.isMine);
+        // Fall back to a *recently* finished entry so the "session ended" state
+        // and the popup-close effect can fire; it expires so rejoining still works.
+        const justDone = (data.done || []).find((e: QueueEntry) =>
+          e.isMine && e.doneAt && Date.now() - new Date(e.doneAt).getTime() < 2 * 60 * 1000);
+        setMyEntry(live || justDone || null);
       }
     } catch (err) {
       console.error('fetchQueue failed:', err);
@@ -95,7 +102,7 @@ export default function RoomPage() {
     const res = await fetch(`/api/rooms/${id}/queue`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seekerName, topic: topicInput.trim() || undefined }),
     });
-    if (res.ok) setMyEntry(await res.json());
+    if (res.ok) setMyEntry({ ...(await res.json()), isMine: true });
     setJoining(false);
   }
 
@@ -120,10 +127,10 @@ export default function RoomPage() {
     fetchQueue();
   }
 
-  async function requestConnect(seekerClerkId: string, seekerName: string) {
+  async function requestConnect(seekerClerkId: string) {
     setConnecting(seekerClerkId);
     await fetch(`/api/rooms/${id}/connect-request`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seekerClerkId, seekerName }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seekerClerkId }),
     });
     setConnecting(null);
   }
@@ -144,7 +151,7 @@ export default function RoomPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }),
     });
     if (res.ok) { const updated = await res.json(); setRoom(prev => prev ? { ...prev, mode: updated.mode } : prev); }
-    setModeUpdating(false);if (res.ok) { const updated = await res.json(); setRoom(prev => prev ? { ...prev, mode: updated.mode } : prev); }
+    setModeUpdating(false);
   }
 
   function toggleSelect(entryId: string) {
@@ -317,7 +324,7 @@ export default function RoomPage() {
                       <div style={{ fontSize: 12, color: MUTED, fontStyle: 'italic', marginTop: 4 }}>&quot;{actives[0].topic}&quot;</div>
                     )}
                     <button onClick={() => markDone(actives[0].id)} style={{ marginTop: 10, marginRight: 8, background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>mark done</button>
-                    <button onClick={() => requestConnect(actives[0].seekerClerkId, actives[0].seekerName)} disabled={connecting === actives[0].seekerClerkId} style={{ marginTop: 10, marginRight: 8, background: 'rgba(91,219,138,0.1)', border: '1px solid rgba(91,219,138,0.3)', color: '#5BDB8A', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: connecting === actives[0].seekerClerkId ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>{connecting === actives[0].seekerClerkId ? 'sending...' : 'request 1:1'}</button>
+                    <button onClick={() => requestConnect(actives[0].seekerClerkId)} disabled={connecting === actives[0].seekerClerkId} style={{ marginTop: 10, marginRight: 8, background: 'rgba(91,219,138,0.1)', border: '1px solid rgba(91,219,138,0.3)', color: '#5BDB8A', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: connecting === actives[0].seekerClerkId ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>{connecting === actives[0].seekerClerkId ? 'sending...' : 'request 1:1'}</button>
                     <button onClick={() => { setFlagTarget({ id: actives[0].seekerClerkId, name: actives[0].seekerName }); setFlagOpen(true); }} style={{ marginTop: 10, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#FBBF24', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>flag & remove</button>
                   </div>
                 )}

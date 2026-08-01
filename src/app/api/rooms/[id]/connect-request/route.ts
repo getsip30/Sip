@@ -1,11 +1,13 @@
 ﻿import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { requests, mentors, seekers, rooms } from '@/db/schema';
+import { requests, mentors, seekers, rooms, queueEntries } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
 import { escapeHtml } from '@/lib/utils';
+import { isUuid } from '@/lib/validate';
+import { mutationLimiter } from '@/lib/ratelimit';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,8 +15,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id: roomId } = await params;
-    const { seekerClerkId, seekerName } = await req.json();
-    if (!seekerClerkId || !seekerName) {
+    if (!isUuid(roomId)) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+
+    const { success } = await mutationLimiter.limit(userId);
+    if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
+
+    const { seekerClerkId } = await req.json();
+    if (typeof seekerClerkId !== 'string' || !seekerClerkId.trim()) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
     if (seekerClerkId === userId) {
@@ -32,9 +39,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
     if (mentor.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
 
+    // The seeker must actually have been in this room — otherwise a mentor could
+    // fire connect requests at any clerkId they happen to know.
+    const attended = await db.select({ id: queueEntries.id }).from(queueEntries)
+      .where(and(eq(queueEntries.roomId, roomId), eq(queueEntries.seekerClerkId, seekerClerkId)));
+    if (attended.length === 0) {
+      return NextResponse.json({ error: 'That person was not in this room.' }, { status: 403 });
+    }
+
     const seekerResult = await db.select().from(seekers).where(eq(seekers.clerkId, seekerClerkId));
     const seeker = seekerResult[0];
     if (!seeker) return NextResponse.json({ error: 'Seeker not found' }, { status: 404 });
+    if (seeker.banned) return NextResponse.json({ error: 'That account has been suspended.' }, { status: 403 });
+
+    // Name comes from the seeker's own profile, not the caller's request body.
+    const seekerName = [seeker.firstName, seeker.lastName].filter(Boolean).join(' ') || 'Someone';
 
     const existingOpen = await db.select().from(requests).where(and(eq(requests.mentorId, mentor.id), eq(requests.seekerClerkId, seekerClerkId)));
     const hasOpenRequest = existingOpen.some(r => r.status === 'pending' || (r.status === 'accepted' && !r.sipCountedAt));
@@ -54,7 +73,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       mentorConsentToShow: true,
     }).returning();
 
-    transporter.sendMail({
+    after(() => transporter.sendMail({
       from: `Sip <${process.env.GMAIL_USER}>`,
       to: seeker.email,
       subject: `${mentor.firstName} wants to continue as a 1:1`,
@@ -66,7 +85,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">View in Dashboard →</a>
         </div>
       `,
-    }).catch(err => console.error('connect-request email failed:', err));
+    }).catch(err => console.error('connect-request email failed:', err)));
 
     return NextResponse.json(created[0]);
   } catch (err) {

@@ -1,11 +1,12 @@
-﻿import { auth } from '@clerk/nextjs/server';
+﻿import { auth, clerkClient } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { mentors, seekers, referralEvents } from '@/db/schema';
-import { eq, desc, sql, and, ne } from 'drizzle-orm';
+import { eq, desc, sql, and } from 'drizzle-orm';
 import { NextResponse, after } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { generateUniqueReferralCode } from '@/lib/referral';
-import { escapeHtml } from '@/lib/utils';
+import { publicMentor } from '@/lib/mentor';
+import { escapeHtml, safeExternalUrl } from '@/lib/utils';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
 
@@ -50,22 +51,48 @@ export async function POST(req: Request) {
   if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
   const body = await req.json();
-  const { firstName, lastName, email, role, company, bio, topics, calendarLink, contactEmail, availability, linkedin, showLinkedin, avatarData, ref } = body;
-  
-  if (!firstName || !lastName || !email || !role || !company) {
+  const { firstName, lastName, role, company, bio, topics, calendarLink, contactEmail, availability, linkedin, showLinkedin, avatarData, ref } = body;
+
+  if (!firstName || !lastName || !role || !company) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
+
+  // Account email comes from the verified Clerk identity, never the request body.
+  // It was previously attacker-supplied, which allowed pointing a profile's
+  // notifications at someone else's inbox (and squatting their unique email).
+  const client = await clerkClient();
+  const clerkUser = await client.users.getUser(userId);
+  const email = clerkUser.emailAddresses[0]?.emailAddress;
+  if (!email) return NextResponse.json({ error: 'No email on your account.' }, { status: 400 });
   if (bio && bio.length > 500) return NextResponse.json({ error: 'Bio is too long' }, { status: 400 });
   if (topics && topics.length > 300) return NextResponse.json({ error: 'Topics field is too long' }, { status: 400 });
   if (firstName.length > 50 || lastName.length > 50 || role.length > 100 || company.length > 100) {
     return NextResponse.json({ error: 'One of the fields is too long' }, { status: 400 });
   }
 
+  // These are rendered as hrefs in outbound email and on the seeker dashboard.
+  // The signup form checks them client-side only, so validate here too.
+  const safeCalendarLink = calendarLink ? safeExternalUrl(calendarLink) : null;
+  if (calendarLink && !safeCalendarLink) {
+    return NextResponse.json({ error: 'Calendar link must be a valid http(s) URL' }, { status: 400 });
+  }
+  const safeLinkedin = linkedin ? safeExternalUrl(linkedin) : null;
+  if (linkedin && !safeLinkedin) {
+    return NextResponse.json({ error: 'LinkedIn must be a valid http(s) URL' }, { status: 400 });
+  }
+  if (contactEmail && (typeof contactEmail !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail))) {
+    return NextResponse.json({ error: 'Enter a valid contact email' }, { status: 400 });
+  }
+  if (avatarData && (typeof avatarData !== 'string' || avatarData.length > 256)) {
+    return NextResponse.json({ error: 'Invalid avatar' }, { status: 400 });
+  }
+
   const existing = await db.select().from(mentors).where(eq(mentors.clerkId, userId));
+  if (existing[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
 
   if (existing.length > 0) {
     const updated = await db.update(mentors)
-      .set({ firstName, lastName, email, role, company, bio: bio || '', topics: topics || '', calendarLink: calendarLink || null, contactEmail: contactEmail || null, availability, linkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null })      .where(eq(mentors.clerkId, userId))
+      .set({ firstName, lastName, email, role, company, bio: bio || '', topics: topics || '', calendarLink: safeCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null })      .where(eq(mentors.clerkId, userId))
       .returning();
     return NextResponse.json(updated[0]);
   }
@@ -79,7 +106,7 @@ export async function POST(req: Request) {
 
   const referralCode = await generateUniqueReferralCode();
   const mentor = await db.insert(mentors).values({
-    clerkId: userId, firstName, lastName, email, role, company, bio: bio || '', topics: topics || '',    calendarLink: calendarLink || null, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin, showLinkedin: !!showLinkedin,
+    clerkId: userId, firstName, lastName, email, role, company, bio: bio || '', topics: topics || '',    calendarLink: safeCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin,
     avatarData: avatarData || null,
     referralCode,
     invitedByClerkId,
@@ -102,11 +129,6 @@ export async function POST(req: Request) {
   }
 }
 
-function sanitizeMentor(m: typeof mentors.$inferSelect) {
-  const { linkedin, showLinkedin, clerkId, email, ...rest } = m;
-  return { ...rest, linkedin: showLinkedin ? linkedin : null, showLinkedin };
-}
-
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const all = url.searchParams.get('all');
@@ -114,13 +136,13 @@ export async function GET(req: Request) {
 
   if (leaderboard === 'true') {
     const result = await db.select().from(mentors).where(eq(mentors.banned, false)).orderBy(desc(mentors.xp)).limit(10);
-    return NextResponse.json(result.map(sanitizeMentor));
+    return NextResponse.json(result.map(publicMentor));
   }
 
   if (all === 'true') {
     const { userId: viewerId } = await auth();
     const result = await db.select().from(mentors).where(and(eq(mentors.isOpen, true), eq(mentors.banned, false))).orderBy(desc(mentors.createdAt));
-    return NextResponse.json(result.filter(m => m.clerkId !== viewerId).map(sanitizeMentor));
+    return NextResponse.json(result.filter(m => m.clerkId !== viewerId).map(publicMentor));
   }
 
   const { userId } = await auth();
@@ -145,12 +167,15 @@ export async function PATCH(req: Request) {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const existing = await db.select().from(mentors).where(eq(mentors.clerkId, userId));
-  const wasOpen = existing[0]?.isOpen;
+  if (!existing[0]) return NextResponse.json({ error: 'No mentor profile' }, { status: 404 });
+  if (existing[0].banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
+  const wasOpen = existing[0].isOpen;
 
   const { isOpen } = await req.json();
   if (typeof isOpen !== 'boolean') return NextResponse.json({ error: 'isOpen must be true or false' }, { status: 400 });
 
   const updated = await db.update(mentors).set({ isOpen }).where(eq(mentors.clerkId, userId)).returning();
+  if (!updated[0]) return NextResponse.json({ error: 'No mentor profile' }, { status: 404 });
 
   const COOLDOWN_MS = 60 * 60 * 1000;
   const lastNotified = updated[0].lastOpenNotifiedAt ? new Date(updated[0].lastOpenNotifiedAt).getTime() : 0;

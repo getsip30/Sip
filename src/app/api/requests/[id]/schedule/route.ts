@@ -5,10 +5,13 @@ import { eq, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter } from '@/lib/ratelimit';
+import { isUuid } from '@/lib/validate';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: 'Request not found' }, { status: 404 });
+
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -45,8 +48,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'This mentor already has a sip scheduled too close to that time. Pick another slot.' }, { status: 409 });
     }
 
+    // Only clear the reminder flag when the time actually moved to a different
+    // day. Resetting it on every save let a seeker re-trigger the mentor's
+    // reminder email on each nightly cron run.
+    const previous = r.scheduledAt ? new Date(r.scheduledAt) : null;
+    const dayChanged = !previous || previous.toDateString() !== new Date(scheduledAt).toDateString();
+
     const updated = await db.update(requests)
-      .set({ scheduledAt: new Date(scheduledAt), reminderSentAt: null })
+      .set({ scheduledAt: new Date(scheduledAt), ...(dayChanged ? { reminderSentAt: null } : {}) })
       .where(eq(requests.id, id))
       .returning();
 

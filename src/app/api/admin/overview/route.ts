@@ -15,7 +15,7 @@ export async function GET() {
       db.select().from(rooms).orderBy(desc(rooms.startedAt)).limit(200),
       db.select().from(requests).orderBy(desc(requests.createdAt)).limit(300),
       db.select().from(flags).where(eq(flags.status, 'open')),
-      db.select().from(queueEntries),
+      db.select().from(queueEntries).limit(1000),
       db.select().from(sipFeedback).orderBy(desc(sipFeedback.createdAt)).limit(300),
       db.select().from(asks).orderBy(desc(asks.createdAt)).limit(200),
       db.select().from(sipNotes).orderBy(desc(sipNotes.createdAt)).limit(200),
