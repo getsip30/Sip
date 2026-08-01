@@ -1,5 +1,5 @@
 ﻿'use client';
-import { BG, SURFACE, TEXT, MUTED, ACCENT, LINK, PURPLE } from '@/lib/theme';
+import { BG, SURFACE, TEXT, MUTED, ACCENT, LINK, CLAY } from '@/lib/theme';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -15,12 +15,12 @@ type Mentor = {
 const BADGE_META: Record<string, { label: string; color: string }> = {
   'first-sip':  { label: 'First Sip',  color: '#D97706' },
   'regular':    { label: 'Regular',    color: '#DC2626' },
-  'veteran':    { label: 'Veteran',    color: PURPLE },
+  'veteran':    { label: 'Veteran',    color: CLAY },
   'legend':     { label: 'Legend',     color: '#0891B2' },
   'goat':       { label: 'GOAT',       color: '#059669' },
 };
 
-const AVATARS = [ACCENT, PURPLE, '#059669', '#DC2626', '#D97706', '#0891B2'];
+const AVATARS = [ACCENT, CLAY, '#059669', '#DC2626', '#D97706', '#0891B2'];
 const RANK_COLORS = ['#F59E0B', '#94A3B8', '#CD7F32'];
 
 export default function Leaderboard() {

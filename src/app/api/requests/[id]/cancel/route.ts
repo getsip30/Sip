@@ -63,7 +63,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>
           <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">Sip cancelled</h2>
           <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;">
-          ${escapeHtml(cancellerName)} cancelled your upcoming sip. Sorry about that — check back on Sip whenever you're ready.
+          ${escapeHtml(cancellerName)} cancelled your upcoming sip. Sorry about that. Check back on Sip whenever you're ready.
           </p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" style="display:inline-block;background:#161B22;color:#70B5F9;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid rgba(112,181,249,0.3);">Back to Sip →</a>
         </div>

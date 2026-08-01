@@ -1,6 +1,6 @@
 ﻿
 'use client';
-import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, PURPLE } from '@/lib/theme';
+import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, CLAY } from '@/lib/theme';
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -30,7 +30,7 @@ type SipRequest = {
   mentor?: { firstName: string; lastName: string; role: string; company: string; calendarLink: string; contactEmail?: string; };
 };
 
-const AVATARS = [ACCENT, PURPLE, '#059669', '#DC2626', '#D97706', '#0891B2'];
+const AVATARS = [ACCENT, CLAY, '#059669', '#DC2626', '#D97706', '#0891B2'];
 const INITIALS = (m: Mentor) => `${m.firstName[0]}${m.lastName[0]}`;
 const ALL_FILTERS = ['all', 'tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'engineering', 'computer science', 'data science', 'marketing', 'consulting', 'law', 'medicine', 'entrepreneurship', 'business', 'psychology', 'co-op', 'grad school'];
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; label: string }> = {
@@ -44,7 +44,7 @@ const SEEKER_TOUR_STEPS: TourStep[] = [
   { label: 'Browse', title: 'Find a Mentor', description: 'Filter by topic, or search by name, role, or company.', bullets: ['Every mentor lists their actual topics', 'Live tag shows who you can talk to right now'] },
   { label: 'Request', title: 'Send a Sip Request', description: 'Write a couple sentences on what you want to talk about.', bullets: ['They accept or decline', 'Accepted = calendar link or email to book a time'] },
   { label: 'Live Rooms', title: 'Live Sip Rooms', description: 'Some mentors go live. Join the queue instead of sending a request.', bullets: ['Anonymous until the mentor picks you', 'No scheduling, it just happens'] },
-  { label: 'My Sips', title: 'My Sips Tab', description: 'Every request you send lands here.', bullets: ['Pending, accepted, past — all in one place', 'Leave feedback after so it counts toward the mentor\'s total'] },
+  { label: 'My Sips', title: 'My Sips Tab', description: 'Every request you send lands here.', bullets: ['Pending, accepted, past, all in one place', 'Leave feedback after so it counts toward the mentor\'s total'] },
   { label: 'Streaks', title: 'Streaks', description: 'Optional. Tracks how often you show up, ranked on the leaderboard.' },
 ];
 

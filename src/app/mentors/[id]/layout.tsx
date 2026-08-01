@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 
   const name = `${mentor.firstName} ${mentor.lastName}`;
-  const title = `Talk to ${name} — ${mentor.role} at ${mentor.company}`;
+  const title = `Talk to ${name}, ${mentor.role} at ${mentor.company}`;
   const description = mentor.bio || `Request a live conversation with ${name}, ${mentor.role} at ${mentor.company}, on Sip.`;
 
   return {

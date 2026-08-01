@@ -1,4 +1,3 @@
-// src/components/Logo.tsx
 'use client';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';

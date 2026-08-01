@@ -41,14 +41,18 @@ export default function PixelAvatarPicker({ value, onChange }: { value: string; 
         <button
           onClick={() => setActiveColor(ERASE)}
           title="Eraser"
+          aria-label="Eraser"
           style={{
             width: 28, height: 28, borderRadius: 8,
             background: '#0A0E16',
             border: activeColor === ERASE ? '2px solid #70B5F9' : '1px solid rgba(255,255,255,0.2)',
-            cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
+            cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
-          🧹
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M8 20H21" stroke="#8A93A3" strokeWidth="2" strokeLinecap="round" />
+            <path d="m14.5 5.5-9 9a2 2 0 0 0 0 2.8l2.2 2.2a2 2 0 0 0 2.8 0l9-9a2 2 0 0 0 0-2.8l-2.2-2.2a2 2 0 0 0-2.8 0Z" stroke="#8A93A3" strokeWidth="2" strokeLinejoin="round" />
+          </svg>
         </button>
         {PALETTE.map((color, i) => (
           <button

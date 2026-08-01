@@ -154,7 +154,7 @@ function MentorSignup() {
                   <label style={label} htmlFor="mentorEmail">Email</label>
                   <input id="mentorEmail" value={form.email} type="email" readOnly disabled style={{ ...input, opacity: 0.6, cursor: 'not-allowed' }} />
                   <div style={{ color: MUTED, fontSize: 12, marginTop: 6 }}>
-                    This is your account email — change it from your account settings. Use the contact email below if you want seekers to reach you somewhere else.
+                    This is your account email. Change it from your account settings. Use the contact email below if you want seekers to reach you somewhere else.
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, marginBottom: 24 }}>
@@ -179,7 +179,7 @@ function MentorSignup() {
                   disabled={loading}
                   onClick={() => { if (!form.firstName || !form.lastName || !form.role || !form.company) { setError('Please fill in all fields.'); return; } setError(''); handleSubmit(); }}
                   style={{ display: 'block', margin: '14px auto 0', background: 'none', border: 'none', color: MUTED, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                  {loading ? 'saving...' : "finish later — I'll add my bio and calendar from the dashboard"}
+                  {loading ? 'saving...' : "finish later, I'll add my bio and calendar from the dashboard"}
                 </button>
               </motion.div>
             )}
@@ -228,7 +228,7 @@ function MentorSignup() {
                     <div style={{ color: '#F87171', fontSize: 12, marginTop: 6 }}>Enter a valid email.</div>
                   )}
                   <div style={{ color: MUTED, fontSize: 12, marginTop: 6 }}>
-                    Add a calendar link, an email, or both — this is what seekers get when you accept a request. If you add both, you&apos;ll choose which to share each time you accept.
+                    Add a calendar link, an email, or both. This is what seekers get when you accept a request. If you add both, you&apos;ll choose which to share each time you accept.
                   </div>
                   {!form.calendarLink && !form.contactEmail && (
                     <div style={{ color: '#F87171', fontSize: 12, marginTop: 6 }}>Add at least a calendar link or an email.</div>

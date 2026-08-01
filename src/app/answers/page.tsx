@@ -26,12 +26,12 @@ export default function AnswersPage() {
 
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ maxWidth: 720, margin: '0 auto', padding: '60px 24px 100px' }}>
         <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: -1.5, marginBottom: 8 }}>Real Questions, Real Answers</h1>
-        <p style={{ color: '#8A93A3', fontSize: 15, marginBottom: 40 }}>Quick questions people asked mentors on Sip — answered async, no scheduling needed.</p>
+        <p style={{ color: '#8A93A3', fontSize: 15, marginBottom: 40 }}>Quick questions people asked mentors on Sip, answered async with no scheduling needed.</p>
 
         {loading ? (
           <p style={{ color: '#8A93A3' }}>loading...</p>
         ) : asks.length === 0 ? (
-          <p style={{ color: '#8A93A3' }}>no public answers yet — check back soon.</p>
+          <p style={{ color: '#8A93A3' }}>no public answers yet. check back soon.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {asks.map(a => (

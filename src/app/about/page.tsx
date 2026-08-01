@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'About',
-  description: 'Sip exists because cold outreach doesn\'t work. Join a live queue and talk to a mentor right now — no scheduling, no waiting on replies.',
+  description: 'Sip exists because cold outreach doesn\'t work. Join a live queue and talk to a mentor right now. No scheduling, no waiting on replies.',
   openGraph: {
     title: 'About Sip',
     description: 'Real conversations, zero cold messages. No scheduling, no waiting on replies.',
