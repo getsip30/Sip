@@ -90,7 +90,7 @@ async function seed() {
 
   // one live room for the "Live Now" section
   await db.insert(rooms).values([
-    { mentorId: insertedMentors[0].id, title: `${insertedMentors[0].firstName}'s Sip Room`, roomName: `sip-room-${insertedMentors[0].id.slice(0, 8)}`, roomUrl: 'https://example.daily.co/sip-room-demo', status: 'live' },
+    { mentorId: insertedMentors[0].id, title: `${insertedMentors[0].firstName}'s Sip Room`, roomName: `sip-room-${insertedMentors[0].id.slice(0, 8)}`, roomUrl: `https://meet.jit.si/sip-room-${insertedMentors[0].id.slice(0, 8)}`, status: 'live' },
   ]);
 
   console.log(`seeded ${insertedMentors.length} mentors, ${insertedSeekers.length} seekers, 5 requests, 3 notes, 3 asks, 1 live room`);

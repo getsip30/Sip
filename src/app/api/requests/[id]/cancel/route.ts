@@ -1,8 +1,9 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { requests, mentors } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { isUuid } from '@/lib/validate';
 import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
 import { escapeHtml } from '@/lib/utils';
@@ -11,6 +12,8 @@ import { mutationLimiter } from '@/lib/ratelimit';
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: 'Request not found' }, { status: 404 });
+
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -39,10 +42,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       cancelledBy = 'seeker';
     }
 
+    // Re-assert status in the WHERE so two concurrent cancels can't both win and
+    // send duplicate mail — only the caller that flips 'accepted' gets rows back.
     const updated = await db.update(requests)
       .set({ status: 'cancelled', cancelledAt: new Date(), cancelledBy })
-      .where(eq(requests.id, id))
+      .where(and(eq(requests.id, id), eq(requests.status, 'accepted')))
       .returning();
+
+    if (!updated[0]) return NextResponse.json({ error: 'Request was already cancelled' }, { status: 409 });
 
     const notifyTo = cancelledBy === 'mentor' ? r.seekerEmail : mentor.email;
     const cancellerName = cancelledBy === 'mentor' ? `${mentor.firstName} ${mentor.lastName}` : r.seekerName;

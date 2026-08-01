@@ -2,7 +2,7 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { rooms, mentors, follows } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { transporter } from '@/lib/mailer';
@@ -67,7 +67,9 @@ export async function POST(req: Request) {
     }).returning();
 
     const whenStr = when.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
-    void (async () => {
+    // `after()` rather than a floating promise — on serverless the latter can be
+    // killed the moment the response is returned.
+    after(async () => {
       const followers = await db.select().from(follows).where(eq(follows.mentorId, mentor.id));
       if (followers.length === 0) return;
       const client = await clerkClient();
@@ -85,7 +87,7 @@ export async function POST(req: Request) {
           console.error('scheduled-session follower notify failed:', e);
         }
       }
-    })();
+    });
 
     return NextResponse.json(created[0]);
   } catch (err) {

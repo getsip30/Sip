@@ -5,10 +5,13 @@ import { eq, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter } from '@/lib/ratelimit';
+import { isUuid } from '@/lib/validate';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: 'Request not found' }, { status: 404 });
+
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

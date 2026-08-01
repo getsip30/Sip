@@ -12,6 +12,7 @@ import RoleSwitchLink from '@/components/RoleSwitchLink';
 import PixelAvatar from '@/components/PixelAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Suspense } from 'react';
+import { safeExternalUrl } from '@/lib/utils';
 
 type LiveRoom = { id: string; title: string; firstName: string; lastName: string; role: string; company: string };
 type UpcomingRoom = { id: string; title: string; scheduledAt: string; firstName: string; lastName: string; role: string; company: string };
@@ -63,6 +64,7 @@ function SeekersContent() {
   const [form, setForm] = useState({ name: '', email: '', message: '' });
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [modalError, setModalError] = useState('');
 
 
   const [lookupDone, setLookupDone] = useState(false);
@@ -211,13 +213,19 @@ function SeekersContent() {
   async function handleSubmit() {
     if (!form.name || !form.email || !form.message || !modal) return;
     setSubmitting(true);
-    await fetch('/api/request', {
+    setModalError('');
+    const res = await fetch('/api/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mentorId: modal.id, seekerName: form.name, seekerEmail: form.email, message: form.message }),
+      body: JSON.stringify({ mentorId: modal.id, seekerName: form.name, message: form.message }),
     });
-    setSent(true);
     setSubmitting(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setModalError(data.error || 'Something went wrong. Try again.');
+      return;
+    }
+    setSent(true);
     setTimeout(() => { setModal(null); setSent(false); setForm(f => ({ ...f, message: '' })); }, 2200);
   }
 
@@ -536,14 +544,14 @@ function SeekersContent() {
                                 {r.seekerConsentToShow ? 'showing on profile ✓' : 'show on profile'}
                               </button>
                               <button onClick={() => cancelRequest(r.id)} disabled={cancelling === r.id} style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{cancelling === r.id ? 'cancelling...' : 'cancel'}</button>
-                              {r.mentor?.calendarLink && (
-                                <a href={r.mentor.calendarLink} target="_blank" rel="noopener noreferrer"
+                              {safeExternalUrl(r.mentor?.calendarLink) && (
+                                <a href={safeExternalUrl(r.mentor?.calendarLink)!} target="_blank" rel="noopener noreferrer"
                                   style={{ background: ACCENT, color: 'white', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
                                   book your sip →
                                 </a>
                               )}
-                              {r.originRoomId && (r.mentor?.calendarLink || r.mentor?.contactEmail) && (
-                                <a href={r.mentor.calendarLink ? r.mentor.calendarLink : `mailto:${r.mentor.contactEmail}?subject=${encodeURIComponent('Scheduling our 1:1')}`}
+                              {r.originRoomId && (safeExternalUrl(r.mentor?.calendarLink) || r.mentor?.contactEmail) && (
+                                <a href={safeExternalUrl(r.mentor?.calendarLink) ?? `mailto:${encodeURIComponent(r.mentor?.contactEmail ?? '')}?subject=${encodeURIComponent('Scheduling our 1:1')}`}
                                   target="_blank" rel="noopener noreferrer"
                                   style={{ background: ACCENT, color: 'white', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
                                   click here to schedule call →
@@ -597,7 +605,7 @@ function SeekersContent() {
       <AnimatePresence>
         {modal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={e => { if (e.target === e.currentTarget) setModal(null); }}
+            onClick={e => { if (e.target === e.currentTarget) { setModal(null); setModalError(''); } }}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
             <motion.div initial={{ scale: 0.92, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0, y: 20 }}
               role="dialog" aria-modal="true" aria-label="Request a sip"
@@ -626,6 +634,11 @@ function SeekersContent() {
                     <textarea id="seekerReqMessage" value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3}
                       style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: TEXT, fontSize: 14, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
                   </div>
+                  {modalError && (
+                    <div style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 10, padding: '10px 14px', color: '#F87171', fontSize: 13, marginBottom: 14 }}>
+                      {modalError}
+                    </div>
+                  )}
                   <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={handleSubmit}
                     style={{ width: '100%', background: submitting ? '#1E3A5F' : ACCENT, color: 'white', border: 'none', padding: '13px 0', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                     {submitting ? 'sending...' : 'send it'}

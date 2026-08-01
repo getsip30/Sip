@@ -4,12 +4,14 @@ import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { isAdmin } from '@/lib/admin';
+import { isUuid } from '@/lib/validate';
 import { mentors, seekers } from '@/db/schema';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     if (!(await isAdmin())) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: 'Flag not found' }, { status: 404 });
     const { action } = await req.json(); // 'dismiss' | 'action' | 'ban'
     if (!['dismiss', 'action', 'ban'].includes(action)) return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 

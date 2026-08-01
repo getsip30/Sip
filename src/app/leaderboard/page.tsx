@@ -52,7 +52,7 @@ export default function Leaderboard() {
         {/* HEADER */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ marginBottom: 56, textAlign: 'center' }}>
           <h1 style={{ fontSize: 48, fontWeight: 700, letterSpacing: -2.5, marginBottom: 12 }}>Leaderboard</h1>
-          <p style={{ color: MUTED, fontSize: 16 }}>The people showing up the hardest. Earn XP every time someone requests a sip.</p>
+          <p style={{ color: MUTED, fontSize: 16 }}>The people showing up the hardest. Earn XP when a sip is completed and both sides leave feedback.</p>
         </motion.div>
 
         {/* XP LEGEND */}

@@ -152,7 +152,10 @@ function MentorSignup() {
                 </div>
                 <div style={{ marginBottom: 16 }}>
                   <label style={label} htmlFor="mentorEmail">Email</label>
-                  <input id="mentorEmail" value={form.email} onChange={e => set('email', e.target.value)} type="email" placeholder="where seekers can reach you" style={input} />
+                  <input id="mentorEmail" value={form.email} type="email" readOnly disabled style={{ ...input, opacity: 0.6, cursor: 'not-allowed' }} />
+                  <div style={{ color: MUTED, fontSize: 12, marginTop: 6 }}>
+                    This is your account email — change it from your account settings. Use the contact email below if you want seekers to reach you somewhere else.
+                  </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, marginBottom: 24 }}>
                   <div>
@@ -168,13 +171,13 @@ function MentorSignup() {
                 <motion.button
                   whileHover={{ scale: 1.02, background: '#0856A8' }}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => { if (!form.firstName || !form.lastName || !form.email || !form.role || !form.company) { setError('Please fill in all fields.'); return; } setError(''); setStep(2); }}
+                  onClick={() => { if (!form.firstName || !form.lastName || !form.role || !form.company) { setError('Please fill in all fields.'); return; } setError(''); setStep(2); }}
                   style={{ width: '100%', background: ACCENT, color: 'white', border: 'none', padding: '14px', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.2s' }}>
                   next →
                 </motion.button>
                 <button
                   disabled={loading}
-                  onClick={() => { if (!form.firstName || !form.lastName || !form.email || !form.role || !form.company) { setError('Please fill in all fields.'); return; } setError(''); handleSubmit(); }}
+                  onClick={() => { if (!form.firstName || !form.lastName || !form.role || !form.company) { setError('Please fill in all fields.'); return; } setError(''); handleSubmit(); }}
                   style={{ display: 'block', margin: '14px auto 0', background: 'none', border: 'none', color: MUTED, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                   {loading ? 'saving...' : "finish later — I'll add my bio and calendar from the dashboard"}
                 </button>
@@ -187,7 +190,7 @@ function MentorSignup() {
                 <div style={{ marginBottom: 20 }}>
                   <label style={label} htmlFor="bio">Your one-liner bio</label>
                   <textarea id="bio" value={form.bio} onChange={e => set('bio', e.target.value)} placeholder="what do you actually want to talk about? be real, not corporate." rows={3} style={{ ...input, resize: 'none' }} />
-                  <div style={{ color: MUTED, fontSize: 12, marginTop: 6 }}>{form.bio.length}/200 chars</div>
+                  <div style={{ color: MUTED, fontSize: 12, marginTop: 6 }}>{form.bio.length}/500 chars</div>
                 </div>
                 <div style={{ marginBottom: 28 }}>
                 <label style={label}>Topics you&apos;re open to discuss</label>

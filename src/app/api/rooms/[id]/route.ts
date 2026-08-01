@@ -1,21 +1,23 @@
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { rooms, mentors } from '@/db/schema';
-import { eq, and, lte } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { eq, and } from 'drizzle-orm';
+import { NextResponse, after } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter } from '@/lib/ratelimit';
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isUuid } from '@/lib/validate';
+import { flipToLive, notifyRoomLive } from '@/lib/rooms';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    if (!UUID_RE.test(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!isUuid(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    await db.update(rooms)
-      .set({ status: 'live', startedAt: new Date() })
-      .where(and(eq(rooms.id, id), eq(rooms.status, 'scheduled'), lte(rooms.scheduledAt, new Date())));
+    // Lazy flip so a room opened at its scheduled time reads as live immediately;
+    // the cron is only a backstop for rooms nobody opens. Only the caller that
+    // wins the conditional UPDATE sends mail, so this can't duplicate.
+    const flipped = await flipToLive(id);
+    if (flipped) after(() => notifyRoomLive(flipped));
 
     const result = await db
       .select({
@@ -37,7 +39,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    if (!UUID_RE.test(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!isUuid(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -62,6 +64,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           .returning();
 
     if (!updated[0]) return NextResponse.json({ error: 'Not found or not yours' }, { status: 404 });
+
+    // Starting early still notifies followers — previously only the (unregistered)
+    // cron sent this, so nobody was ever told about a scheduled session going live.
+    if (action === 'start') after(() => notifyRoomLive(updated[0]));
 
     return NextResponse.json(updated[0]);
   } catch (err) {

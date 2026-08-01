@@ -138,8 +138,10 @@ export default function MentorProfile() {
       body: JSON.stringify({ mentorId: mentor.id, seekerName: noteForm.name, note: noteText }),
     });
     if (res.ok) {
-      const created = await res.json();
-      setNotes(n => [created, ...n]);
+      await res.json();
+      // Not prepended to `notes`: the note is created with status 'pending' and
+      // only appears publicly once the mentor approves it. Showing it here made it
+      // look live until the next refresh.
       setNoteSent(true);
       const trimmedNote = noteText.length > 220 ? noteText.slice(0, 220).trim() + '...' : noteText;
       setLinkedinDraft(`Had a good conversation with ${mentor?.firstName} ${mentor?.lastName} (${mentor?.role} @ ${mentor?.company}) recently.\n\n${trimmedNote}`);

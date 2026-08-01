@@ -507,7 +507,7 @@ export default function Dashboard() {
                     ))}
                   </div>
                 ) : (
-                  <p style={{ color: MUTED, fontSize: 13 }}>No badges yet. Your first sip request earns you the First Sip badge.</p>
+                  <p style={{ color: MUTED, fontSize: 13 }}>No badges yet. Completing your first sip earns you the First Sip badge.</p>
                 )}
               </motion.div>
 

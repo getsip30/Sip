@@ -33,15 +33,21 @@ export async function GET() {
       .orderBy(desc(requests.createdAt))
       .limit(300);
 
-    const enriched = rows.map(r => ({
-      ...r,
-      seekerFeedbackGiven: r.seekerFeedbackGiven !== null,
-      mentor: r.mentorFirstName ? {
-        firstName: r.mentorFirstName, lastName: r.mentorLastName,
-        role: r.mentorRole, company: r.mentorCompany, calendarLink: r.mentorCalendarLink,
-        contactEmail: r.mentorContactEmail,
-      } : null,
-    }));
+    // Contact details are the payoff for an ACCEPTED request only — a pending or
+    // declined request must not hand out the mentor's private booking channel.
+    const enriched = rows.map(({ mentorCalendarLink, mentorContactEmail, ...r }) => {
+      const released = r.status === 'accepted';
+      return {
+        ...r,
+        seekerFeedbackGiven: r.seekerFeedbackGiven !== null,
+        mentor: r.mentorFirstName ? {
+          firstName: r.mentorFirstName, lastName: r.mentorLastName,
+          role: r.mentorRole, company: r.mentorCompany,
+          calendarLink: released ? mentorCalendarLink : null,
+          contactEmail: released ? mentorContactEmail : null,
+        } : null,
+      };
+    });
 
     return NextResponse.json(enriched);
   } catch (err) {

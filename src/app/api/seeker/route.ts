@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { generateUniqueReferralCode } from '@/lib/referral';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
+import { safeExternalUrl } from '@/lib/utils';
 
 export async function GET() {
   try {
@@ -30,20 +31,33 @@ export async function POST(req: Request) {
   if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
   const { firstName, age, linkedin, interests, avatarData, ref } = await req.json();
-  if (age !== undefined && age !== null && (age < 13 || age > 100)) {
+  // Explicit integer check: a non-numeric age used to slip past `age < 13` (string
+  // comparisons are false) and blow up on the integer column instead.
+  if (age !== undefined && age !== null && (!Number.isInteger(age) || age < 13 || age > 100)) {
     return NextResponse.json({ error: 'Please enter a real age between 13 and 100.' }, { status: 400 });
   }
-  if (linkedin && linkedin.length > 200) return NextResponse.json({ error: 'LinkedIn URL is too long' }, { status: 400 });
-  if (interests && interests.length > 300) return NextResponse.json({ error: 'Interests field is too long' }, { status: 400 });
+  const safeLinkedin = linkedin ? safeExternalUrl(linkedin) : null;
+  if (linkedin && !safeLinkedin) return NextResponse.json({ error: 'LinkedIn must be a valid http(s) URL' }, { status: 400 });
+  if (interests && (typeof interests !== 'string' || interests.length > 300)) {
+    return NextResponse.json({ error: 'Interests field is too long' }, { status: 400 });
+  }
+  if (firstName !== undefined && firstName !== null && (typeof firstName !== 'string' || firstName.length > 100)) {
+    return NextResponse.json({ error: 'Name is too long' }, { status: 400 });
+  }
+  if (avatarData && (typeof avatarData !== 'string' || avatarData.length > 256)) {
+    return NextResponse.json({ error: 'Invalid avatar' }, { status: 400 });
+  }
 
   const client = await clerkClient();
   const user = await client.users.getUser(userId);
   const email = user.emailAddresses[0]?.emailAddress || '';
 
   const existing = await db.select().from(seekers).where(eq(seekers.clerkId, userId));
+  if (existing[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
+
   if (existing.length > 0) {
     const updated = await db.update(seekers)
-      .set({ firstName: firstName || existing[0].firstName, age, linkedin, interests, avatarData: avatarData || null })
+      .set({ firstName: firstName || existing[0].firstName, age, linkedin: safeLinkedin, interests, avatarData: avatarData || null })
       .where(eq(seekers.clerkId, userId))
       .returning();
     return NextResponse.json(updated[0]);
@@ -63,7 +77,7 @@ export async function POST(req: Request) {
     lastName: user.lastName || '',
     email,
     age,
-    linkedin,
+    linkedin: safeLinkedin,
     interests,
     avatarData: avatarData || null,
     referralCode,
