@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { BG, BORDER, TEXT, MUTED, ACCENT, LINK } from '@/lib/theme';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { BG, SURFACE, TEXT, MUTED, ACCENT } from '@/lib/theme';
 
 export function ConsentGate({ onAccept, onDecline }: { onAccept: () => void; onDecline: () => void }) {

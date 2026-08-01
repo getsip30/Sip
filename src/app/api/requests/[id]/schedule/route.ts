@@ -1,4 +1,5 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
+import { getUserEmail } from '@/lib/clerk';
 import { db } from '@/db';
 import { requests } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -18,9 +19,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { success } = await mutationLimiter.limit(userId);
     if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const email = user.emailAddresses[0]?.emailAddress;
+    const email = await getUserEmail(userId);
     if (!email) return NextResponse.json({ error: 'No email on file' }, { status: 400 });
 
     const { scheduledAt } = await req.json();

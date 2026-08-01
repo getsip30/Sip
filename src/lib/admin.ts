@@ -1,12 +1,11 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
+import { getUserEmail } from '@/lib/clerk';
 
 export async function isAdmin() {
   if (!process.env.ADMIN_EMAIL) return false;
   const { userId } = await auth();
   if (!userId) return false;
-  const client = await clerkClient();
-  const user = await client.users.getUser(userId);
-  const email = user.emailAddresses[0]?.emailAddress;
+  const email = await getUserEmail(userId);
   if (!email) return false;
   return email.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase();
 }

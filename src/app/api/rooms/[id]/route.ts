@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { rooms, mentors } from '@/db/schema';
+import { rooms, mentors, queueEntries } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { NextResponse, after } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
@@ -29,8 +29,24 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .from(rooms)
       .innerJoin(mentors, eq(rooms.mentorId, mentors.id))
       .where(eq(rooms.id, id));
-    if (!result[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    return NextResponse.json(result[0]);
+
+    const room = result[0];
+    if (!room) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    // The Jitsi link is the only thing gating the call, so hand it out only to
+    // the host or to a seeker whose turn is actually active in this room.
+    const { userId: viewerId } = await auth();
+    let mayJoin = !!viewerId && viewerId === room.mentorClerkId;
+    if (!mayJoin && viewerId) {
+      const active = await db.select({ id: queueEntries.id }).from(queueEntries).where(and(
+        eq(queueEntries.roomId, id),
+        eq(queueEntries.seekerClerkId, viewerId),
+        eq(queueEntries.status, 'active'),
+      ));
+      mayJoin = active.length > 0;
+    }
+
+    return NextResponse.json({ ...room, roomUrl: mayJoin ? room.roomUrl : null });
   } catch (err) {
     return handleApiError(err, 'GET /api/rooms/[id]');
   }

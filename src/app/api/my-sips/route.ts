@@ -1,18 +1,21 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
+import { getUserEmail } from '@/lib/clerk';
 import { db } from '@/db';
 import { requests, mentors, sipFeedback } from '@/db/schema';
 import { eq, and, or, getTableColumns, desc } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { privateReadLimiter, limitKey, tooManyRequests } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { success, reset } = await privateReadLimiter.limit(limitKey(req, userId));
+    if (!success) return tooManyRequests(reset);
 
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const email = user.emailAddresses[0]?.emailAddress;
+
+    const email = await getUserEmail(userId);
     if (!email) return NextResponse.json([], { status: 400 });
 
     const rows = await db

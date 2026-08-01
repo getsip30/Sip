@@ -1,4 +1,4 @@
-﻿import { auth } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { rooms, mentors } from '@/db/schema';
 import { eq, and, lt, lte } from 'drizzle-orm';
@@ -6,6 +6,7 @@ import { NextResponse, after } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter, readLimiter, getIp } from '@/lib/ratelimit';
 import { notifyFollowersLive, flipToLive, notifyRoomLive } from '@/lib/rooms';
+import { runOnce } from '@/lib/lock';
 
 export async function GET(req: Request) {
   try {
@@ -13,31 +14,34 @@ export async function GET(req: Request) {
     const { success } = await readLimiter.limit(ip);
     if (!success) return NextResponse.json({ error: 'Slow down a bit.' }, { status: 429 });
 
-    // Maintenance, off the response path. The old module-level `lastCleanup`
-    // throttle was a no-op on serverless (every instance has its own copy).
-    after(async () => {
-      // 1. Sweep rooms left open for 6h+.
-      const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000);
-      await db.update(rooms).set({ status: 'ended', endedAt: new Date() })
-        .where(and(eq(rooms.status, 'live'), lt(rooms.startedAt, cutoff)));
+    // Maintenance, off the response path and behind a distributed lock. This
+    // route is polled every 15s by every open tab, so without the lock every
+    // instance would run these table-wide writes concurrently.
+    after(() =>
+      runOnce('rooms:sweep', 60, async () => {
+        // 1. Sweep rooms left open for 6h+.
+        const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000);
+        await db.update(rooms).set({ status: 'ended', endedAt: new Date() })
+          .where(and(eq(rooms.status, 'live'), lt(rooms.startedAt, cutoff)));
 
-      // 2. Bring due scheduled rooms live. This is the backstop in place of a
-      // cron (Vercel Hobby can't run one often enough to be useful here), so a
-      // due room still surfaces without anyone opening its direct link. Scoped
-      // to rooms that are actually due, and each flip goes through flipToLive,
-      // whose conditional UPDATE guarantees exactly one notification.
-      const dueRooms = await db.select({ id: rooms.id }).from(rooms)
-        .where(and(eq(rooms.status, 'scheduled'), lte(rooms.scheduledAt, new Date())))
-        .limit(25);
-      for (const r of dueRooms) {
-        const flipped = await flipToLive(r.id);
-        if (flipped) await notifyRoomLive(flipped);
-      }
-    });
+        // 2. Bring due scheduled rooms live. Backstop in place of a cron, since
+        // Vercel Hobby can't run one often enough to be useful here.
+        const dueRooms = await db.select({ id: rooms.id }).from(rooms)
+          .where(and(eq(rooms.status, 'scheduled'), lte(rooms.scheduledAt, new Date())))
+          .limit(25);
+        for (const r of dueRooms) {
+          const flipped = await flipToLive(r.id);
+          if (flipped) await notifyRoomLive(flipped);
+        }
+      })
+    );
 
     const result = await db
       .select({
-        id: rooms.id, title: rooms.title, roomUrl: rooms.roomUrl, startedAt: rooms.startedAt,
+        // roomUrl is deliberately absent: meet.jit.si rooms are open to anyone
+        // holding the link, so it is only released to the host or a seeker whose
+        // turn is active (see GET /api/rooms/[id]).
+        id: rooms.id, title: rooms.title, startedAt: rooms.startedAt,
         mentorId: mentors.id, firstName: mentors.firstName, lastName: mentors.lastName,
         role: mentors.role, company: mentors.company,
       })

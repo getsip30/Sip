@@ -1,10 +1,12 @@
-﻿import { auth } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { requests, mentors, seekers, referralEvents } from '@/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
+import { logSwallowed } from '@/lib/logger';
+import { recordAbuseSignal } from '@/lib/abuse';
 import { escapeHtml, safeExternalUrl } from '@/lib/utils';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { isUuid } from '@/lib/validate';
@@ -42,6 +44,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const existingRequest = await db.select().from(requests).where(eq(requests.id, id));
     if (!existingRequest[0]) return NextResponse.json({ error: 'Request not found' }, { status: 404 });
     if (existingRequest[0].mentorId !== mentor.id) {
+      void recordAbuseSignal('auth_denied', userId, { route: 'requests.respond', requestId: id });
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     if (existingRequest[0].status !== 'pending') {
@@ -64,7 +67,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     `).then(r => {
       const avg = (r.rows as { avg_minutes: number | null }[])[0]?.avg_minutes;
       if (avg != null) return db.update(mentors).set({ avgResponseMinutes: avg }).where(eq(mentors.id, mentor.id));
-    }).catch(err => console.error('avgResponseMinutes update failed:', err));
+    }).catch(err => logSwallowed('mentor.avg_response_update_failed', err, { mentorId: mentor.id }));
 
     if (status === 'accepted') {
       const bookingSeeker = await db.select().from(seekers).where(eq(seekers.email, r.seekerEmail));
@@ -108,7 +111,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             <p style="color:#8B949E;font-size:13px;margin-top:24px;">Show up curious. That's all they ask.</p>
           </div>
         `,
-      }).catch(err => console.error('accept email failed:', err));
+      }).catch(err => logSwallowed('email.accept_failed', err, { requestId: id }));
     }
 
     if (status === 'declined') {
@@ -126,7 +129,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" style="display:inline-block;background:#161B22;color:#70B5F9;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid rgba(112,181,249,0.3);">Browse More Mentors →</a>
           </div>
         `,
-      }).catch(err => console.error('decline email failed:', err));
+      }).catch(err => logSwallowed('email.decline_failed', err, { requestId: id }));
     }
 
     return NextResponse.json(updated[0]);

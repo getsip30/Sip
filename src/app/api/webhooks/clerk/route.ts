@@ -3,7 +3,8 @@ import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { mentors, seekers, requests, asks, follows, queueEntries, referralEvents, flags, consents, siteFeedback, sipFeedback, sipNotes } from '@/db/schema';
-import { eq, or } from 'drizzle-orm';
+import { eq, or, inArray } from 'drizzle-orm';
+import { logInfo, logWarn } from '@/lib/logger';
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -30,7 +31,10 @@ export async function POST(req: Request) {
       'svix-timestamp': svix_timestamp,
       'svix-signature': svix_signature,
     }) as WebhookEvent;
-  } catch {
+  } catch (err) {
+    // A burst of these means either a misconfigured secret or someone probing
+    // the endpoint, and both are things worth seeing.
+    logWarn('webhook.signature_invalid', { svixId: svix_id, message: String(err) });
     return new Response('Invalid webhook', { status: 400 });
   }
 
@@ -46,25 +50,35 @@ export async function POST(req: Request) {
       ]);
       const emails = [mentorRow[0]?.email, seekerRow[0]?.email].filter(Boolean) as string[];
 
-      await db.delete(requests).where(eq(requests.seekerClerkId, id));
-      await db.delete(asks).where(eq(asks.seekerClerkId, id));
-      await db.delete(follows).where(eq(follows.seekerClerkId, id));
-      await db.delete(queueEntries).where(eq(queueEntries.seekerClerkId, id));
-      await db.delete(referralEvents).where(or(eq(referralEvents.referrerClerkId, id), eq(referralEvents.referredClerkId, id)));
-      await db.delete(consents).where(eq(consents.clerkId, id));
-      await db.delete(siteFeedback).where(eq(siteFeedback.clerkId, id));
-      await db.delete(sipFeedback).where(eq(sipFeedback.raterClerkId, id));
-      // Both sides of a flag: reports they filed and reports filed about them.
-      await db.delete(flags).where(or(eq(flags.reporterClerkId, id), eq(flags.reportedClerkId, id)));
+      // These target independent tables, so they run concurrently rather than as
+      // a dozen sequential round trips.
+      await Promise.all([
+        db.delete(requests).where(eq(requests.seekerClerkId, id)),
+        db.delete(asks).where(eq(asks.seekerClerkId, id)),
+        db.delete(follows).where(eq(follows.seekerClerkId, id)),
+        db.delete(queueEntries).where(eq(queueEntries.seekerClerkId, id)),
+        db.delete(referralEvents).where(or(eq(referralEvents.referrerClerkId, id), eq(referralEvents.referredClerkId, id))),
+        db.delete(consents).where(eq(consents.clerkId, id)),
+        db.delete(siteFeedback).where(eq(siteFeedback.clerkId, id)),
+        db.delete(sipFeedback).where(eq(sipFeedback.raterClerkId, id)),
+        // Both sides of a flag: reports they filed and reports filed about them.
+        db.delete(flags).where(or(eq(flags.reporterClerkId, id), eq(flags.reportedClerkId, id))),
+      ]);
 
       // Requests/notes created while logged out are keyed only by email.
-      for (const email of emails) {
-        await db.delete(requests).where(eq(requests.seekerEmail, email));
-        await db.delete(sipNotes).where(eq(sipNotes.seekerEmail, email));
+      if (emails.length > 0) {
+        await Promise.all([
+          db.delete(requests).where(inArray(requests.seekerEmail, emails)),
+          db.delete(sipNotes).where(inArray(sipNotes.seekerEmail, emails)),
+        ]);
       }
 
-      await db.delete(mentors).where(eq(mentors.clerkId, id));
-      await db.delete(seekers).where(eq(seekers.clerkId, id));
+      // Last, so the cascade can't remove rows the cleanup above still needs.
+      await Promise.all([
+        db.delete(mentors).where(eq(mentors.clerkId, id)),
+        db.delete(seekers).where(eq(seekers.clerkId, id)),
+      ]);
+      logInfo('webhook.user_deleted', { clerkId: id });
     }
   }
 

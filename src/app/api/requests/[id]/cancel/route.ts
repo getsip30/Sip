@@ -1,4 +1,5 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
+import { getUserEmail } from '@/lib/clerk';
 import { db } from '@/db';
 import { requests, mentors } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -6,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { isUuid } from '@/lib/validate';
 import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
+import { logSwallowed } from '@/lib/logger';
 import { escapeHtml } from '@/lib/utils';
 import { mutationLimiter } from '@/lib/ratelimit';
 
@@ -33,9 +35,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (mentor.clerkId === userId) {
       cancelledBy = 'mentor';
     } else {
-      const client = await clerkClient();
-      const user = await client.users.getUser(userId);
-      const email = user.emailAddresses[0]?.emailAddress;
+      const email = await getUserEmail(userId);
       if (!email || email.toLowerCase() !== r.seekerEmail.toLowerCase()) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
@@ -68,7 +68,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" style="display:inline-block;background:#161B22;color:#70B5F9;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid rgba(112,181,249,0.3);">Back to Sip →</a>
         </div>
       `,
-    }).catch(err => console.error('cancel email failed:', err));
+    }).catch(err => logSwallowed('email.cancel_failed', err, { requestId: id }));
 
     return NextResponse.json(updated[0]);
   } catch (err) {

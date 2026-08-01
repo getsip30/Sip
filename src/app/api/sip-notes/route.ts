@@ -1,10 +1,12 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
+import { getUserEmail } from '@/lib/clerk';
 import { db } from '@/db';
 import { sipNotes, requests, seekers, mentors } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
+import { recordAbuseSignal } from '@/lib/abuse';
 import { isUuid, cleanText } from '@/lib/validate';
 
 export async function GET(req: Request) {
@@ -22,7 +24,10 @@ export async function GET(req: Request) {
       const { userId } = await auth();
       if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       const mentorSelf = await db.select({ id: mentors.id }).from(mentors).where(eq(mentors.clerkId, userId));
-      if (mentorSelf[0]?.id !== mentorId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      if (mentorSelf[0]?.id !== mentorId) {
+        void recordAbuseSignal('auth_denied', userId, { route: 'sip-notes.mine', mentorId });
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
       const result = await db.select().from(sipNotes).where(and(eq(sipNotes.mentorId, mentorId), eq(sipNotes.status, 'pending'))).orderBy(desc(sipNotes.createdAt));
       return NextResponse.json(result);
     }
@@ -47,9 +52,7 @@ export async function POST(req: Request) {
     const { success } = await mutationLimiter.limit(userId);
     if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
-    const client = await clerkClient();
-    const clerkUser = await client.users.getUser(userId);
-    const seekerEmail = clerkUser.emailAddresses[0]?.emailAddress;
+    const seekerEmail = await getUserEmail(userId);
     if (!seekerEmail) return NextResponse.json({ error: 'No verified email on account' }, { status: 400 });
 
     const seekerSelf = await db.select().from(seekers).where(eq(seekers.clerkId, userId));

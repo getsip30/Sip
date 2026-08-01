@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK } from '@/lib/theme';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useRoles } from '@/hooks/useRoles';
 import { ConsentGate } from '@/components/ConsentGate';
 
-type Room = { id: string; title: string; roomUrl: string; status: string; mode: string; scheduledAt: string | null; firstName: string; lastName: string; role: string; company: string; mentorClerkId: string };
+type Room = { id: string; title: string; roomUrl: string | null; status: string; mode: string; scheduledAt: string | null; firstName: string; lastName: string; role: string; company: string; mentorClerkId: string };
 type QueueEntry = { id: string; seekerClerkId: string; seekerName: string; topic?: string; status: string; isMine?: boolean; visitCount?: number; flagCount?: number; doneAt?: string | null };
 
 export default function RoomPage() {
@@ -84,6 +84,12 @@ export default function RoomPage() {
     const t = setInterval(fetchQueue, 4000);
     return () => clearInterval(t);
   }, [fetchQueue]);
+
+  // The API withholds roomUrl until the viewer's turn is active, so refetch the
+  // room once that happens to pick up the join link.
+  useEffect(() => {
+    if (myEntry?.status === 'active' && room && !room.roomUrl) fetchRoom();
+  }, [myEntry?.status, room, fetchRoom]);
 
   useEffect(() => {
     if (myEntry?.status === 'active' && room?.roomUrl && !popupRef.current) {
@@ -236,7 +242,9 @@ export default function RoomPage() {
           </div>
         ) : isRoomMentor ? (
           <>
-            <a href={room.roomUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', background: ACCENT, color: 'white', padding: '12px 24px', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 14, marginBottom: 20 }}>start call</a>
+            {room.roomUrl && (
+              <a href={room.roomUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', background: ACCENT, color: 'white', padding: '12px 24px', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 14, marginBottom: 20 }}>start call</a>
+            )}
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
               <button onClick={() => setMode('individual')} disabled={modeUpdating || actives.length > 0} style={modeBtn(room.mode === 'individual')}>individuals</button>

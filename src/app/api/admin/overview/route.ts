@@ -1,13 +1,17 @@
-﻿import { db } from '@/db';
+import { db } from '@/db';
 import { mentors, seekers, rooms, requests, flags, queueEntries, sipFeedback, asks, sipNotes, referralEvents, consents, follows } from '@/db/schema';
 import { desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { adminLimiter, limitKey, tooManyRequests } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
 import { isAdmin } from '@/lib/admin';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     if (!(await isAdmin())) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const { success, reset } = await adminLimiter.limit(limitKey(req, 'admin'));
+    if (!success) return tooManyRequests(reset);
+
 
     const [allMentors, allSeekers, allRooms, recentRequests, openFlags, activeQueues, allFeedback, allAsks, allSipNotes, allReferrals, allConsents, allFollows] = await Promise.all([
       db.select().from(mentors).orderBy(desc(mentors.createdAt)).limit(1000),

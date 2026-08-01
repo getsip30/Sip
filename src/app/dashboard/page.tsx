@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useUser, SignOutButton } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';

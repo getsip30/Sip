@@ -1,11 +1,15 @@
 import { db } from "@/db";
 import { seekers, requests, mentors } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { publicReadLimiter, limitKey, tooManyRequests } from '@/lib/ratelimit';
 
 import { isUuid } from '@/lib/validate';
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { success, reset } = await publicReadLimiter.limit(limitKey(req));
+  if (!success) return tooManyRequests(reset);
+
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json(null, { status: 404 });
   const result = await db.select().from(seekers).where(eq(seekers.id, id));
@@ -19,11 +23,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     eq(requests.mentorConsentToShow, true)
   ));
 
-  const sips = [];
-  for (const s of sharedSips) {
-    const m = await db.select().from(mentors).where(eq(mentors.id, s.mentorId));
-    if (m[0]) sips.push({ mentorId: m[0].id, firstName: m[0].firstName, lastName: m[0].lastName, role: m[0].role, company: m[0].company });
-  }
+  // One query for every shared sip's mentor instead of one per sip.
+  const mentorIds = [...new Set(sharedSips.map((s) => s.mentorId))];
+  const sips = mentorIds.length
+    ? await db
+        .select({ mentorId: mentors.id, firstName: mentors.firstName, lastName: mentors.lastName, role: mentors.role, company: mentors.company })
+        .from(mentors)
+        .where(inArray(mentors.id, mentorIds))
+    : [];
 
   const { clerkId, email, invitedByClerkId, linkedin, ...safe } = seeker;
   return NextResponse.json({ ...safe, sips });

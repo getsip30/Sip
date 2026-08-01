@@ -4,6 +4,7 @@ import { eq, sql, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { escapeHtml } from '@/lib/utils';
+import { logSwallowed } from '@/lib/logger';
 
 type Row = {
   id: string; seeker_email: string; seeker_name: string; scheduled_at: string;
@@ -45,7 +46,7 @@ export async function GET(req: Request) {
       await db.update(requests).set({ reminderSentAt: new Date() }).where(eq(requests.id, row.id));
       sent++;
     } catch (err) {
-      console.error(`reminder failed for request ${row.id}:`, err);
+      logSwallowed('cron.reminder_failed', err, { requestId: row.id });
     }
   }
 
