@@ -8,6 +8,7 @@ import { useRoles } from '@/hooks/useRoles';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import Collapse from '@/components/Collapse';
 import { useRequestList, RequestFilterBar, ShowMore } from '@/components/RequestFilters';
+import { bookingOptions, type ContactMethod } from '@/lib/booking';
 import { ease, DUR, listItem, badgeVariants, badgeTransition } from '@/lib/motion';
 import Logo from '@/components/Logo';
 import RoleSwitchLink from '@/components/RoleSwitchLink';
@@ -18,7 +19,7 @@ import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, SUCCESS2, WARNING, DANG
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
-  bio: string; topics: string; calendarLink: string | null; contactEmail: string | null; availability: string;
+  bio: string; topics: string; calendarLink: string | null; googleCalendarLink: string | null; contactEmail: string | null; availability: string;
   isOpen: boolean; xp: number; sipCount: number; badges: string; referrerName?: string | null; avatarData?: string;
 };
 type Request = {
@@ -94,7 +95,7 @@ export default function Dashboard() {
   const [feedbackComments, setFeedbackComments] = useState<Record<string, string>>({});
   const [submittingFeedback, setSubmittingFeedback] = useState<string | null>(null);
 
-  async function acceptRequest(requestId: string, contactMethod?: 'calendar' | 'email', mentorNote?: string) {
+  async function acceptRequest(requestId: string, contactMethod?: ContactMethod, mentorNote?: string) {
     setAccepting(requestId);
     const res = await fetch(`/api/requests/${requestId}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -335,17 +336,20 @@ export default function Dashboard() {
                 placeholder="e.g. I'm free next week after 6pm, book then!"
                 style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 12px', color: TEXT, fontSize: 13, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: 16 }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {mentor?.calendarLink && (
-                  <button onClick={() => acceptRequest(choosingContactFor, 'calendar', acceptNote)} disabled={accepting === choosingContactFor}
-                   style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '12px 16px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: accepting === choosingContactFor ? 'not-allowed' : 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                    Send calendar link
+                {/* One button per saved method, from the same resolver the server
+                    validates against, so the dialog cannot offer what the accept
+                    would reject. */}
+                {(mentor ? bookingOptions(mentor) : []).map(o => (
+                  <button key={o.method} onClick={() => acceptRequest(choosingContactFor, o.method, acceptNote)} disabled={accepting === choosingContactFor}
+                    style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '12px 16px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: accepting === choosingContactFor ? 'not-allowed' : 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                    Send {o.label.toLowerCase()}
+                    <span style={{ display: 'block', color: MUTED, fontWeight: 400, fontSize: 11, marginTop: 3, wordBreak: 'break-all' }}>{o.value}</span>
                   </button>
-                )}
-                {mentor?.contactEmail && (
-                  <button onClick={() => acceptRequest(choosingContactFor, 'email', acceptNote)} disabled={accepting === choosingContactFor}
-                     style={{ background: 'rgba(91,219,138,0.12)', border: '1px solid rgba(91,219,138,0.3)', color: SUCCESS2, padding: '12px 16px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: accepting === choosingContactFor ? 'not-allowed' : 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                    Send email contact
-                  </button>
+                ))}
+                {mentor && bookingOptions(mentor).length === 0 && (
+                  <div style={{ fontSize: 12, color: WARNING, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '10px 12px' }}>
+                    Add a booking link or contact email to your profile before accepting.
+                  </div>
                 )}
                 <button onClick={() => { setChoosingContactFor(null); setAcceptNote(''); }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: MUTED, padding: '10px 16px', borderRadius: 20, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>cancel</button>
               </div>
@@ -519,7 +523,7 @@ export default function Dashboard() {
               {(() => {
                 const checklist = [
                   { label: 'Complete your profile (bio + topics)', done: !!mentor.bio && !!mentor.topics },
-                  { label: 'Add a calendar link or contact email', done: !!mentor.calendarLink || !!mentor.contactEmail },
+                  { label: 'Add a booking link or contact email', done: bookingOptions(mentor).length > 0 },
                   { label: 'Answer your first ask', done: asks.some(a => !!a.answer) },
                   { label: 'Complete your first sip', done: mentor.sipCount > 0 },
                 ];

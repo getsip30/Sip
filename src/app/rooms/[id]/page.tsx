@@ -45,7 +45,7 @@ export default function RoomPage() {
   const [connecting, setConnecting] = useState<string | null>(null);
   const [sentConnects, setSentConnects] = useState<Set<string>>(new Set());
   const [connectError, setConnectError] = useState<string | null>(null);
-  const [myBooking, setMyBooking] = useState<{ calendarLink: string | null; contactEmail: string | null } | null>(null);
+  const [myBooking, setMyBooking] = useState<{ calendarLink: string | null; googleCalendarLink: string | null; contactEmail: string | null } | null>(null);
   const [connectChoiceFor, setConnectChoiceFor] = useState<string | null>(null);
   const [rateSeeker, setRateSeeker] = useState<{ clerkId: string; name: string } | null>(null);
   const [noteOpenFor, setNoteOpenFor] = useState<string | null>(null);

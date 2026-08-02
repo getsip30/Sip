@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
   const body = await req.json();
-  const { firstName, lastName, role, company, bio, topics, calendarLink, contactEmail, availability, linkedin, showLinkedin, avatarData, ref } = body;
+  const { firstName, lastName, role, company, bio, topics, calendarLink, googleCalendarLink, contactEmail, availability, linkedin, showLinkedin, avatarData, ref } = body;
 
   if (!firstName || !lastName || !role || !company) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -78,6 +78,10 @@ export async function POST(req: Request) {
   if (calendarLink && !safeCalendarLink) {
     return NextResponse.json({ error: 'Calendar link must be a valid http(s) URL' }, { status: 400 });
   }
+  const safeGoogleCalendarLink = googleCalendarLink ? safeExternalUrl(googleCalendarLink) : null;
+  if (googleCalendarLink && !safeGoogleCalendarLink) {
+    return NextResponse.json({ error: 'Google Calendar link must be a valid http(s) URL' }, { status: 400 });
+  }
   const safeLinkedin = linkedin ? safeExternalUrl(linkedin) : null;
   if (linkedin && !safeLinkedin) {
     return NextResponse.json({ error: 'LinkedIn must be a valid http(s) URL' }, { status: 400 });
@@ -94,7 +98,7 @@ export async function POST(req: Request) {
 
   if (existing.length > 0) {
     const updated = await db.update(mentors)
-      .set({ firstName, lastName, email, role, company, bio: bio || '', topics: topics || '', calendarLink: safeCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null })      .where(eq(mentors.clerkId, userId))
+      .set({ firstName, lastName, email, role, company, bio: bio || '', topics: topics || '', calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null })      .where(eq(mentors.clerkId, userId))
       .returning();
     return NextResponse.json(updated[0]);
   }
@@ -108,7 +112,7 @@ export async function POST(req: Request) {
 
   const referralCode = await generateUniqueReferralCode();
   const mentor = await db.insert(mentors).values({
-    clerkId: userId, firstName, lastName, email, role, company, bio: bio || '', topics: topics || '',    calendarLink: safeCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin,
+    clerkId: userId, firstName, lastName, email, role, company, bio: bio || '', topics: topics || '',    calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin,
     avatarData: avatarData || null,
     referralCode,
     invitedByClerkId,

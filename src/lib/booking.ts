@@ -1,7 +1,7 @@
 import type { mentors } from '@/db/schema';
 import { escapeHtml, safeExternalUrl } from '@/lib/utils';
 
-export type ContactMethod = 'calendar' | 'email';
+export type ContactMethod = 'calendar' | 'google' | 'email';
 
 /**
  * How long a mentor is held off after cancelling a 1:1 on someone, so a
@@ -47,7 +47,7 @@ export type BookingOption = {
  * Only the fields a booking option is built from, so the browser can reuse this
  * against the profile it fetched without reconstructing a full row.
  */
-type BookingSource = Pick<typeof mentors.$inferSelect, 'calendarLink' | 'contactEmail'>;
+type BookingSource = Pick<typeof mentors.$inferSelect, 'calendarLink' | 'googleCalendarLink' | 'contactEmail'>;
 
 /**
  * Every way this mentor can be booked, in the order they should be offered.
@@ -63,7 +63,10 @@ export function bookingOptions(mentor: BookingSource): BookingOption[] {
   const options: BookingOption[] = [];
 
   const calendar = safeExternalUrl(mentor.calendarLink);
-  if (calendar) options.push({ method: 'calendar', label: 'Calendar link', value: calendar });
+  if (calendar) options.push({ method: 'calendar', label: 'Calendly link', value: calendar });
+
+  const google = safeExternalUrl(mentor.googleCalendarLink);
+  if (google) options.push({ method: 'google', label: 'Google Calendar', value: google });
 
   if (mentor.contactEmail) options.push({ method: 'email', label: 'Email', value: mentor.contactEmail });
 
