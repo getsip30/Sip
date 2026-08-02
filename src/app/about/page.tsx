@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { BG, TEXT, MUTED, LINK } from '@/lib/theme';
 import Logo from '@/components/Logo';
+import Footer from '@/components/Footer';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
@@ -15,8 +16,8 @@ export const metadata: Metadata = {
 
 export default function About() {
   return (
-    <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "'Space Grotesk', sans-serif", padding: '60px 20px' }}>
-      <div id="main-content" style={{ maxWidth: 640, margin: '0 auto', animation: 'fadeInUp 0.5s ease-out' }}>
+    <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "'Space Grotesk', sans-serif", paddingTop: 60, display: 'flex', flexDirection: 'column' }}>
+      <div id="main-content" style={{ maxWidth: 640, margin: '0 auto', padding: '0 20px 60px', width: '100%', boxSizing: 'border-box', animation: 'fadeInUp 0.5s ease-out' }}>
         <div style={{ marginBottom: 32 }}><Logo /></div>
         <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 20 }}>About Sip</h1>
         <p style={{ color: MUTED, fontSize: 15, lineHeight: 1.8, marginBottom: 16 }}>
@@ -27,6 +28,7 @@ export default function About() {
         </p>
         <Link href="/" style={{ color: LINK, textDecoration: 'none', fontSize: 14 }}>← back home</Link>
       </div>
+      <Footer />
     </div>
   );
 }

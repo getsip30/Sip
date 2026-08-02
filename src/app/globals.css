@@ -80,6 +80,18 @@ input, textarea, button, select {
   .page-rail { position: sticky; top: 92px; }
 }
 
+/* Footer columns. The brand column takes the extra room so the two link columns
+   stay the width of their content instead of drifting apart on a wide screen. */
+.footer-grid {
+  display: grid;
+  gap: 40px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 720px) {
+  .footer-grid { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr); }
+}
+
 /* Short form fields sit side by side once the form is wide enough that a single
    column would leave most of the row empty. */
 .field-pair {
