@@ -1,4 +1,5 @@
 import { db } from '@/db';
+import { isAuthorisedCron } from '@/lib/cron-auth';
 import { rooms } from '@/db/schema';
 import { eq, and, lte } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
@@ -22,8 +23,7 @@ import { flipToLive, notifyRoomLive } from '@/lib/rooms';
  */
 
 export async function GET(req: Request) {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorisedCron(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

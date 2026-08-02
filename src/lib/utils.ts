@@ -54,3 +54,16 @@ export function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+/**
+ * Flattens user-supplied text for use in an email subject.
+ *
+ * Names reach subject lines from profile fields that are only length-checked,
+ * so a name can carry newlines. Resend takes JSON rather than raw SMTP, which
+ * makes classic header injection unlikely, but relying on a provider to sanitise
+ * our input is not a control we own, and a folded subject looks broken either
+ * way. Collapses all whitespace and caps the length.
+ */
+export function subjectSafe(value: string, max = 120): string {
+  const flat = String(value).replace(/\s+/g, ' ').trim();
+  return flat.length > max ? flat.slice(0, max - 1) + '…' : flat;
+}

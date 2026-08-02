@@ -1,4 +1,5 @@
 import { db } from '@/db';
+import { isAuthorisedCron } from '@/lib/cron-auth';
 import { requests, mentors } from '@/db/schema';
 import { eq, sql, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
@@ -12,8 +13,7 @@ type Row = {
 };
 
 export async function GET(req: Request) {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorisedCron(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

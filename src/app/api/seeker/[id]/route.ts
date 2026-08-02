@@ -32,6 +32,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         .where(inArray(mentors.id, mentorIds))
     : [];
 
-  const { clerkId, email, invitedByClerkId, linkedin, ...safe } = seeker;
-  return NextResponse.json({ ...safe, sips });
+  // An ALLOWLIST, matching publicMentor. This used to strip four named fields
+  // and spread the rest, so every column added to seekers afterwards was
+  // published by default. On this unauthenticated route that was already
+  // leaking referralCode, which is unique and drives referral attribution,
+  // banned, which is moderation state, and the lastNoteAt / lastMatchEmailAt /
+  // lastCheckinAt activity timestamps. Anything new stays private until someone
+  // deliberately adds it here.
+  return NextResponse.json({
+    id: seeker.id,
+    firstName: seeker.firstName,
+    lastName: seeker.lastName,
+    age: seeker.age,
+    interests: seeker.interests,
+    avatarData: seeker.avatarData,
+    currentStreak: seeker.currentStreak,
+    longestStreak: seeker.longestStreak,
+    createdAt: seeker.createdAt,
+    sips,
+  });
 }

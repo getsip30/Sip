@@ -6,7 +6,7 @@ import { NextResponse, after } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
 import { logSwallowed } from '@/lib/logger';
-import { escapeHtml } from '@/lib/utils';
+import { escapeHtml, subjectSafe } from '@/lib/utils';
 import { resolveBookingOption, bookingEmailBlock, connectCooldownUntil } from '@/lib/booking';
 import { isUuid } from '@/lib/validate';
 import { mutationLimiter } from '@/lib/ratelimit';
@@ -113,7 +113,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const email = option
       ? {
-          subject: `${mentor.firstName} wants to do a 1:1 with you`,
+          subject: `${subjectSafe(mentor.firstName)} wants to do a 1:1 with you`,
           html: `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;">
           <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>
@@ -125,7 +125,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       `,
         }
       : {
-          subject: `${mentor.firstName} wants to continue as a 1:1`,
+          subject: `${subjectSafe(mentor.firstName)} wants to continue as a 1:1`,
           html: `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;">
           <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>

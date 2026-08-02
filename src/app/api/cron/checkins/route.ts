@@ -1,4 +1,5 @@
 import { db } from '@/db';
+import { isAuthorisedCron } from '@/lib/cron-auth';
 import { seekers } from '@/db/schema';
 import { lte, or, isNull, and, inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
@@ -9,8 +10,7 @@ const BATCH_LIMIT = 400;
 const MAIL_CONCURRENCY = 5;
 
 export async function GET(req: Request) {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorisedCron(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
