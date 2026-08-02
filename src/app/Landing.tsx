@@ -8,6 +8,7 @@ import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion
 import { useRoles } from '@/hooks/useRoles';
 import PixelAvatar from '@/components/PixelAvatar';
 import Logo from '@/components/Logo';
+import Footer from '@/components/Footer';
 import { BG, SURFACE, TEXT, MUTED, ACCENT, LINK, SUCCESS2 } from '@/lib/theme';
 
 type Mentor = {
@@ -712,40 +713,6 @@ function FinalCta({ signedIn }: { signedIn: boolean }) {
         </Reveal>
       </div>
     </section>
-  );
-}
-
-function Footer() {
-  return (
-    <footer style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-      <div
-        style={{
-          maxWidth: MAX_PAGE_WIDTH,
-          margin: '0 auto',
-          padding: `34px ${GUTTER}`,
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 18,
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <span style={{ ...mono, fontSize: 11, color: MUTED }}>Sip {new Date().getFullYear()}</span>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 22 }}>
-          {[
-            ['/about', 'About'],
-            ['/leaderboard', 'Leaderboard'],
-            ['/conduct', 'Conduct'],
-            ['/privacy', 'Privacy'],
-            ['/terms', 'Terms'],
-          ].map(([href, label]) => (
-            <Link key={href} href={href} className="text-link" style={{ fontSize: 13, color: MUTED, textDecoration: 'none' }}>
-              {label}
-            </Link>
-          ))}
-        </div>
-      </div>
-    </footer>
   );
 }
 

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { BG, TEXT, MUTED, LINK } from '@/lib/theme';
 import Logo from '@/components/Logo';
+import Footer from '@/components/Footer';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
@@ -11,8 +12,8 @@ export const metadata: Metadata = {
 
 export default function Terms() {
   return (
-    <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "'Space Grotesk', sans-serif", padding: '80px 40px' }}>
-      <div style={{ maxWidth: 640, margin: '0 auto', animation: 'fadeInUp 0.5s ease-out' }}>
+    <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "'Space Grotesk', sans-serif", paddingTop: 80, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 40px 60px', width: '100%', boxSizing: 'border-box', animation: 'fadeInUp 0.5s ease-out' }}>
         <div style={{ marginBottom: 32 }}><Logo /></div>
         <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 20 }}>Terms of Service</h1>
         <p style={{ color: MUTED, fontSize: 14, marginBottom: 24 }}>Last updated: {new Date().toLocaleDateString()}</p>
@@ -43,6 +44,7 @@ export default function Terms() {
         </div>
         <Link href="/" style={{ color: LINK, textDecoration: 'none', fontSize: 14, display: 'block', marginTop: 32 }}>← back home</Link>
       </div>
+      <Footer />
     </div>
   );
 }
