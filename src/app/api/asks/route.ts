@@ -12,7 +12,7 @@ import { isUuid, cleanText } from '@/lib/validate';
 import { handleApiError } from '@/lib/api-handler';
 import { requireSeeker } from '@/lib/guards';
 import { recordAbuseSignal } from '@/lib/abuse';
-import { seekers, flags } from '@/db/schema';
+import { flags } from '@/db/schema';
 import { ne } from 'drizzle-orm';
 
 const WEEKLY_CAP = 2;

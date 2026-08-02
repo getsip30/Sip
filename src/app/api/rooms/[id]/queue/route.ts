@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { queueEntries, rooms, seekers, flags, mentors, requests } from '@/db/schema';
+import { queueEntries, rooms, flags, mentors, requests } from '@/db/schema';
 import { eq, and, sql, inArray, ne, lt } from 'drizzle-orm';
 import { NextResponse, after } from 'next/server';
 import { runOnce } from '@/lib/lock';

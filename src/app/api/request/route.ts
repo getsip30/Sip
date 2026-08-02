@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { requests, mentors, seekers } from '@/db/schema';
+import { requests, mentors } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
