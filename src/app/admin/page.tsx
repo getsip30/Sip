@@ -23,6 +23,11 @@ type Referral = { id: string; referrerClerkId: string; referredClerkId: string; 
 type Follow = { id: string; seekerClerkId: string; mentorId: string; createdAt: string };
 type Consent = { id: string; clerkId: string; roomId: string | null; context: string; createdAt: string };
 type SiteFeedbackEntry = { id: string; clerkId: string | null; path: string | null; message: string; createdAt: string };
+type SessionFeedbackEntry = {
+  id: string; role: string; rating: number; wouldSipAgain: boolean | null; comment: string | null;
+  createdAt: string; seekerClerkId: string; roomTitle: string | null;
+  mentorFirstName: string | null; mentorLastName: string | null;
+};
 type Overview = {
   stats: {
     totalMentors: number; bannedMentors: number; openMentors: number;
@@ -36,7 +41,7 @@ type Overview = {
   asks: Ask[]; notes: Note[]; referrals: Referral[]; follows: Follow[]; consents: Consent[];
 };
 
-const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Follows', 'Consents', 'Flags', 'Feedback'] as const;
+const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Follows', 'Consents', 'Flags', 'Feedback', 'Session Feedback'] as const;
 type Tab = typeof TABS[number];
 
 const card: React.CSSProperties = { background: '#121923', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20 };
@@ -47,16 +52,19 @@ export default function AdminPage() {
   const [data, setData] = useState<Overview | null>(null);
   const [flags, setFlags] = useState<Flag[]>([]);
   const [siteFeedback, setSiteFeedback] = useState<SiteFeedbackEntry[]>([]);
+  const [sessionFeedback, setSessionFeedback] = useState<SessionFeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
 
   const fetchAll = useCallback(async () => {
     try {
-      const [ov, fl, sf] = await Promise.all([
+      const [ov, fl, sf, sess] = await Promise.all([
         fetch('/api/admin/overview'),
         fetch('/api/admin/flags'),
         fetch('/api/admin/site-feedback'),
+        fetch('/api/admin/session-feedback'),
       ]);
+      if (sess.ok) setSessionFeedback(await sess.json());
       if (ov.status === 403 || fl.status === 403 || sf.status === 403) { setForbidden(true); setLoading(false); return; }
       if (ov.ok) setData(await ov.json());
       if (fl.ok) setFlags(await fl.json());
@@ -144,6 +152,27 @@ export default function AdminPage() {
                   {new Date(f.createdAt).toLocaleString()} · {f.path || 'unknown page'}{f.clerkId ? ` · ${f.clerkId}` : ' · anonymous'}
                 </div>
                 <div style={{ whiteSpace: 'pre-wrap' }}>{f.message}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === 'Session Feedback' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {sessionFeedback.length === 0 && <div style={{ color: '#8A93A3' }}>No session feedback yet.</div>}
+            {sessionFeedback.map(f => (
+              <div key={f.id} style={card}>
+                <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 8 }}>
+                  {new Date(f.createdAt).toLocaleString()} · from the {f.role} · {f.mentorFirstName} {f.mentorLastName}
+                  {f.roomTitle ? ` · ${f.roomTitle}` : ''}
+                </div>
+                <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', marginBottom: f.comment ? 8 : 0 }}>
+                  <span style={{ color: '#F59E0B', fontWeight: 700 }}>{'★'.repeat(f.rating)}<span style={{ color: 'rgba(255,255,255,0.2)' }}>{'★'.repeat(5 - f.rating)}</span></span>
+                  <span style={{ fontSize: 12, color: f.wouldSipAgain === true ? '#5BDB8A' : f.wouldSipAgain === false ? '#F87171' : '#8A93A3' }}>
+                    {f.wouldSipAgain === true ? 'would sip again' : f.wouldSipAgain === false ? 'would not sip again' : 'no answer'}
+                  </span>
+                </div>
+                {f.comment && <div style={{ whiteSpace: 'pre-wrap' }}>{f.comment}</div>}
               </div>
             ))}
           </div>
