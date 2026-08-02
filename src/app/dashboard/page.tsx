@@ -22,6 +22,9 @@ type Request = {
   seekerLinkedin?: string; seekerConsentToShow: boolean; mentorConsentToShow: boolean;
   scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null;
   mentorFeedbackGiven?: boolean;
+  // Set only by the in-room "request 1:1" button, so it marks the requests this
+  // mentor sent rather than the ones sent to them.
+  originRoomId?: string | null;
 };
 type Ask = {
   id: string; seekerName: string; question: string; answer: string | null; status: string; createdAt: string;
@@ -228,6 +231,13 @@ export default function Dashboard() {
       <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ color: MUTED, fontSize: 15 }}>loading...</motion.div>
     </div>
   );
+
+  // A 1:1 the mentor sent from a live room is not something they act on, so it
+  // is pulled out of Incoming Sips while it waits. Anything already answered
+  // stays in the main list, which is where the consent, cancel and feedback
+  // controls live.
+  const sentPending = requests.filter(r => r.originRoomId && r.status === 'pending');
+  const incoming = requests.filter(r => !(r.originRoomId && r.status === 'pending'));
 
   const earnedBadges = mentor?.badges ? mentor.badges.split(',').filter(Boolean) : [];
   const nextMilestone = mentor ? (mentor.sipCount < 1 ? 1 : mentor.sipCount < 5 ? 5 : mentor.sipCount < 10 ? 10 : mentor.sipCount < 25 ? 25 : 50) : 1;
@@ -472,7 +482,7 @@ export default function Dashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 16, marginBottom: 32 }}>
                 {[
                   { label: 'Total Requests', value: requests.length, color: LINK },
-                  { label: 'Pending', value: requests.filter(r => r.status === 'pending').length, color: WARNING },
+                  { label: 'Pending', value: incoming.filter(r => r.status === 'pending').length, color: WARNING },
                   { label: 'XP Earned', value: mentor.xp.toLocaleString(), color: SUCCESS2 },
                   { label: 'Sips Given', value: mentor.sipCount, color: CLAY },
                 ].map((stat, i) => (
@@ -633,10 +643,33 @@ export default function Dashboard() {
                 </motion.div>
               )}
 
+              {/* 1:1s THIS MENTOR ASKED FOR */}
+              {sentPending.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.39 }} style={{ marginBottom: 32 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                    <h2 style={{ fontSize: 22, fontWeight: 700 }}>1:1s You Asked For</h2>
+                    <span style={{ background: WARNING, color: BG, borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '2px 8px' }}>{sentPending.length}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {sentPending.map(r => (
+                      <div key={r.id} style={{ background: SURFACE, border: '1px solid rgba(245,158,11,0.22)', borderRadius: 14, padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, marginBottom: 4 }}>{r.seekerName}</div>
+                          <div style={{ color: MUTED, fontSize: 13 }}>
+                            asked {new Date(r.createdAt).toLocaleDateString()} · waiting on them to reply
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 12, flexShrink: 0, background: 'rgba(245,158,11,0.1)', color: WARNING, border: '1px solid rgba(245,158,11,0.3)' }}>awaiting reply</span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
               {/* REQUESTS */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
                 <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>Incoming Sips</h2>
-                {requests.length === 0 ? (
+                {incoming.length === 0 ? (
                   <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: '60px 40px', textAlign: 'center', color: MUTED }}>
                     <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
                       <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke={MUTED} strokeWidth="1.6"/><path d="M3 7l9 6 9-6" stroke={MUTED} strokeWidth="1.6" strokeLinecap="round"/></svg>
@@ -645,7 +678,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {requests.map((r, i) => (
+                    {incoming.map((r, i) => (
                       <motion.div key={r.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
                         whileHover={{ borderColor: 'rgba(255,255,255,0.15)' }}
                         style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '20px 24px', transition: 'all 0.2s', opacity: (r.status === 'declined' || r.status === 'cancelled') ? 0.45 : 1 }}>

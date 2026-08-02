@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { queueEntries, rooms, seekers, flags, mentors } from '@/db/schema';
+import { queueEntries, rooms, seekers, flags, mentors, requests } from '@/db/schema';
 import { eq, and, sql, inArray, ne, lt } from 'drizzle-orm';
 import { NextResponse, after } from 'next/server';
 import { runOnce } from '@/lib/lock';
@@ -57,12 +57,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     let visitCounts: Record<string, number> = {};
     let flagCounts: Record<string, number> = {};
+    const connectStatuses: Record<string, string> = {};
 
-    // These two aggregates are only ever rendered for the host, so skip the work
+    // These aggregates are only ever rendered for the host, so skip the work
     // entirely for the seekers who make up nearly all of this route's traffic.
     if (viewerIsMentor && clerkIds.length > 0) {
       const mentorId = roomRow[0]?.mentorId;
-      const [visits, flagRows] = await Promise.all([
+      const [visits, flagRows, connectRows] = await Promise.all([
         mentorId
           ? db.select({ seekerClerkId: queueEntries.seekerClerkId, count: sql<number>`count(*)::int` })
               .from(queueEntries)
@@ -74,9 +75,30 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           .from(flags)
           .where(and(inArray(flags.reportedClerkId, clerkIds), ne(flags.status, 'dismissed')))
           .groupBy(flags.reportedClerkId),
+        // Drives the "request 1:1" button label. Deriving it server-side means
+        // the 4s poll already carries the answer, so the button reverts on its
+        // own once a request is declined or cancelled.
+        mentorId
+          ? db.select({ seekerClerkId: requests.seekerClerkId, status: requests.status, sipCountedAt: requests.sipCountedAt })
+              .from(requests)
+              .where(and(eq(requests.mentorId, mentorId), inArray(requests.seekerClerkId, clerkIds)))
+          : Promise.resolve([]),
       ]);
       visitCounts = Object.fromEntries(visits.map(v => [v.seekerClerkId as string, v.count]));
       flagCounts = Object.fromEntries(flagRows.map(f => [f.reportedClerkId as string, f.count]));
+
+      // "Open" has to mean the same thing here as in POST connect-request, which
+      // rejects a duplicate with a 409. If these two drifted apart the button
+      // would invite a click that always failed.
+      for (const r of connectRows) {
+        if (!r.seekerClerkId) continue;
+        const open = r.status === 'pending' || (r.status === 'accepted' && !r.sipCountedAt);
+        if (!open) continue;
+        // accepted outranks pending when a seeker somehow has both.
+        if (r.status === 'accepted' || !connectStatuses[r.seekerClerkId]) {
+          connectStatuses[r.seekerClerkId] = r.status;
+        }
+      }
     }
 
     const attach = (e: typeof allEntries[number]) => {
@@ -94,6 +116,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         seekerClerkId: e.seekerClerkId,
         visitCount: e.seekerClerkId ? (visitCounts[e.seekerClerkId] || 0) : 0,
         flagCount: e.seekerClerkId ? (flagCounts[e.seekerClerkId] || 0) : 0,
+        connectStatus: (e.seekerClerkId ? connectStatuses[e.seekerClerkId] : null) ?? 'none',
       };
     };
 
