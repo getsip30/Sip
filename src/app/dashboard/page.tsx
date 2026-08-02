@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import Collapse from '@/components/Collapse';
+import { ease, DUR, listItem, badgeVariants, badgeTransition } from '@/lib/motion';
 import Logo from '@/components/Logo';
 import RoleSwitchLink from '@/components/RoleSwitchLink';
 import AppTour, { TourStep } from '@/components/AppTour';
@@ -186,6 +189,10 @@ export default function Dashboard() {
     if (isLoaded && user) { fetchData(); localStorage.setItem('sip_last_role', 'mentor'); }
   }, [isLoaded, user, fetchData, router]);
 
+  // A seeker can accept, decline or cancel at any time, and none of that
+  // reaches this tab on its own.
+  useLiveRefresh(fetchData, { enabled: isLoaded && !!user });
+
   async function submitAnswer(askId: string) {
     const answer = answerDrafts[askId];
     if (!answer) return;
@@ -359,7 +366,7 @@ export default function Dashboard() {
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => { navigator.clipboard.writeText(shareNoteDraft); setShareNoteCopied(true); setTimeout(() => setShareNoteCopied(false), 2000); }}
                   style={{ flex: 1, background: shareNoteCopied ? 'rgba(91,219,138,0.15)' : 'rgba(255,255,255,0.05)', color: shareNoteCopied ? '#5BDB8A' : TEXT, border: `1px solid ${shareNoteCopied ? 'rgba(91,219,138,0.3)' : 'rgba(255,255,255,0.1)'}`, padding: '12px 0', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  {shareNoteCopied ? 'copied ✓' : 'copy text'}
+                  {shareNoteCopied ? 'copied' : 'copy text'}
                 </button>
                 <a href="https://www.linkedin.com/feed/?shareActive=true" target="_blank" rel="noopener noreferrer"
                   onClick={() => { navigator.clipboard.writeText(shareNoteDraft); }}
@@ -585,7 +592,7 @@ export default function Dashboard() {
                 <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
                   onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/mentors/${mentor.id}`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
                   style={{ background: copied ? 'rgba(91,219,138,0.15)' : ACCENT, color: copied ? SUCCESS2 : 'white', border: copied ? '1px solid rgba(91,219,138,0.3)' : 'none', padding: '10px 22px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
-                  {copied ? 'copied ✓' : 'copy link'}
+                  {copied ? 'copied' : 'copy link'}
                 </motion.button>
               </motion.div>
 
@@ -601,7 +608,7 @@ export default function Dashboard() {
                     <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
                       onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/mentors/signup?ref=${referrals.referralCode}`); setRefCopied(true); setTimeout(() => setRefCopied(false), 2000); }}
                       style={{ background: refCopied ? 'rgba(91,219,138,0.15)' : 'rgba(91,219,138,0.15)', color: SUCCESS2, border: '1px solid rgba(91,219,138,0.3)', padding: '10px 22px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
-                      {refCopied ? 'copied ✓' : 'copy invite link'}
+                      {refCopied ? 'copied' : 'copy invite link'}
                     </motion.button>
                   </div>
                   {referrals.totalInvites > 0 && (
@@ -626,7 +633,7 @@ export default function Dashboard() {
                           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
                             onClick={() => reviewNote(n.id, 'approved')} disabled={reviewingNote === n.id}
                             style={{ background: 'rgba(91,219,138,0.15)', border: '1px solid rgba(91,219,138,0.3)', color: SUCCESS2, padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                            approve ✓
+                            approve
                           </motion.button>
                           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
                             onClick={() => reviewNote(n.id, 'rejected')} disabled={reviewingNote === n.id}
@@ -692,10 +699,13 @@ export default function Dashboard() {
                       <span style={{ fontSize: 22, fontWeight: 700 }}>Session Notes</span>
                       <span style={{ color: MUTED, fontSize: 13 }}>{sessionNotes.length} across {notesByDate.length} {notesByDate.length === 1 ? 'day' : 'days'}</span>
                     </span>
-                    <span aria-hidden style={{ color: MUTED, fontSize: 13, transform: notesSectionOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.18s' }}>▶</span>
+                    <motion.span aria-hidden animate={{ rotate: notesSectionOpen ? 90 : 0 }} transition={ease(DUR.fast)}
+                      style={{ display: 'inline-flex', color: MUTED }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </motion.span>
                   </button>
 
-                  {notesSectionOpen && (
+                  <Collapse open={notesSectionOpen}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
                       {notesByDate.map(({ day, total, seekers }) => {
                         const dayOpen = openNoteDates.has(day);
@@ -711,7 +721,7 @@ export default function Dashboard() {
                               <span style={{ color: MUTED, fontSize: 12 }}>{total} {total === 1 ? 'note' : 'notes'} · {seekers.length} {seekers.length === 1 ? 'person' : 'people'}</span>
                             </button>
 
-                            {dayOpen && (
+                            <Collapse open={dayOpen}>
                               <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                                 {seekers.map(([seekerName, list]) => {
                                   const key = `${day}::${seekerName}`;
@@ -725,7 +735,7 @@ export default function Dashboard() {
                                         <span style={{ fontSize: 13.5, fontWeight: 600 }}>{seekerName}</span>
                                         <span style={{ color: MUTED, fontSize: 12 }}>{list.length}</span>
                                       </button>
-                                      {seekerOpen && (
+                                      <Collapse open={seekerOpen}>
                                         <div style={{ padding: '0 16px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                                           {list.map(n => (
                                             <div key={n.id} style={{ borderLeft: `2px solid ${BORDER}`, paddingLeft: 12 }}>
@@ -734,17 +744,17 @@ export default function Dashboard() {
                                             </div>
                                           ))}
                                         </div>
-                                      )}
+                                      </Collapse>
                                     </div>
                                   );
                                 })}
                               </div>
-                            )}
+                            </Collapse>
                           </div>
                         );
                       })}
                     </div>
-                  )}
+                  </Collapse>
                 </motion.div>
               )}
 
@@ -779,11 +789,13 @@ export default function Dashboard() {
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.39 }} style={{ marginBottom: 32 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
                     <h2 style={{ fontSize: 22, fontWeight: 700 }}>1:1s You Asked For</h2>
-                    <span style={{ background: WARNING, color: BG, borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '2px 8px' }}>{sentPending.length}</span>
+                    <motion.span variants={badgeVariants} initial="hidden" animate="visible" transition={badgeTransition}
+                      style={{ background: WARNING, color: BG, borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '2px 8px', display: 'inline-block' }}>{sentPending.length}</motion.span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {sentPending.map(r => (
-                      <div key={r.id} style={{ background: SURFACE, border: '1px solid rgba(245,158,11,0.22)', borderRadius: 14, padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    {sentPending.map((r, i) => (
+                      <motion.div key={r.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={listItem(i)}
+                        style={{ background: SURFACE, border: '1px solid rgba(245,158,11,0.22)', borderRadius: 14, padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontWeight: 600, marginBottom: 4 }}>{r.seekerName}</div>
                           <div style={{ color: MUTED, fontSize: 13 }}>
@@ -791,7 +803,7 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <span style={{ fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 12, flexShrink: 0, background: 'rgba(245,158,11,0.1)', color: WARNING, border: '1px solid rgba(245,158,11,0.3)' }}>awaiting reply</span>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 </motion.div>
@@ -844,7 +856,7 @@ export default function Dashboard() {
                               disabled={accepting === r.id}
                               onClick={() => setChoosingContactFor(r.id)}
                               style={{ background: 'rgba(91,219,138,0.15)', border: '1px solid rgba(91,219,138,0.3)', color: SUCCESS2, padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: accepting === r.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                              {accepting === r.id ? 'accepting...' : 'accept ✓'}
+                              {accepting === r.id ? 'accepting...' : 'accept'}
                             </motion.button>
                             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
                               onClick={async () => {
@@ -863,7 +875,7 @@ export default function Dashboard() {
                               <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
                                 onClick={() => toggleConsent(r.id, r.mentorConsentToShow)} disabled={togglingConsent === r.id}
                                 style={{ background: r.mentorConsentToShow ? 'rgba(91,219,138,0.1)' : 'transparent', border: `1px solid ${r.mentorConsentToShow ? 'rgba(91,219,138,0.3)' : BORDER}`, color: r.mentorConsentToShow ? SUCCESS2 : MUTED, padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                                {r.mentorConsentToShow ? 'showing on profiles ✓' : 'show on profiles'}
+                                {r.mentorConsentToShow ? 'showing on profiles' : 'show on profiles'}
                               </motion.button>
                               <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
                                 onClick={() => cancelRequest(r.id)} disabled={cancelling === r.id}
@@ -894,7 +906,7 @@ export default function Dashboard() {
                                 </motion.button>
                               </div>
                             ) : (
-                              <div style={{ color: SUCCESS2, fontSize: 12 }}>feedback sent ✓</div>
+                              <div style={{ color: SUCCESS2, fontSize: 12 }}>feedback sent</div>
                             )}
                           </div>
                         )}

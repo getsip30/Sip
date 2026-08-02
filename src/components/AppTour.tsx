@@ -66,7 +66,7 @@ export default function AppTour({ steps, open, onClose }: { steps: TourStep[]; o
             <span style={{ color: MUTED, fontSize: 12 }}>{i + 1} / {steps.length}</span>
             <button onClick={() => last ? close() : setI(n => n + 1)}
               style={{ background: ACCENT, border: 'none', color: 'white', padding: '9px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              {last ? 'Done ✓' : 'Next →'}
+              {last ? 'Done' : 'Next →'}
             </button>
           </div>
           {!last && (

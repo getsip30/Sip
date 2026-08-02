@@ -5,6 +5,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useRoles } from '@/hooks/useRoles';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { ease, DUR, swapVariants, badgeVariants, badgeTransition, listItem } from '@/lib/motion';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 import AppTour, { TourStep } from '@/components/AppTour';
@@ -34,8 +36,8 @@ const AVATARS = [ACCENT, CLAY, '#059669', '#DC2626', '#D97706', '#0891B2'];
 const INITIALS = (m: Mentor) => `${m.firstName[0]}${m.lastName[0]}`;
 const ALL_FILTERS = ['all', 'tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'engineering', 'computer science', 'data science', 'marketing', 'consulting', 'law', 'medicine', 'entrepreneurship', 'business', 'psychology', 'co-op', 'grad school'];
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; label: string }> = {
-  pending:  { bg: 'rgba(245,158,11,0.1)',  color: '#F59E0B', border: 'rgba(245,158,11,0.3)',  label: 'pending ⏳' },
-  accepted: { bg: 'rgba(91,219,138,0.1)',  color: '#5BDB8A', border: 'rgba(91,219,138,0.3)',  label: 'accepted ✓' },
+  pending:  { bg: 'rgba(245,158,11,0.1)',  color: '#F59E0B', border: 'rgba(245,158,11,0.3)',  label: 'pending' },
+  accepted: { bg: 'rgba(91,219,138,0.1)',  color: '#5BDB8A', border: 'rgba(91,219,138,0.3)',  label: 'accepted' },
   declined: { bg: 'rgba(248,113,113,0.1)', color: '#F87171', border: 'rgba(248,113,113,0.3)', label: 'declined' },
   cancelled: { bg: 'rgba(248,113,113,0.1)', color: '#F87171', border: 'rgba(248,113,113,0.3)', label: 'cancelled' },
 };
@@ -229,6 +231,20 @@ function SeekersContent() {
     setTimeout(() => { setModal(null); setSent(false); setForm(f => ({ ...f, message: '' })); }, 2200);
   }
 
+  // Status is owned by the mentor: they accept, decline or cancel, and none of
+  // that reaches this tab on its own. Split out from handleLookup so it can be
+  // re-run without touching the loading and error state of the first load.
+  const refreshSips = useCallback(async () => {
+    try {
+      const res = await fetch('/api/my-sips');
+      if (res.ok) setRequests(await res.json());
+    } catch {
+      // A failed refresh keeps whatever is already on screen.
+    }
+  }, []);
+
+  useLiveRefresh(refreshSips, { enabled: lookupDone });
+
   async function handleLookup() {
     setLoadingLookup(true);
     setError('');
@@ -287,9 +303,12 @@ function SeekersContent() {
       display: 'flex', alignItems: 'center', gap: 6,
     }}>
       {label}
-      {!!badge && (
-        <span style={{ background: badgeColor, color: '#0A0E16', borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '1px 7px' }}>{badge}</span>
-      )}
+      <AnimatePresence initial={false}>
+        {!!badge && (
+          <motion.span key="badge" variants={badgeVariants} initial="hidden" animate="visible" exit="exit" transition={badgeTransition}
+            style={{ background: badgeColor, color: '#0A0E16', borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '1px 7px', display: 'inline-block' }}>{badge}</motion.span>
+        )}
+      </AnimatePresence>
     </button>
   );
 
@@ -382,6 +401,8 @@ function SeekersContent() {
         </section>
       )}
 
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={tab} variants={swapVariants} initial="hidden" animate="visible" exit="exit" transition={ease(DUR.fast)}>
       {tab === 'browse' ? (
         <section style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px 60px' }}>
           <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -460,11 +481,13 @@ function SeekersContent() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {liveRooms.map(r => {
+              {liveRooms.map((r, i) => {
                 const mins = Math.max(0, Math.round((Date.now() - new Date(r.startedAt).getTime()) / 60000));
                 const topics = (r.topics || '').split(',').map(t => t.trim()).filter(Boolean).slice(0, 4);
                 return (
-                  <div key={r.id} style={{ background: SURFACE, border: '1px solid rgba(220,38,38,0.22)', borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+                  <motion.div key={r.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={listItem(i)}
+                    whileHover={{ y: -3 }}
+                    style={{ background: SURFACE, border: '1px solid rgba(220,38,38,0.22)', borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
                     {r.avatarData
                       ? <PixelAvatar data={r.avatarData} size={48} />
                       : <div style={{ width: 48, height: 48, borderRadius: '50%', background: ACCENT, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>{r.firstName[0]}{r.lastName[0]}</div>}
@@ -488,7 +511,7 @@ function SeekersContent() {
                     </div>
 
                     <Link href={`/rooms/${r.id}`} style={{ background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.3)', color: '#F87171', padding: '10px 22px', borderRadius: 20, fontSize: 14, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>join queue →</Link>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
@@ -539,7 +562,7 @@ function SeekersContent() {
                   </div>
                   <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/seekers/${seekerId}`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
                     style={{ background: copied ? 'rgba(91,219,138,0.15)' : ACCENT, color: copied ? '#5BDB8A' : 'white', border: copied ? '1px solid rgba(91,219,138,0.3)' : 'none', padding: '10px 22px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-                    {copied ? 'copied ✓' : 'copy link'}
+                    {copied ? 'copied' : 'copy link'}
                   </button>
                 </div>
               )}
@@ -593,7 +616,7 @@ function SeekersContent() {
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                               <button onClick={() => toggleConsent(r.id, r.seekerConsentToShow)} disabled={togglingConsent === r.id}
                                 style={{ background: r.seekerConsentToShow ? 'rgba(91,219,138,0.1)' : 'transparent', border: `1px solid ${r.seekerConsentToShow ? 'rgba(91,219,138,0.3)' : BORDER}`, color: r.seekerConsentToShow ? '#5BDB8A' : MUTED, padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                                {r.seekerConsentToShow ? 'showing on profile ✓' : 'show on profile'}
+                                {r.seekerConsentToShow ? 'showing on profile' : 'show on profile'}
                               </button>
                               <button onClick={() => cancelRequest(r.id)} disabled={cancelling === r.id} style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{cancelling === r.id ? 'cancelling...' : 'cancel'}</button>
                               {safeExternalUrl(r.mentor?.calendarLink) && (
@@ -624,7 +647,7 @@ function SeekersContent() {
                             )}
 
                             {r.seekerFeedbackGiven ? (
-                              <span style={{ color: '#5BDB8A', fontSize: 12 }}>feedback sent ✓</span>
+                              <span style={{ color: '#5BDB8A', fontSize: 12 }}>feedback sent</span>
                             ) : (
                               <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                                 <div role="radiogroup" aria-label="Rating" style={{ display: 'flex', gap: 4 }}>
@@ -653,6 +676,8 @@ function SeekersContent() {
           )}
         </section>
       )}
+        </motion.div>
+      </AnimatePresence>
 
       <AnimatePresence>
         {modal && (
@@ -666,7 +691,7 @@ function SeekersContent() {
               <div style={{ color: MUTED, fontSize: 14, marginBottom: 28 }}>sending to {modal.firstName} {modal.lastName} · {modal.role} @ {modal.company}</div>
               {sent ? (
                 <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
+                  <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 420, damping: 26 }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden style={{ margin: '0 auto 16px', display: 'block' }}><circle cx="12" cy="12" r="10" stroke="#5BDB8A" strokeWidth="1.5" opacity="0.35"/><path d="M7.5 12.4l3.1 3.1 6-6.4" stroke="#5BDB8A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></motion.div>
                   <div style={{ color: '#5BDB8A', fontSize: 18, fontWeight: 600 }}>sent. they&apos;ll reach out soon.</div>
                 </div>
               ) : (
