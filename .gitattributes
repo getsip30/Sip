@@ -1,0 +1,6 @@
+# Migration files are hashed byte-for-byte by drizzle (sha256 of the file
+# contents), so their line endings have to be stable across machines. Without
+# this, a checkout on Windows with core.autocrlf=true rewrites them to CRLF and
+# every hash changes.
+drizzle/*.sql text eol=lf
+drizzle/meta/*.json text eol=lf
