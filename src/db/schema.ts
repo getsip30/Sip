@@ -97,6 +97,13 @@ export const requests = pgTable('requests', {
   cancelledBy: text('cancelled_by'),
   reminderSentAt: timestamp('reminder_sent_at'),
   sipCountedAt: timestamp('sip_counted_at'),
+  // Which booking method the mentor actually shared: 'calendar' | 'google' |
+  // 'email'. Previously the choice only picked an email template and was then
+  // forgotten, so nothing downstream could tell what the seeker was given.
+  sharedContactMethod: text('shared_contact_method'),
+  // Set when a mentor skips the pending step and sends their link immediately,
+  // which distinguishes that from a request they accepted after reviewing.
+  linkSentAt: timestamp('link_sent_at'),
 }, (t) => [
   index('requests_mentor_id_idx').on(t.mentorId),
   index('requests_seeker_clerk_id_idx').on(t.seekerClerkId),
