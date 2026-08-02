@@ -28,10 +28,28 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { status } = await req.json();
-    if (!['approved', 'rejected'].includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    const { status, featured } = await req.json();
 
-    const updated = await db.update(sipNotes).set({ status }).where(eq(sipNotes.id, id)).returning();
+    // Two independent controls: status is moderation, featured is whether an
+    // already-approved note is currently shown on the profile. A request may
+    // carry either.
+    if (status !== undefined && !['approved', 'rejected'].includes(status)) {
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    }
+    if (featured !== undefined && typeof featured !== 'boolean') {
+      return NextResponse.json({ error: 'Invalid featured value' }, { status: 400 });
+    }
+    if (status === undefined && featured === undefined) {
+      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+    }
+
+    const updated = await db.update(sipNotes)
+      .set({
+        ...(status !== undefined ? { status } : {}),
+        ...(featured !== undefined ? { featured } : {}),
+      })
+      .where(eq(sipNotes.id, id))
+      .returning();
     return NextResponse.json(updated[0]);
   } catch (err) {
     return handleApiError(err, 'PATCH /api/sip-notes/[id]');

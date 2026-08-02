@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { getUserEmail } from '@/lib/clerk';
 import { db } from '@/db';
-import { sipNotes, requests, seekers, mentors } from '@/db/schema';
+import { sipNotes, requests, seekers, mentors, queueEntries, rooms } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { mutationLimiter } from '@/lib/ratelimit';
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
 
     if (!isUuid(mentorId)) return NextResponse.json([]);
 
-    if (mine === 'true') {
+    if (mine === 'true' || mine === 'approved') {
       // Pending notes are unmoderated and carry the seeker's email, so being
       // signed in is not enough — the caller must own this mentor profile.
       const { userId } = await auth();
@@ -28,15 +28,22 @@ export async function GET(req: Request) {
         void recordAbuseSignal('auth_denied', userId, { route: 'sip-notes.mine', mentorId });
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
-      const result = await db.select().from(sipNotes).where(and(eq(sipNotes.mentorId, mentorId), eq(sipNotes.status, 'pending'))).orderBy(desc(sipNotes.createdAt));
+      // The owner's approved list deliberately ignores `featured`, otherwise
+      // un-featuring a note would remove the very control used to put it back.
+      const wanted = mine === 'approved' ? 'approved' : 'pending';
+      const result = await db.select().from(sipNotes)
+        .where(and(eq(sipNotes.mentorId, mentorId), eq(sipNotes.status, wanted)))
+        .orderBy(desc(sipNotes.createdAt));
       return NextResponse.json(result);
     }
 
-    // Public branch: never include seekerEmail — this renders on the open profile page.
+    // Public branch: never include seekerEmail — this renders on the open profile
+    // page. Approved is moderation; featured is whether the mentor currently
+    // wants it up, and both have to hold.
     const result = await db
-      .select({ id: sipNotes.id, mentorId: sipNotes.mentorId, seekerName: sipNotes.seekerName, note: sipNotes.note, status: sipNotes.status, createdAt: sipNotes.createdAt })
+      .select({ id: sipNotes.id, mentorId: sipNotes.mentorId, seekerName: sipNotes.seekerName, note: sipNotes.note, status: sipNotes.status, featured: sipNotes.featured, createdAt: sipNotes.createdAt })
       .from(sipNotes)
-      .where(and(eq(sipNotes.mentorId, mentorId), eq(sipNotes.status, 'approved')))
+      .where(and(eq(sipNotes.mentorId, mentorId), eq(sipNotes.status, 'approved'), eq(sipNotes.featured, true)))
       .orderBy(desc(sipNotes.createdAt));
     return NextResponse.json(result);
   } catch (err) {
@@ -72,9 +79,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "You can't leave a note on your own mentor profile." }, { status: 403 });
     }
 
-    const priorRequest = await db.select().from(requests).where(and(eq(requests.mentorId, mentorId), eq(requests.seekerEmail, seekerEmail), eq(requests.status, 'accepted')));
-    if (priorRequest.length === 0) {
-      return NextResponse.json({ error: "You can only leave a note after an accepted sip with this mentor." }, { status: 403 });
+    // Two ways to have sat down with this mentor, and either one earns a note.
+    // The request path was the only one before, which locked out everyone whose
+    // session happened in a live room, since those never create a request.
+    const [priorRequest, priorRoomSession] = await Promise.all([
+      db.select({ id: requests.id }).from(requests)
+        .where(and(eq(requests.mentorId, mentorId), eq(requests.seekerEmail, seekerEmail), eq(requests.status, 'accepted')))
+        .limit(1),
+      db.select({ id: queueEntries.id }).from(queueEntries)
+        .innerJoin(rooms, eq(queueEntries.roomId, rooms.id))
+        .where(and(
+          eq(rooms.mentorId, mentorId),
+          eq(queueEntries.seekerClerkId, userId),
+          eq(queueEntries.status, 'done'),
+        ))
+        .limit(1),
+    ]);
+    if (priorRequest.length === 0 && priorRoomSession.length === 0) {
+      return NextResponse.json({ error: "You can only leave a note after a sip with this mentor." }, { status: 403 });
     }
 
     const created = await db.insert(sipNotes).values({ mentorId, seekerName: cleanName, seekerEmail, note: cleanNote, status: 'pending' }).returning();

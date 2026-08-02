@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       })
       .from(sipNotes)
       .innerJoin(mentors, eq(sipNotes.mentorId, mentors.id))
-      .where(and(eq(sipNotes.status, 'approved'), eq(mentors.banned, false)))
+      .where(and(eq(sipNotes.status, 'approved'), eq(sipNotes.featured, true), eq(mentors.banned, false)))
       .orderBy(desc(sipNotes.createdAt))
       .limit(6);
 
