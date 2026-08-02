@@ -14,7 +14,7 @@ import { ease, DUR, listItem } from '@/lib/motion';
 
 type Room = { id: string; title: string; roomUrl: string | null; status: string; mode: string; scheduledAt: string | null; firstName: string; lastName: string; role: string; company: string; mentorClerkId: string };
 type ConnectStatus = 'none' | 'pending' | 'accepted';
-type QueueEntry = { id: string; seekerClerkId: string; seekerName: string; topic?: string; status: string; isMine?: boolean; visitCount?: number; flagCount?: number; doneAt?: string | null; connectStatus?: ConnectStatus };
+type QueueEntry = { id: string; seekerClerkId: string; seekerName: string; topic?: string; status: string; isMine?: boolean; visitCount?: number; flagCount?: number; doneAt?: string | null; connectStatus?: ConnectStatus; connectCooldownUntil?: string | null };
 
 export default function RoomPage() {
   const { id } = useParams<{ id: string }>();
@@ -191,12 +191,16 @@ export default function RoomPage() {
     // recorded the result. Mark it locally so it updates on the click rather
     // than up to a poll later, then let the next poll confirm against the
     // server. 409 means a request is already open, which is the same end state.
-    if (res.ok || res.status === 409) {
+    const body = res.ok ? null : await res.json().catch(() => null);
+    // A 409 used to mean only "a request is already open", which is the same end
+    // state as success. A cooldown answers 409 too and is not, so it has to be
+    // told apart rather than silently reported as sent.
+    if (res.ok || (res.status === 409 && !body?.cooldownUntil)) {
       setSentConnects(prev => new Set(prev).add(seekerClerkId));
       setConnectChoiceFor(null);
     } else {
-      const body = await res.json().catch(() => null);
       setConnectError(body?.error || 'Could not send that request. Try again.');
+      if (body?.cooldownUntil) setConnectChoiceFor(null);
     }
     setConnecting(null);
     fetchQueue();
@@ -445,15 +449,30 @@ export default function RoomPage() {
                     {(() => {
                       const state = connectStateFor(actives[0]);
                       const busy = connecting === actives[0].seekerClerkId;
-                      const settled = state !== 'none';
-                      const label = busy ? 'sending...' : state === 'accepted' ? '1:1 accepted' : state === 'pending' ? 'requested' : 'request 1:1';
+                      // The server only sends this while the cooldown is still
+                      // running, so its presence is the answer. Reading the clock
+                      // here would be an impure call during render, and the 4s
+                      // poll already clears it the moment it lapses.
+                      const cooldownUntil = state === 'none' && actives[0].connectCooldownUntil
+                        ? new Date(actives[0].connectCooldownUntil) : null;
+                      const onCooldown = !!cooldownUntil;
+                      const settled = state !== 'none' || onCooldown;
+                      const label = busy ? 'sending...'
+                        : state === 'accepted' ? '1:1 accepted'
+                        : state === 'pending' ? 'requested'
+                        : onCooldown ? 'on cooldown'
+                        : 'request 1:1';
                       const choiceOpen = connectChoiceFor === actives[0].seekerClerkId;
                       return (
                         <button
                           onClick={() => setConnectChoiceFor(choiceOpen ? null : actives[0].seekerClerkId)}
                           disabled={busy || settled}
                           aria-expanded={choiceOpen}
-                          title={state === 'pending' ? 'Waiting on them to accept. Track it on your dashboard.' : undefined}
+                          title={
+                            state === 'pending' ? 'Waiting on them to accept. Track it on your dashboard.'
+                            : onCooldown ? `You cancelled a 1:1 with them recently. You can ask again after ${cooldownUntil!.toLocaleString()}.`
+                            : undefined
+                          }
                           style={{ marginTop: 10, marginRight: 8, background: settled ? 'rgba(139,148,158,0.1)' : 'rgba(91,219,138,0.1)', border: `1px solid ${settled ? 'rgba(139,148,158,0.25)' : 'rgba(91,219,138,0.3)'}`, color: settled ? MUTED : '#5BDB8A', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: busy || settled ? 'default' : 'pointer', fontFamily: 'inherit' }}>
                           {label}
                         </button>

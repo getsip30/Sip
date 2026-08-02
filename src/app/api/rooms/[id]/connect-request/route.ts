@@ -7,7 +7,7 @@ import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
 import { logSwallowed } from '@/lib/logger';
 import { escapeHtml } from '@/lib/utils';
-import { resolveBookingOption, bookingEmailBlock } from '@/lib/booking';
+import { resolveBookingOption, bookingEmailBlock, connectCooldownUntil } from '@/lib/booking';
 import { isUuid } from '@/lib/validate';
 import { mutationLimiter } from '@/lib/ratelimit';
 
@@ -64,6 +64,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const hasOpenRequest = existingOpen.some(r => r.status === 'pending' || (r.status === 'accepted' && !r.sipCountedAt));
     if (hasOpenRequest) {
       return NextResponse.json({ error: 'There is already an open request between you and this seeker.' }, { status: 409 });
+    }
+
+    // Cancelling used to free the mentor to ask again immediately, since the
+    // duplicate guard above only looks at requests that are still open.
+    const cooldownUntil = connectCooldownUntil(existingOpen);
+    if (cooldownUntil) {
+      const hoursLeft = Math.max(1, Math.ceil((cooldownUntil.getTime() - Date.now()) / (60 * 60 * 1000)));
+      return NextResponse.json(
+        {
+          error: `You cancelled a 1:1 with this person recently. You can ask again in ${hoursLeft} ${hoursLeft === 1 ? 'hour' : 'hours'}.`,
+          cooldownUntil: cooldownUntil.toISOString(),
+        },
+        { status: 409 }
+      );
     }
 
     // "Send my link now" resolves the booking option up front, because there is

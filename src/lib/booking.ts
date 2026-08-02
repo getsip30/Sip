@@ -3,6 +3,38 @@ import { escapeHtml, safeExternalUrl } from '@/lib/utils';
 
 export type ContactMethod = 'calendar' | 'email';
 
+/**
+ * How long a mentor is held off after cancelling a 1:1 on someone, so a
+ * cancellation cannot be followed straight away by another ask.
+ */
+export const CONNECT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+type CooldownCandidate = {
+  originRoomId: string | null;
+  status: string;
+  cancelledBy: string | null;
+  cancelledAt: Date | null;
+};
+
+/**
+ * When the mentor may next send this seeker a 1:1, or null if they may now.
+ *
+ * Scoped to 1:1s the mentor themselves cancelled. A seeker cancelling does not
+ * hold the mentor off, and a declined or expired request is not a cancellation.
+ * Shared so the queue endpoint and the send endpoint cannot disagree about
+ * whether the button should work.
+ */
+export function connectCooldownUntil(history: CooldownCandidate[], now = Date.now()): Date | null {
+  let latest: number | null = null;
+  for (const r of history) {
+    if (!r.originRoomId || r.status !== 'cancelled') continue;
+    if (r.cancelledBy !== 'mentor' || !r.cancelledAt) continue;
+    const expiresAt = new Date(r.cancelledAt).getTime() + CONNECT_COOLDOWN_MS;
+    if (expiresAt > now && (latest === null || expiresAt > latest)) latest = expiresAt;
+  }
+  return latest === null ? null : new Date(latest);
+}
+
 export type BookingOption = {
   method: ContactMethod;
   /** Shown on the mentor's own picker. */

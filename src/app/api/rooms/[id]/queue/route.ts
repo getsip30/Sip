@@ -7,6 +7,7 @@ import { runOnce } from '@/lib/lock';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter, readLimiter, getIp } from '@/lib/ratelimit';
 import { isUuid, cleanText } from '@/lib/validate';
+import { connectCooldownUntil } from '@/lib/booking';
 
 const STALE_WAITING_MS = 30 * 60 * 1000;
 
@@ -58,6 +59,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     let visitCounts: Record<string, number> = {};
     let flagCounts: Record<string, number> = {};
     const connectStatuses: Record<string, string> = {};
+    const cooldowns: Record<string, string> = {};
 
     // These aggregates are only ever rendered for the host, so skip the work
     // entirely for the seekers who make up nearly all of this route's traffic.
@@ -79,7 +81,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         // the 4s poll already carries the answer, so the button reverts on its
         // own once a request is declined or cancelled.
         mentorId
-          ? db.select({ seekerClerkId: requests.seekerClerkId, status: requests.status, sipCountedAt: requests.sipCountedAt })
+          ? db.select({
+                seekerClerkId: requests.seekerClerkId, status: requests.status, sipCountedAt: requests.sipCountedAt,
+                originRoomId: requests.originRoomId, cancelledBy: requests.cancelledBy, cancelledAt: requests.cancelledAt,
+              })
               .from(requests)
               .where(and(eq(requests.mentorId, mentorId), inArray(requests.seekerClerkId, clerkIds)))
           : Promise.resolve([]),
@@ -90,14 +95,25 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       // "Open" has to mean the same thing here as in POST connect-request, which
       // rejects a duplicate with a 409. If these two drifted apart the button
       // would invite a click that always failed.
+      const bySeeker = new Map<string, typeof connectRows>();
       for (const r of connectRows) {
         if (!r.seekerClerkId) continue;
         const open = r.status === 'pending' || (r.status === 'accepted' && !r.sipCountedAt);
-        if (!open) continue;
-        // accepted outranks pending when a seeker somehow has both.
-        if (r.status === 'accepted' || !connectStatuses[r.seekerClerkId]) {
+        if (open && (r.status === 'accepted' || !connectStatuses[r.seekerClerkId])) {
+          // accepted outranks pending when a seeker somehow has both.
           connectStatuses[r.seekerClerkId] = r.status;
         }
+        const list = bySeeker.get(r.seekerClerkId) ?? [];
+        list.push(r);
+        bySeeker.set(r.seekerClerkId, list);
+      }
+
+      // Surfaced so the button can show why it is unavailable, instead of
+      // looking clickable and failing.
+      for (const [cid, history] of bySeeker) {
+        if (connectStatuses[cid]) continue;
+        const until = connectCooldownUntil(history);
+        if (until) cooldowns[cid] = until.toISOString();
       }
     }
 
@@ -117,6 +133,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         visitCount: e.seekerClerkId ? (visitCounts[e.seekerClerkId] || 0) : 0,
         flagCount: e.seekerClerkId ? (flagCounts[e.seekerClerkId] || 0) : 0,
         connectStatus: (e.seekerClerkId ? connectStatuses[e.seekerClerkId] : null) ?? 'none',
+        connectCooldownUntil: (e.seekerClerkId ? cooldowns[e.seekerClerkId] : null) ?? null,
       };
     };
 
