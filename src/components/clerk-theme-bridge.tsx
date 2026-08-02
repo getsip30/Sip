@@ -1,23 +1,14 @@
 "use client";
 import { ClerkProvider } from '@clerk/nextjs';
-import { dark } from '@clerk/themes';
+import { clerkAppearance } from '@/lib/clerk-appearance';
 
-const DARK_ACCENT = '#3B82F6';
-const DARK_BG = '#0A0E16';
-
+/**
+ * Applies the Sip appearance to every Clerk component in the tree, including the
+ * ones with no page of their own (user button, profile modal, verification-code
+ * steps). Sign in and sign up pass the same object explicitly rather than
+ * relying on inheritance, so their layout overrides sit on top of an identical
+ * base.
+ */
 export function ClerkThemeBridge({ children }: { children: React.ReactNode }) {
-  return (
-    <ClerkProvider
-      appearance={{
-        baseTheme: [dark],
-        variables: {
-          colorPrimary: DARK_ACCENT,
-          colorBackground: DARK_BG,
-          borderRadius: '10px',
-        },
-      } as any}
-    >
-      {children}
-    </ClerkProvider>
-  );
+  return <ClerkProvider appearance={clerkAppearance}>{children}</ClerkProvider>;
 }
