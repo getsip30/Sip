@@ -21,6 +21,8 @@ export const mentors = pgTable('mentors', {
   bio: text('bio').notNull(),
   topics: text('topics').notNull(),
   calendarLink: text('calendar_link'),
+  /** Google Calendar appointment schedule, offered alongside calendarLink. */
+  googleCalendarLink: text('google_calendar_link'),
   contactEmail: text('contact_email'),
   availability: text('availability').notNull(),
   linkedin: text('linkedin'),

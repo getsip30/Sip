@@ -1,0 +1,1 @@
+ALTER TABLE "mentors" ADD COLUMN "google_calendar_link" text;
