@@ -30,7 +30,7 @@ type SipRequest = {
   seekerConsentToShow: boolean; mentorConsentToShow: boolean;
   scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null;
   seekerFeedbackGiven?: boolean; mentorNote?: string | null;
-  mentor?: { firstName: string; lastName: string; role: string; company: string; calendarLink: string; contactEmail?: string; };
+  mentor?: { firstName: string; lastName: string; role: string; company: string; calendarLink: string | null; googleCalendarLink?: string | null; contactEmail?: string | null; };
 };
 
 const AVATARS = [ACCENT, CLAY, '#059669', '#DC2626', '#D97706', '#0891B2'];
@@ -593,19 +593,23 @@ function SeekersContent() {
                                 {r.seekerConsentToShow ? 'showing on profile' : 'show on profile'}
                               </button>
                               <button onClick={() => cancelRequest(r.id)} disabled={cancelling === r.id} style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{cancelling === r.id ? 'cancelling...' : 'cancel'}</button>
-                              {safeExternalUrl(r.mentor?.calendarLink) && (
-                                <a href={safeExternalUrl(r.mentor?.calendarLink)!} target="_blank" rel="noopener noreferrer"
-                                  style={{ background: ACCENT, color: 'white', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                                  book your sip →
-                                </a>
-                              )}
-                              {r.originRoomId && (safeExternalUrl(r.mentor?.calendarLink) || r.mentor?.contactEmail) && (
-                                <a href={safeExternalUrl(r.mentor?.calendarLink) ?? `mailto:${encodeURIComponent(r.mentor?.contactEmail ?? '')}?subject=${encodeURIComponent('Scheduling our 1:1')}`}
-                                  target="_blank" rel="noopener noreferrer"
-                                  style={{ background: ACCENT, color: 'white', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                                  click here to schedule call →
-                                </a>
-                              )}
+                              {(() => {
+                                // Only the method the mentor chose comes back
+                                // from the API, so whichever link is present is
+                                // the one they meant to share.
+                                const bookingUrl = safeExternalUrl(r.mentor?.calendarLink) ?? safeExternalUrl(r.mentor?.googleCalendarLink);
+                                const mailto = r.mentor?.contactEmail
+                                  ? `mailto:${encodeURIComponent(r.mentor.contactEmail)}?subject=${encodeURIComponent('Scheduling our 1:1')}`
+                                  : null;
+                                const href = bookingUrl ?? (r.originRoomId ? mailto : null);
+                                if (!href) return null;
+                                return (
+                                  <a href={href} target="_blank" rel="noopener noreferrer"
+                                    style={{ background: ACCENT, color: 'white', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+                                    {bookingUrl ? 'book your sip →' : 'email to schedule →'}
+                                  </a>
+                                );
+                              })()}
                             </div>
 
                             {!r.scheduledAt ? (

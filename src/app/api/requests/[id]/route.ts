@@ -8,7 +8,7 @@ import { handleApiError } from '@/lib/api-handler';
 import { logSwallowed } from '@/lib/logger';
 import { recordAbuseSignal } from '@/lib/abuse';
 import { escapeHtml } from '@/lib/utils';
-import { resolveBookingOption, bookingEmailBlock } from '@/lib/booking';
+import { resolveBookingOption, bookingEmailBlock, bookingOptions } from '@/lib/booking';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { isUuid } from '@/lib/validate';
 
@@ -33,12 +33,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
     if (status === 'accepted') {
-      const hasBoth = !!mentor.calendarLink && !!mentor.contactEmail;
-      if (hasBoth && !['calendar', 'email'].includes(contactMethod)) {
-        return NextResponse.json({ error: 'Choose a contact method' }, { status: 400 });
+      // Derived rather than hardcoded to two fields, so a mentor holding a
+      // Calendly and a Google Calendar is asked which one, the same as any
+      // other pair.
+      const available = bookingOptions(mentor);
+      if (available.length === 0) {
+        return NextResponse.json({ error: 'No booking link or contact email on file' }, { status: 400 });
       }
-      if (!mentor.calendarLink && !mentor.contactEmail) {
-        return NextResponse.json({ error: 'No calendar link or contact email on file' }, { status: 400 });
+      if (available.length > 1 && !available.some(o => o.method === contactMethod)) {
+        return NextResponse.json({ error: 'Choose a contact method' }, { status: 400 });
       }
     }
 

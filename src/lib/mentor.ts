@@ -5,7 +5,7 @@ import type { mentors } from '@/db/schema';
  * page, AI match). This is an ALLOWLIST on purpose: new columns added to the
  * mentors table stay private until someone deliberately exposes them here.
  *
- * Never add: clerkId, email, contactEmail, calendarLink, referralCode,
+ * Never add: clerkId, email, contactEmail, calendarLink, googleCalendarLink, referralCode,
  * invitedByClerkId, banned, lastOpenNotifiedAt. contactEmail and calendarLink
  * are only released to a seeker after the mentor accepts their request
  * (see GET /api/my-sips).

@@ -28,7 +28,7 @@ function MentorSignup() {
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '', role: '', company: '',
-    bio: '', topics: [] as string[], calendarLink: '', contactEmail: '', availability: 'flexible',
+    bio: '', topics: [] as string[], calendarLink: '', googleCalendarLink: '', contactEmail: '', availability: 'flexible',
     linkedin: '', showLinkedin: false, avatarData: '',
   });
 
@@ -44,7 +44,7 @@ function MentorSignup() {
           firstName: data.firstName, lastName: data.lastName, email: data.email,
           role: data.role, company: data.company, bio: data.bio,
           topics: data.topics ? data.topics.split(',').filter(Boolean) : [],
-          calendarLink: data.calendarLink || '', contactEmail: data.contactEmail || '', availability: data.availability,
+          calendarLink: data.calendarLink || '', googleCalendarLink: data.googleCalendarLink || '', contactEmail: data.contactEmail || '', availability: data.availability,
           linkedin: data.linkedin || '', showLinkedin: data.showLinkedin,
           avatarData: data.avatarData || '',
         }));
@@ -222,13 +222,20 @@ function MentorSignup() {
                   )}
                 </div>
                 <div style={{ marginBottom: 16 }}>
+                  <label style={label} htmlFor="googleCalendarLink">Google Calendar booking link (optional)</label>
+                  <input id="googleCalendarLink" value={form.googleCalendarLink} onChange={e => set('googleCalendarLink', e.target.value)} placeholder="calendar.app.google/..." style={input} />
+                  {form.googleCalendarLink && !/^(https?:\/\/)?([\w-]+\.)*google\.com\/|^(https?:\/\/)?calendar\.app\.google\//i.test(form.googleCalendarLink.trim()) && (
+                    <div style={{ color: '#F87171', fontSize: 12, marginTop: 6 }}>Must be a Google Calendar booking link.</div>
+                  )}
+                </div>
+                <div style={{ marginBottom: 16 }}>
                   <label style={label} htmlFor="contactEmail">Contact email (optional)</label>
                   <input id="contactEmail" value={form.contactEmail} onChange={e => set('contactEmail', e.target.value)} type="email" placeholder="you@example.com" style={input} />
                   {form.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail.trim()) && (
                     <div style={{ color: '#F87171', fontSize: 12, marginTop: 6 }}>Enter a valid email.</div>
                   )}
                   <div style={{ color: MUTED, fontSize: 12, marginTop: 6 }}>
-                    Add a calendar link, an email, or both. This is what seekers get when you accept a request. If you add both, you&apos;ll choose which to share each time you accept.
+                    Add any of these. This is what a seeker gets when you accept. Save more than one and you pick which to share each time.
                   </div>
                   {!form.calendarLink && !form.contactEmail && (
                     <div style={{ color: '#F87171', fontSize: 12, marginTop: 6 }}>Add at least a calendar link or an email.</div>

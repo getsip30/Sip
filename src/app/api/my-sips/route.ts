@@ -26,6 +26,7 @@ export async function GET(req: Request) {
         mentorRole: mentors.role,
         mentorCompany: mentors.company,
         mentorCalendarLink: mentors.calendarLink,
+        mentorGoogleCalendarLink: mentors.googleCalendarLink,
         mentorContactEmail: mentors.contactEmail,
         seekerFeedbackGiven: sipFeedback.id,
       })
@@ -46,7 +47,7 @@ export async function GET(req: Request) {
     // sharedContactMethod is null on requests accepted before it existed. There
     // is no record of what those seekers were shown, so they keep seeing
     // everything rather than losing a link they may already be booking through.
-    const enriched = rows.map(({ mentorCalendarLink, mentorContactEmail, ...r }) => {
+    const enriched = rows.map(({ mentorCalendarLink, mentorGoogleCalendarLink, mentorContactEmail, ...r }) => {
       const released = r.status === 'accepted';
       const chosen = r.sharedContactMethod;
       const releases = (method: string) => released && (chosen == null || chosen === method);
@@ -57,6 +58,7 @@ export async function GET(req: Request) {
           firstName: r.mentorFirstName, lastName: r.mentorLastName,
           role: r.mentorRole, company: r.mentorCompany,
           calendarLink: releases('calendar') ? mentorCalendarLink : null,
+          googleCalendarLink: releases('google') ? mentorGoogleCalendarLink : null,
           contactEmail: releases('email') ? mentorContactEmail : null,
         } : null,
       };
