@@ -520,7 +520,7 @@ function SeekersContent() {
           )}
         </section>
       ) : (
-        <section style={{ maxWidth: 680, margin: '0 auto', padding: '0 16px 60px' }}>
+        <section style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px 60px' }}>
           {!lookupDone ? (
             <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, padding: 40, textAlign: 'center' }}>
               {!user ? (
@@ -541,45 +541,9 @@ function SeekersContent() {
             </div>
           ) : (
             <div>
-              {myFlags.length > 0 && (
-                <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 16, padding: '18px 24px', marginBottom: 20 }}>
-                  <div style={{ fontWeight: 700, color: '#FBBF24', marginBottom: 4 }}>You&apos;ve been flagged {myFlags.length > 1 ? `${myFlags.length} times` : 'once'}</div>
-                  <div style={{ color: MUTED, fontSize: 13 }}>Repeated flags can lead to a permanent ban. If you think this was a mistake, reach out to support.</div>
-                </div>
-              )}
-              {streak && streak.currentStreak > 0 && (
-                <div style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.03))', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 16, padding: '18px 24px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 18, color: '#F59E0B' }}>{streak.currentStreak} week streak</div>
-                    <div style={{ color: MUTED, fontSize: 13 }}>longest: {streak.longestStreak} weeks · log a note after your next sip to keep it going</div>
-                  </div>
-                </div>
-              )}
+              <div className="page-split">
+                <div>
 
-              {seekerId && (
-                <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 28px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Your public profile</div>
-                    <div style={{ color: MUTED, fontSize: 13 }}>Share this so people can see who you are, sips you&apos;ve had shared publicly appear here too.</div>
-                  </div>
-                  <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/seekers/${seekerId}`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                    style={{ background: copied ? 'rgba(91,219,138,0.15)' : ACCENT, color: copied ? '#5BDB8A' : 'white', border: copied ? '1px solid rgba(91,219,138,0.3)' : 'none', padding: '10px 22px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-                    {copied ? 'copied' : 'copy link'}
-                  </button>
-                </div>
-              )}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
-                {[
-                  { label: 'Total Sent', value: requests.length, color: LINK },
-                  { label: 'Accepted', value: accepted.length, color: '#5BDB8A' },
-                  { label: 'Pending', value: pending.length, color: '#F59E0B' },
-                ].map(s => (
-                  <div key={s.label} style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '20px 24px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: s.color, fontFamily: 'Space Mono' }}>{s.value}</div>
-                    <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
               {requests.length === 0 ? (
                 <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '60px 40px', textAlign: 'center' }}>
                   <p style={{ color: MUTED, marginBottom: 24 }}>No sips found for this email.</p>
@@ -685,6 +649,51 @@ function SeekersContent() {
                 <ShowMore hiddenCount={sipList.hiddenCount} expanded={sipList.expanded} onMore={sipList.showMore} onCollapse={sipList.collapse} />
                 </>
               )}
+
+                </div>
+
+                <aside className="page-rail">
+              {myFlags.length > 0 && (
+                <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 16, padding: '18px 24px', marginBottom: 20 }}>
+                  <div style={{ fontWeight: 700, color: '#FBBF24', marginBottom: 4 }}>You&apos;ve been flagged {myFlags.length > 1 ? `${myFlags.length} times` : 'once'}</div>
+                  <div style={{ color: MUTED, fontSize: 13 }}>Repeated flags can lead to a permanent ban. If you think this was a mistake, reach out to support.</div>
+                </div>
+              )}
+              {streak && streak.currentStreak > 0 && (
+                <div style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.03))', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 16, padding: '18px 24px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 18, color: '#F59E0B' }}>{streak.currentStreak} week streak</div>
+                    <div style={{ color: MUTED, fontSize: 13 }}>longest: {streak.longestStreak} weeks · log a note after your next sip to keep it going</div>
+                  </div>
+                </div>
+              )}
+
+              {seekerId && (
+                <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 28px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Your public profile</div>
+                    <div style={{ color: MUTED, fontSize: 13 }}>Share this so people can see who you are, sips you&apos;ve had shared publicly appear here too.</div>
+                  </div>
+                  <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/seekers/${seekerId}`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                    style={{ background: copied ? 'rgba(91,219,138,0.15)' : ACCENT, color: copied ? '#5BDB8A' : 'white', border: copied ? '1px solid rgba(91,219,138,0.3)' : 'none', padding: '10px 22px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                    {copied ? 'copied' : 'copy link'}
+                  </button>
+                </div>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(92px, 1fr))', gap: 12, marginBottom: 32 }}>
+                {[
+                  { label: 'Total Sent', value: requests.length, color: LINK },
+                  { label: 'Accepted', value: accepted.length, color: '#5BDB8A' },
+                  { label: 'Pending', value: pending.length, color: '#F59E0B' },
+                ].map(s => (
+                  <div key={s.label} style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '20px 24px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: s.color, fontFamily: 'Space Mono' }}>{s.value}</div>
+                    <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+                </aside>
+              </div>
             </div>
           )}
         </section>

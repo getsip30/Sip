@@ -95,7 +95,7 @@ function MentorSignup() {
         <Link href="/dashboard" style={{ color: MUTED, textDecoration: 'none', fontSize: 14 }}>← back to dashboard</Link>
       </motion.nav>
 
-      <div id="main-content" style={{ maxWidth: 560, margin: '0 auto', padding: '90px 16px 60px' }}>
+      <div id="main-content" style={{ maxWidth: 860, margin: '0 auto', padding: '90px 16px 60px' }}>
 
         {/* HEADER */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} style={{ marginBottom: 48 }}>

@@ -102,7 +102,7 @@ export default function SeekerOnboarding() {
         <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <Logo />
         </nav>
-        <div style={{ maxWidth: 560, margin: '0 auto', padding: '90px 16px 60px' }}>
+        <div style={{ maxWidth: 860, margin: '0 auto', padding: '90px 16px 60px' }}>
           <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1.5, marginBottom: 12 }}>Mentors picked for you</h1>
           <p style={{ color: MUTED, fontSize: 15, marginBottom: 28 }}>Based on what you're into.</p>
 
@@ -128,20 +128,22 @@ export default function SeekerOnboarding() {
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <Logo />
       </nav>
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: '90px 16px 60px' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '90px 16px 60px' }}>
         <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: -1.5, marginBottom: 12 }}>Tell us a bit about you</h1>
         <p style={{ color: MUTED, fontSize: 15, marginBottom: 36 }}>Helps mentors understand who&apos;s reaching out. All optional.</p>
 
         <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
           <PixelAvatarPicker value={avatarData} onChange={setAvatarData} />
         </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={label} htmlFor="seekerName">Your name</label>
-          <input id="seekerName" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="what do people call you?" style={input} />
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={label} htmlFor="seekerAge">Age</label>
-          <input id="seekerAge" value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value.replace(/\D/g, '') }))} placeholder="optional" style={input} />
+        <div className="field-pair" style={{ marginBottom: 16 }}>
+          <div>
+            <label style={label} htmlFor="seekerName">Your name</label>
+            <input id="seekerName" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="what do people call you?" style={input} />
+          </div>
+          <div>
+            <label style={label} htmlFor="seekerAge">Age</label>
+            <input id="seekerAge" value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value.replace(/\D/g, '') }))} placeholder="optional" style={input} />
+          </div>
         </div>
         <div style={{ marginBottom: 16 }}>
           <label style={label} htmlFor="seekerLinkedin">LinkedIn profile</label>
