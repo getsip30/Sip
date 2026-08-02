@@ -51,6 +51,47 @@ input, textarea, button, select {
   font-size: inherit;
 }
 
+/* Page layout ------------------------------------------------------------
+   These live here rather than inline because they are the parts that have to
+   change with viewport width, and inline styles cannot hold a media query.
+   1280px matches the mentor directory, which is the width the rest of the app
+   is being brought in line with. */
+
+.page-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 90px 16px 60px;
+}
+
+/* A main column with a rail of at-a-glance cards beside it. One column until
+   there is enough room for the rail to be readable rather than a squeezed
+   gutter. */
+.page-split {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1040px) {
+  .page-split { grid-template-columns: minmax(0, 1fr) 330px; }
+  /* The rail is reference material, so it stays put while the main column,
+     which is the long one, scrolls past it. */
+  .page-rail { position: sticky; top: 92px; }
+}
+
+/* Short form fields sit side by side once the form is wide enough that a single
+   column would leave most of the row empty. */
+.field-pair {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 720px) {
+  .field-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+
 @media (min-width: 640px) {
   .desktop-only { display: inline !important; }
 }
