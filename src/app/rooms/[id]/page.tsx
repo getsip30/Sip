@@ -8,6 +8,9 @@ import { useRoles } from '@/hooks/useRoles';
 import { ConsentGate } from '@/components/ConsentGate';
 import { bookingOptions } from '@/lib/booking';
 import SessionFeedbackPrompt from '@/components/SessionFeedbackPrompt';
+import Collapse from '@/components/Collapse';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ease, DUR, listItem } from '@/lib/motion';
 
 type Room = { id: string; title: string; roomUrl: string | null; status: string; mode: string; scheduledAt: string | null; firstName: string; lastName: string; role: string; company: string; mentorClerkId: string };
 type ConnectStatus = 'none' | 'pending' | 'accepted';
@@ -334,20 +337,24 @@ export default function RoomPage() {
               <a href={room.roomUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', background: ACCENT, color: 'white', padding: '12px 24px', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 14, marginBottom: 20 }}>start call</a>
             )}
 
-            {rateSeeker && (
-              <div style={{ marginBottom: 20 }}>
-                <SessionFeedbackPrompt
-                  roomId={id}
-                  seekerClerkId={rateSeeker.clerkId}
-                  personName={rateSeeker.name}
-                  onDone={() => setTimeout(() => setRateSeeker(null), 1500)}
-                />
-                <button onClick={() => setRateSeeker(null)}
-                  style={{ marginTop: 8, background: 'none', border: 'none', color: MUTED, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
-                  skip
-                </button>
-              </div>
-            )}
+            <AnimatePresence initial={false}>
+              {rateSeeker && (
+                <motion.div key={rateSeeker.clerkId}
+                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                  transition={ease(DUR.base)} style={{ marginBottom: 20 }}>
+                  <SessionFeedbackPrompt
+                    roomId={id}
+                    seekerClerkId={rateSeeker.clerkId}
+                    personName={rateSeeker.name}
+                    onDone={() => setTimeout(() => setRateSeeker(null), 1500)}
+                  />
+                  <button onClick={() => setRateSeeker(null)}
+                    style={{ marginTop: 8, background: 'none', border: 'none', color: MUTED, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                    skip
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
               <button onClick={() => setMode('individual')} disabled={modeUpdating || actives.length > 0} style={modeBtn(room.mode === 'individual')}>individuals</button>
@@ -439,7 +446,7 @@ export default function RoomPage() {
                       const state = connectStateFor(actives[0]);
                       const busy = connecting === actives[0].seekerClerkId;
                       const settled = state !== 'none';
-                      const label = busy ? 'sending...' : state === 'accepted' ? '1:1 accepted ✓' : state === 'pending' ? 'requested ✓' : 'request 1:1';
+                      const label = busy ? 'sending...' : state === 'accepted' ? '1:1 accepted' : state === 'pending' ? 'requested' : 'request 1:1';
                       const choiceOpen = connectChoiceFor === actives[0].seekerClerkId;
                       return (
                         <button
@@ -470,11 +477,12 @@ export default function RoomPage() {
                       <div role="alert" style={{ marginTop: 10, color: '#F87171', fontSize: 12 }}>{connectError}</div>
                     )}
 
-                    {connectChoiceFor === actives[0].seekerClerkId && (() => {
+                    {(() => {
                       const options = myBooking ? bookingOptions(myBooking) : [];
                       const cid = actives[0].seekerClerkId;
                       const busy = connecting === cid;
                       return (
+                        <Collapse open={connectChoiceFor === cid}>
                         <div style={{ marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14 }}>
                           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>How do you want to do this?</div>
                           <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>
@@ -512,10 +520,11 @@ export default function RoomPage() {
                             cancel
                           </button>
                         </div>
+                        </Collapse>
                       );
                     })()}
 
-                    {noteOpenFor === actives[0].seekerClerkId && (
+                    <Collapse open={noteOpenFor === actives[0].seekerClerkId}>
                       <div style={{ marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14 }}>
                         <label htmlFor="session-note" style={{ display: 'block', fontSize: 12, color: MUTED, marginBottom: 6 }}>
                           Private note about {actives[0].seekerName}. Only you ever see this.
@@ -537,7 +546,7 @@ export default function RoomPage() {
                           <span style={{ color: MUTED, fontSize: 11 }}>{noteDraft.length}/2000</span>
                         </div>
                       </div>
-                    )}
+                    </Collapse>
                   </div>
                 )}
 
@@ -547,7 +556,8 @@ export default function RoomPage() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {waiting.map((w, i) => (
-                      <div key={w.id} style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                      <motion.div key={w.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={listItem(i)}
+                        style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <span style={{ color: MUTED, fontSize: 12, marginRight: 4 }}>#{i + 1}</span>
                           <span style={{ fontWeight: 600 }}>{w.seekerName}</span>
@@ -566,7 +576,7 @@ export default function RoomPage() {
                             {calling === w.id ? 'calling...' : 'call next ?'}
                           </button>
                         )}
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}

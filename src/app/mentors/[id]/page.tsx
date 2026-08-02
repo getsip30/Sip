@@ -219,7 +219,7 @@ export default function MentorProfile() {
                   {user && (
                     <button onClick={toggleFollow} disabled={followBusy}
                       style={{ fontSize: 12, padding: '3px 12px', borderRadius: 20, border: `1px solid ${following ? 'rgba(91,219,138,0.3)' : BORDER}`, background: following ? 'rgba(91,219,138,0.1)' : 'transparent', color: following ? '#5BDB8A' : MUTED, fontWeight: 600, cursor: followBusy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                      {following ? 'following ✓' : 'follow'}
+                      {following ? 'following' : 'follow'}
                     </button>
                   )}
                   {followerCount > 0 && (
@@ -343,7 +343,7 @@ export default function MentorProfile() {
                   <motion.div key="request" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     {sent ? (
                       <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }} style={{ fontSize: 40, marginBottom: 12 }}>✓</motion.div>
+                        <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 420, damping: 26 }}><svg width="44" height="44" viewBox="0 0 24 24" fill="none" aria-hidden style={{ margin: '0 auto 12px', display: 'block' }}><circle cx="12" cy="12" r="10" stroke="#5BDB8A" strokeWidth="1.5" opacity="0.35"/><path d="M7.5 12.4l3.1 3.1 6-6.4" stroke="#5BDB8A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></motion.div>
                         <div style={{ color: '#5BDB8A', fontSize: 16, fontWeight: 600 }}>Sent. They&apos;ll reach out soon.</div>
                       </div>
                     ) : (
@@ -469,7 +469,7 @@ export default function MentorProfile() {
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => { navigator.clipboard.writeText(linkedinDraft); setLiCopied(true); setTimeout(() => setLiCopied(false), 2000); }}
                   style={{ flex: 1, background: liCopied ? 'rgba(91,219,138,0.15)' : 'rgba(255,255,255,0.05)', color: liCopied ? '#5BDB8A' : TEXT, border: `1px solid ${liCopied ? 'rgba(91,219,138,0.3)' : BORDER}`, padding: '12px 0', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  {liCopied ? 'copied ✓' : 'copy text'}
+                  {liCopied ? 'copied' : 'copy text'}
                 </button>
                 <a href="https://www.linkedin.com/feed/?shareActive=true" target="_blank" rel="noopener noreferrer"
                   onClick={() => { navigator.clipboard.writeText(linkedinDraft); }}

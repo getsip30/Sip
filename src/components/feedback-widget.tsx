@@ -48,7 +48,7 @@ export function FeedbackWidget() {
             disabled={status === "sending"}
             style={{ marginTop: 10, width: "100%", background: status === "sent" ? SUCCESS2 : ACCENT, color: "white", border: "none", borderRadius: 12, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: status === "sending" ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: status === "sending" ? 0.7 : 1, transition: "background 0.2s" }}
           >
-            {status === "sent" ? "Sent ✓" : status === "sending" ? "Sending..." : "Send"}
+            {status === "sent" ? "Sent" : status === "sending" ? "Sending..." : "Send"}
           </button>
         </div>
       ) : (
