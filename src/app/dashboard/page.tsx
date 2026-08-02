@@ -399,7 +399,7 @@ export default function Dashboard() {
         </div>
       </motion.nav>
 
-      <div id="main-content" style={{ maxWidth: 900, margin: '0 auto', padding: '90px 16px 60px' }}>
+      <div id="main-content" className="page-shell">
         <AnimatePresence mode="wait">
           {!mentor ? (
             <motion.div key="no-profile" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: 'center', padding: '80px 0' }}>
@@ -559,69 +559,8 @@ export default function Dashboard() {
                 ))}
               </div>
 
-              {/* XP PROGRESS + BADGES */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '24px 28px', marginBottom: 32 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ fontWeight: 600 }}>Progress to next badge</div>
-                  <div style={{ color: MUTED, fontSize: 13 }}>{mentor.sipCount} / {nextMilestone} sips</div>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, height: 8, overflow: 'hidden', marginBottom: 20 }}>
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${progressPct}%` }} transition={{ duration: 1, delay: 0.5, ease: 'easeOut' }}
-                    style={{ height: '100%', background: ACCENT, borderRadius: 8 }} />
-                </div>
-                {earnedBadges.length > 0 ? (
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    {earnedBadges.map(b => (
-                      <motion.div key={b} whileHover={{ scale: 1.05 }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 14 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: BADGE_META[b]?.color, display: 'inline-block' }} />
-                        <span style={{ fontSize: 13, color: TEXT }}>{BADGE_META[b]?.label}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ color: MUTED, fontSize: 13 }}>No badges yet. Completing your first sip earns you the First Sip badge.</p>
-                )}
-              </motion.div>
-
-              {/* SHARE LINK */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                style={{ background: 'rgba(112,181,249,0.06)', border: '1px solid rgba(112,181,249,0.2)', borderRadius: 16, padding: '20px 28px', marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div className="page-split">
                 <div>
-                  <div style={{ fontWeight: 600, marginBottom: 4 }}>Your public profile</div>
-                  <div style={{ color: MUTED, fontSize: 13 }}>Share this link so people can find and request you directly.</div>
-                </div>
-                <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                  onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/mentors/${mentor.id}`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                  style={{ background: copied ? 'rgba(91,219,138,0.15)' : ACCENT, color: copied ? SUCCESS2 : 'white', border: copied ? '1px solid rgba(91,219,138,0.3)' : 'none', padding: '10px 22px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
-                  {copied ? 'copied' : 'copy link'}
-                </motion.button>
-              </motion.div>
-
-              {/* REFERRALS */}
-              {referrals?.referralCode && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}
-                  style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 28px', marginBottom: 32 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: referrals.totalInvites > 0 ? 16 : 0 }}>
-                    <div>
-                      <div style={{ fontWeight: 600, marginBottom: 4 }}>Invite other mentors</div>
-                      <div style={{ color: MUTED, fontSize: 13 }}>Know someone who'd be good at this? Send them your link.</div>
-                    </div>
-                    <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                      onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/mentors/signup?ref=${referrals.referralCode}`); setRefCopied(true); setTimeout(() => setRefCopied(false), 2000); }}
-                      style={{ background: refCopied ? 'rgba(91,219,138,0.15)' : 'rgba(91,219,138,0.15)', color: SUCCESS2, border: '1px solid rgba(91,219,138,0.3)', padding: '10px 22px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
-                      {refCopied ? 'copied' : 'copy invite link'}
-                    </motion.button>
-                  </div>
-                  {referrals.totalInvites > 0 && (
-                    <div style={{ display: 'flex', gap: 20, fontSize: 13, color: MUTED }}>
-                      <span><strong style={{ color: TEXT }}>{referrals.totalInvites}</strong> invited</span>
-                      <span><strong style={{ color: TEXT }}>{referrals.totalConverted}</strong> gave their first sip</span>
-                    </div>
-                  )}
-                </motion.div>
-              )}
 
               {/* PENDING NOTES */}
               {pendingNotes.length > 0 && (
@@ -928,6 +867,75 @@ export default function Dashboard() {
                   </>
                 )}
               </motion.div>
+
+                </div>
+
+                <aside className="page-rail">
+              {/* XP PROGRESS + BADGES */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '24px 28px', marginBottom: 32 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ fontWeight: 600 }}>Progress to next badge</div>
+                  <div style={{ color: MUTED, fontSize: 13 }}>{mentor.sipCount} / {nextMilestone} sips</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, height: 8, overflow: 'hidden', marginBottom: 20 }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${progressPct}%` }} transition={{ duration: 1, delay: 0.5, ease: 'easeOut' }}
+                    style={{ height: '100%', background: ACCENT, borderRadius: 8 }} />
+                </div>
+                {earnedBadges.length > 0 ? (
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {earnedBadges.map(b => (
+                      <motion.div key={b} whileHover={{ scale: 1.05 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 14 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: BADGE_META[b]?.color, display: 'inline-block' }} />
+                        <span style={{ fontSize: 13, color: TEXT }}>{BADGE_META[b]?.label}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ color: MUTED, fontSize: 13 }}>No badges yet. Completing your first sip earns you the First Sip badge.</p>
+                )}
+              </motion.div>
+
+              {/* SHARE LINK */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                style={{ background: 'rgba(112,181,249,0.06)', border: '1px solid rgba(112,181,249,0.2)', borderRadius: 16, padding: '20px 28px', marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>Your public profile</div>
+                  <div style={{ color: MUTED, fontSize: 13 }}>Share this link so people can find and request you directly.</div>
+                </div>
+                <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                  onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/mentors/${mentor.id}`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                  style={{ background: copied ? 'rgba(91,219,138,0.15)' : ACCENT, color: copied ? SUCCESS2 : 'white', border: copied ? '1px solid rgba(91,219,138,0.3)' : 'none', padding: '10px 22px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
+                  {copied ? 'copied' : 'copy link'}
+                </motion.button>
+              </motion.div>
+
+              {/* REFERRALS */}
+              {referrals?.referralCode && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}
+                  style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px 28px', marginBottom: 32 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: referrals.totalInvites > 0 ? 16 : 0 }}>
+                    <div>
+                      <div style={{ fontWeight: 600, marginBottom: 4 }}>Invite other mentors</div>
+                      <div style={{ color: MUTED, fontSize: 13 }}>Know someone who'd be good at this? Send them your link.</div>
+                    </div>
+                    <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                      onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/mentors/signup?ref=${referrals.referralCode}`); setRefCopied(true); setTimeout(() => setRefCopied(false), 2000); }}
+                      style={{ background: refCopied ? 'rgba(91,219,138,0.15)' : 'rgba(91,219,138,0.15)', color: SUCCESS2, border: '1px solid rgba(91,219,138,0.3)', padding: '10px 22px', borderRadius: 20, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
+                      {refCopied ? 'copied' : 'copy invite link'}
+                    </motion.button>
+                  </div>
+                  {referrals.totalInvites > 0 && (
+                    <div style={{ display: 'flex', gap: 20, fontSize: 13, color: MUTED }}>
+                      <span><strong style={{ color: TEXT }}>{referrals.totalInvites}</strong> invited</span>
+                      <span><strong style={{ color: TEXT }}>{referrals.totalConverted}</strong> gave their first sip</span>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+                </aside>
+              </div>
 
             </motion.div>
           )}
