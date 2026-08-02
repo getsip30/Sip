@@ -7,6 +7,7 @@ import { useUser } from '@clerk/nextjs';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
 import PixelAvatar from '@/components/PixelAvatar';
+import Logo from '@/components/Logo';
 import { BG, SURFACE, TEXT, MUTED, ACCENT, LINK, SUCCESS2 } from '@/lib/theme';
 
 type Mentor = {
@@ -129,12 +130,7 @@ function Nav({ isMentor, isSeeker, signedIn }: { isMentor: boolean; isSeeker: bo
           gap: 16,
         }}
       >
-        <Link
-          href="/"
-          style={{ ...mono, fontSize: 20, fontWeight: 700, color: TEXT, textDecoration: 'none', letterSpacing: '0.02em' }}
-        >
-          sip
-        </Link>
+        <Logo size={44} />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(14px, 3vw, 30px)' }}>
           <Link href="/seekers" className="desktop-only" style={{ fontSize: 14, color: MUTED, textDecoration: 'none' }}>

@@ -8,7 +8,8 @@ import { useRoles } from '@/hooks/useRoles';
 import { ConsentGate } from '@/components/ConsentGate';
 
 type Room = { id: string; title: string; roomUrl: string | null; status: string; mode: string; scheduledAt: string | null; firstName: string; lastName: string; role: string; company: string; mentorClerkId: string };
-type QueueEntry = { id: string; seekerClerkId: string; seekerName: string; topic?: string; status: string; isMine?: boolean; visitCount?: number; flagCount?: number; doneAt?: string | null };
+type ConnectStatus = 'none' | 'pending' | 'accepted';
+type QueueEntry = { id: string; seekerClerkId: string; seekerName: string; topic?: string; status: string; isMine?: boolean; visitCount?: number; flagCount?: number; doneAt?: string | null; connectStatus?: ConnectStatus };
 
 export default function RoomPage() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +38,8 @@ export default function RoomPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [batchBusy, setBatchBusy] = useState(false);
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [sentConnects, setSentConnects] = useState<Set<string>>(new Set());
+  const [connectError, setConnectError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const popupRef = useRef<Window | null>(null);
 
@@ -57,6 +60,21 @@ export default function RoomPage() {
       setWaiting(data.waiting);
       setActives(data.active);
       setRecap(data.done || []);
+
+      // Once a response reflects the write, the optimistic marker has done its
+      // job and has to go, or a request that is later declined would leave the
+      // button reading "requested" forever.
+      const seen: string[] = [...data.waiting, ...data.active, ...(data.done || [])]
+        .map((e: QueueEntry) => e.seekerClerkId)
+        .filter(Boolean);
+      if (seen.length > 0) {
+        setSentConnects(prev => {
+          if (prev.size === 0) return prev;
+          const next = new Set(prev);
+          for (const cid of seen) next.delete(cid);
+          return next.size === prev.size ? prev : next;
+        });
+      }
       if (user) {
         // Match on the server-computed `isMine` — seekers don't receive
         // seekerClerkId, so the old comparison never matched and wiped the entry
@@ -135,10 +153,33 @@ export default function RoomPage() {
 
   async function requestConnect(seekerClerkId: string) {
     setConnecting(seekerClerkId);
-    await fetch(`/api/rooms/${id}/connect-request`, {
+    setConnectError(null);
+    const res = await fetch(`/api/rooms/${id}/connect-request`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seekerClerkId }),
     });
+
+    // The button used to flip back to "request 1:1" here because nothing
+    // recorded the result. Mark it locally so it updates on the click rather
+    // than up to a poll later, then let the next poll confirm against the
+    // server. 409 means a request is already open, which is the same end state.
+    if (res.ok || res.status === 409) {
+      setSentConnects(prev => new Set(prev).add(seekerClerkId));
+    } else {
+      const body = await res.json().catch(() => null);
+      setConnectError(body?.error || 'Could not send that request. Try again.');
+    }
     setConnecting(null);
+    fetchQueue();
+  }
+
+  /**
+   * Server truth wins: once the poll reports an open request the local optimistic
+   * entry is redundant, and when a request is declined or cancelled the server
+   * drops back to 'none' and the button has to become clickable again.
+   */
+  function connectStateFor(entry: QueueEntry): ConnectStatus {
+    if (entry.connectStatus && entry.connectStatus !== 'none') return entry.connectStatus;
+    return sentConnects.has(entry.seekerClerkId) ? 'pending' : 'none';
   }
 
   async function goLiveNow() {
@@ -332,8 +373,25 @@ export default function RoomPage() {
                       <div style={{ fontSize: 12, color: MUTED, fontStyle: 'italic', marginTop: 4 }}>&quot;{actives[0].topic}&quot;</div>
                     )}
                     <button onClick={() => markDone(actives[0].id)} style={{ marginTop: 10, marginRight: 8, background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>mark done</button>
-                    <button onClick={() => requestConnect(actives[0].seekerClerkId)} disabled={connecting === actives[0].seekerClerkId} style={{ marginTop: 10, marginRight: 8, background: 'rgba(91,219,138,0.1)', border: '1px solid rgba(91,219,138,0.3)', color: '#5BDB8A', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: connecting === actives[0].seekerClerkId ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>{connecting === actives[0].seekerClerkId ? 'sending...' : 'request 1:1'}</button>
+                    {(() => {
+                      const state = connectStateFor(actives[0]);
+                      const busy = connecting === actives[0].seekerClerkId;
+                      const settled = state !== 'none';
+                      const label = busy ? 'sending...' : state === 'accepted' ? '1:1 accepted ✓' : state === 'pending' ? 'requested ✓' : 'request 1:1';
+                      return (
+                        <button
+                          onClick={() => requestConnect(actives[0].seekerClerkId)}
+                          disabled={busy || settled}
+                          title={state === 'pending' ? 'Waiting on them to accept. Track it on your dashboard.' : undefined}
+                          style={{ marginTop: 10, marginRight: 8, background: settled ? 'rgba(139,148,158,0.1)' : 'rgba(91,219,138,0.1)', border: `1px solid ${settled ? 'rgba(139,148,158,0.25)' : 'rgba(91,219,138,0.3)'}`, color: settled ? MUTED : '#5BDB8A', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: busy || settled ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+                          {label}
+                        </button>
+                      );
+                    })()}
                     <button onClick={() => { setFlagTarget({ id: actives[0].seekerClerkId, name: actives[0].seekerName }); setFlagOpen(true); }} style={{ marginTop: 10, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#FBBF24', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>flag & remove</button>
+                    {connectError && (
+                      <div role="alert" style={{ marginTop: 10, color: '#F87171', fontSize: 12 }}>{connectError}</div>
+                    )}
                   </div>
                 )}
 

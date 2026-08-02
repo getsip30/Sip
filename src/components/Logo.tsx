@@ -14,7 +14,7 @@ async function hasRole(endpoint: string) {
   }
 }
 
-export default function Logo({ style, children }: { style?: React.CSSProperties; children?: React.ReactNode }) {
+export default function Logo({ style, children, size = 68 }: { style?: React.CSSProperties; children?: React.ReactNode; size?: number }) {
   const { user, isLoaded } = useUser();
   const router = useRouter();
 
@@ -38,7 +38,7 @@ export default function Logo({ style, children }: { style?: React.CSSProperties;
   return (
     <a href="/" onClick={handleClick}
       style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'Space Mono', fontSize: 28, fontWeight: 700, color: ACCENT, letterSpacing: -1, textDecoration: 'none', cursor: 'pointer', ...style }}>
-      <img src="/logo.png" alt="Sip" style={{ width: 68, height: 68, objectFit: 'contain' }} />
+      <img src="/logo.png" alt="Sip" style={{ width: size, height: size, objectFit: 'contain' }} />
       {children}
     </a>
   );
