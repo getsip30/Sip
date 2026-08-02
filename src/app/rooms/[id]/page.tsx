@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useRoles } from '@/hooks/useRoles';
 import { ConsentGate } from '@/components/ConsentGate';
 import { bookingOptions } from '@/lib/booking';
+import SessionFeedbackPrompt from '@/components/SessionFeedbackPrompt';
 
 type Room = { id: string; title: string; roomUrl: string | null; status: string; mode: string; scheduledAt: string | null; firstName: string; lastName: string; role: string; company: string; mentorClerkId: string };
 type ConnectStatus = 'none' | 'pending' | 'accepted';
@@ -43,6 +44,7 @@ export default function RoomPage() {
   const [connectError, setConnectError] = useState<string | null>(null);
   const [myBooking, setMyBooking] = useState<{ calendarLink: string | null; contactEmail: string | null } | null>(null);
   const [connectChoiceFor, setConnectChoiceFor] = useState<string | null>(null);
+  const [rateSeeker, setRateSeeker] = useState<{ clerkId: string; name: string } | null>(null);
   const [noteOpenFor, setNoteOpenFor] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [noteSaving, setNoteSaving] = useState(false);
@@ -164,10 +166,13 @@ export default function RoomPage() {
     setCalling(null);
   }
 
-  async function markDone(entryId: string) {
+  async function markDone(entryId: string, seeker?: { clerkId: string; name: string }) {
     await fetch(`/api/rooms/${id}/queue/${entryId}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'done' }),
     });
+    // Asked once, right after the session, while it is still fresh. Dismissing
+    // it is just not answering; nothing blocks calling the next person.
+    if (seeker) setRateSeeker(seeker);
     fetchQueue();
   }
 
@@ -329,6 +334,21 @@ export default function RoomPage() {
               <a href={room.roomUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', background: ACCENT, color: 'white', padding: '12px 24px', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 14, marginBottom: 20 }}>start call</a>
             )}
 
+            {rateSeeker && (
+              <div style={{ marginBottom: 20 }}>
+                <SessionFeedbackPrompt
+                  roomId={id}
+                  seekerClerkId={rateSeeker.clerkId}
+                  personName={rateSeeker.name}
+                  onDone={() => setTimeout(() => setRateSeeker(null), 1500)}
+                />
+                <button onClick={() => setRateSeeker(null)}
+                  style={{ marginTop: 8, background: 'none', border: 'none', color: MUTED, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                  skip
+                </button>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
               <button onClick={() => setMode('individual')} disabled={modeUpdating || actives.length > 0} style={modeBtn(room.mode === 'individual')}>individuals</button>
               <button onClick={() => setMode('batch')} disabled={modeUpdating || actives.length > 0} style={modeBtn(room.mode === 'batch')}>batches</button>
@@ -414,7 +434,7 @@ export default function RoomPage() {
                     {actives[0].topic && (
                       <div style={{ fontSize: 12, color: MUTED, fontStyle: 'italic', marginTop: 4 }}>&quot;{actives[0].topic}&quot;</div>
                     )}
-                    <button onClick={() => markDone(actives[0].id)} style={{ marginTop: 10, marginRight: 8, background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>mark done</button>
+                    <button onClick={() => markDone(actives[0].id, { clerkId: actives[0].seekerClerkId, name: actives[0].seekerName })} style={{ marginTop: 10, marginRight: 8, background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>mark done</button>
                     {(() => {
                       const state = connectStateFor(actives[0]);
                       const busy = connecting === actives[0].seekerClerkId;
@@ -586,7 +606,10 @@ export default function RoomPage() {
                 )}
               </div>
             ) : myEntry.status === 'done' ? (
-              <p style={{ color: MUTED, fontWeight: 600 }}>session ended. thanks for joining.</p>
+              <div>
+                <p style={{ color: MUTED, fontWeight: 600, marginBottom: 16 }}>session ended. thanks for joining.</p>
+                <SessionFeedbackPrompt roomId={id} personName={room.firstName || 'your mentor'} />
+              </div>
             ) : (
               <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '24px 28px' }}>
                 <div style={{ fontSize: 13, color: MUTED, marginBottom: 6 }}>your position</div>

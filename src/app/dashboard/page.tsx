@@ -30,7 +30,7 @@ type Ask = {
   id: string; seekerName: string; question: string; answer: string | null; status: string; createdAt: string;
 };
 type SipNote = {
-  id: string; seekerName: string; note: string; status: string; createdAt: string;
+  id: string; seekerName: string; note: string; status: string; createdAt: string; featured?: boolean;
 };
 type SessionNote = {
   id: string; sessionId: string | null; seekerClerkId: string; seekerName: string;
@@ -68,6 +68,7 @@ export default function Dashboard() {
   const [openNoteSeekers, setOpenNoteSeekers] = useState<Set<string>>(new Set());
   const [reviewingNote, setReviewingNote] = useState<string | null>(null);
   const [deletingNote, setDeletingNote] = useState<string | null>(null);
+  const [togglingFeatured, setTogglingFeatured] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({});
   const [shareDrafts, setShareDrafts] = useState<Record<string, boolean>>({});
@@ -164,7 +165,8 @@ export default function Dashboard() {
       if (schedRes.ok) setScheduledRoom(await schedRes.json());
       const notesRes = await fetch(`/api/sip-notes?mentorId=${m.id}&mine=true`);
       if (notesRes.ok) setPendingNotes(await notesRes.json());
-      const liveNotesRes = await fetch(`/api/sip-notes?mentorId=${m.id}`);
+      // Owner scope, so un-featured notes stay listed and can be put back up.
+      const liveNotesRes = await fetch(`/api/sip-notes?mentorId=${m.id}&mine=approved`);
       if (liveNotesRes.ok) setLiveNotes(await liveNotesRes.json());
       const sessionNotesRes = await fetch('/api/session-notes');
       if (sessionNotesRes.ok) setSessionNotes(await sessionNotesRes.json());
@@ -216,6 +218,19 @@ export default function Dashboard() {
 
   function deleteNote(noteId: string) {
     setConfirmDeleteId(noteId);
+  }
+
+  async function toggleFeatured(noteId: string, current: boolean) {
+    setTogglingFeatured(noteId);
+    const res = await fetch(`/api/sip-notes/${noteId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ featured: !current }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setLiveNotes(prev => prev.map(n => n.id === noteId ? { ...n, featured: updated.featured } : n));
+    }
+    setTogglingFeatured(null);
   }
 
   async function confirmDeleteNote() {
@@ -601,7 +616,7 @@ export default function Dashboard() {
               {/* PENDING NOTES */}
               {pendingNotes.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.37 }} style={{ marginBottom: 32 }}>
-                  <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>Notes Waiting for Your Approval</h2>
+                  <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>Reviews to Approve</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {pendingNotes.map(n => (
                       <div key={n.id} style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '20px 24px' }}>
@@ -628,13 +643,23 @@ export default function Dashboard() {
               {/* LIVE NOTES */}
               {liveNotes.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.375 }} style={{ marginBottom: 32 }}>
-                  <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>Live on Your Profile</h2>
+                  <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>Approved Reviews</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {liveNotes.map(n => (
-                      <div key={n.id} style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '20px 24px' }}>
-                        <div style={{ fontWeight: 600, marginBottom: 4 }}>{n.seekerName}</div>
+                      <div key={n.id} style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '20px 24px', opacity: n.featured === false ? 0.6 : 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600 }}>{n.seekerName}</span>
+                          {n.featured === false && (
+                            <span style={{ fontSize: 11, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '1px 8px' }}>hidden from profile</span>
+                          )}
+                        </div>
                         <p style={{ color: TEXT, fontSize: 14, lineHeight: 1.6, marginBottom: 14 }}>&quot;{n.note}&quot;</p>
-                        <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+                            onClick={() => toggleFeatured(n.id, n.featured !== false)} disabled={togglingFeatured === n.id}
+                            style={{ background: n.featured === false ? 'rgba(91,219,138,0.15)' : 'transparent', border: `1px solid ${n.featured === false ? 'rgba(91,219,138,0.3)' : BORDER}`, color: n.featured === false ? SUCCESS2 : MUTED, padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: togglingFeatured === n.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                            {togglingFeatured === n.id ? '...' : n.featured === false ? 'show on profile' : 'hide from profile'}
+                          </motion.button>
                           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
                             onClick={() => {
                               const trimmed = n.note.length > 200 ? n.note.slice(0, 200).trim() + '...' : n.note;
