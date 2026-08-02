@@ -132,9 +132,44 @@ export const sipNotes = pgTable('sip_notes', {
   seekerEmail: text('seeker_email'),
   note: text('note').notNull(),
   status: text('status').default('pending').notNull(),
+  /**
+   * Whether an approved note is shown on the mentor's public profile. Defaults
+   * to true so approving still publishes exactly as it did before; the flag adds
+   * a way to take a note off the profile without deleting it, which used to be
+   * the only option.
+   */
+  featured: boolean('featured').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   index('sip_notes_mentor_id_idx').on(t.mentorId),
+]);
+
+/**
+ * Private post-session feedback from a live room, from both sides. Never
+ * surfaced to mentors or seekers anywhere in the app: it exists for the admin
+ * view only, which is why it is kept apart from sipFeedback.
+ *
+ * sipFeedback covers request-based sips and its requestId is NOT NULL, so a
+ * live room, which has no request behind it, has nowhere to go there. Keyed on
+ * the room plus the rater instead.
+ */
+export const sessionFeedback = pgTable('session_feedback', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  roomId: uuid('room_id').references(() => rooms.id, { onDelete: 'cascade' }).notNull(),
+  mentorId: uuid('mentor_id').references(() => mentors.id, { onDelete: 'cascade' }).notNull(),
+  seekerClerkId: text('seeker_clerk_id').notNull(),
+  role: text('role').notNull(), // mentor | seeker
+  raterClerkId: text('rater_clerk_id').notNull(),
+  rating: integer('rating').notNull(),
+  wouldSipAgain: boolean('would_sip_again'),
+  comment: text('comment'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('session_feedback_room_id_idx').on(t.roomId),
+  index('session_feedback_mentor_id_idx').on(t.mentorId),
+  // One submission per person per counterpart per room, so a double submit
+  // cannot stack duplicates.
+  uniqueIndex('session_feedback_unique_idx').on(t.roomId, t.seekerClerkId, t.role),
 ]);
 
 /**
