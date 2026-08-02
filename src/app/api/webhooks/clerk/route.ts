@@ -5,6 +5,14 @@ import { db } from '@/db';
 import { mentors, seekers, requests, asks, follows, queueEntries, referralEvents, flags, consents, siteFeedback, sipFeedback, sipNotes } from '@/db/schema';
 import { eq, or, inArray } from 'drizzle-orm';
 import { logInfo, logWarn } from '@/lib/logger';
+import { transporter } from '@/lib/mailer';
+import { verificationCodeEmail } from '@/lib/email-template';
+
+/**
+ * Clerk email templates Sip renders and sends itself. Anything not listed stays
+ * with Clerk, which is why the dashboard toggle is per template.
+ */
+const SELF_SENT_EMAIL_SLUGS = ['verification_code', 'reset_password_code'];
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -36,6 +44,49 @@ export async function POST(req: Request) {
     // the endpoint, and both are things worth seeing.
     logWarn('webhook.signature_invalid', { svixId: svix_id, message: String(err) });
     return new Response('Invalid webhook', { status: 400 });
+  }
+
+  // Clerk emails we render and send ourselves.
+  //
+  // Nothing happens here until "Delivered by Clerk" is switched off for the
+  // template in the Clerk dashboard. Until then Clerk still sends its own copy
+  // and delivered_by_clerk is true, so sending here as well would put two codes
+  // in the same inbox. The guard is what makes this safe to deploy ahead of
+  // flipping that switch.
+  if (evt.type === 'email.created') {
+    const email = evt.data;
+    const slug = email.slug ?? '';
+    const to = email.to_email_address;
+
+    if (email.delivered_by_clerk || !to || !SELF_SENT_EMAIL_SLUGS.includes(slug)) {
+      return new Response('OK', { status: 200 });
+    }
+
+    // Clerk names this otp_code; fall back rather than send an email with a
+    // blank code in it if that ever changes.
+    const data = (email.data ?? {}) as Record<string, unknown>;
+    const code = String(data.otp_code ?? data.code ?? '').trim();
+    if (!code) {
+      logWarn('webhook.email_missing_code', { slug, emailId: email.id });
+      return new Response('OK', { status: 200 });
+    }
+
+    const built = verificationCodeEmail({
+      code,
+      purpose: slug === 'reset_password_code' ? 'reset' : 'verify',
+    });
+
+    try {
+      await transporter.sendMail({ to, subject: built.subject, html: built.html, text: built.text });
+      logInfo('webhook.email_sent', { slug, emailId: email.id });
+    } catch (err) {
+      // A 500 asks Clerk to retry, which is what we want: a code that never
+      // arrives locks someone out of signing in.
+      logWarn('webhook.email_send_failed', { slug, emailId: email.id, message: String(err) });
+      return new Response('Email send failed', { status: 500 });
+    }
+
+    return new Response('OK', { status: 200 });
   }
 
   if (evt.type === 'user.deleted') {
