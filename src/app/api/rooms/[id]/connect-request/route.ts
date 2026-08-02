@@ -7,6 +7,7 @@ import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
 import { logSwallowed } from '@/lib/logger';
 import { escapeHtml } from '@/lib/utils';
+import { resolveBookingOption, bookingEmailBlock } from '@/lib/booking';
 import { isUuid } from '@/lib/validate';
 import { mutationLimiter } from '@/lib/ratelimit';
 
@@ -21,9 +22,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { success } = await mutationLimiter.limit(userId);
     if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
-    const { seekerClerkId } = await req.json();
+    const { seekerClerkId, mode = 'review', contactMethod } = await req.json();
     if (typeof seekerClerkId !== 'string' || !seekerClerkId.trim()) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    }
+    if (mode !== 'review' && mode !== 'link') {
+      return NextResponse.json({ error: 'Invalid mode' }, { status: 400 });
     }
     if (seekerClerkId === userId) {
       return NextResponse.json({ error: "You can't send a connect request to yourself." }, { status: 403 });
@@ -62,6 +66,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'There is already an open request between you and this seeker.' }, { status: 409 });
     }
 
+    // "Send my link now" resolves the booking option up front, because there is
+    // no later accept step to fall back on if the mentor has nothing on file.
+    const option = mode === 'link' ? resolveBookingOption(mentor, contactMethod) : null;
+    if (mode === 'link' && !option) {
+      return NextResponse.json(
+        { error: 'Add a calendar link or contact email to your profile before sending it.' },
+        { status: 400 }
+      );
+    }
+
+    const now = new Date();
     const created = await db.insert(requests).values({
       mentorId: mentor.id,
       originRoomId: roomId,
@@ -70,23 +85,49 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       seekerEmail: seeker.email,
       seekerLinkedin: seeker.linkedin || null,
       message: `${mentor.firstName} wants to continue as a 1:1 after your sip.`,
-      status: 'pending',
+      // A direct send has already been decided, so it lands accepted rather than
+      // sitting in a pending state neither side is waiting on.
+      status: mode === 'link' ? 'accepted' : 'pending',
+      respondedAt: mode === 'link' ? now : null,
+      linkSentAt: mode === 'link' ? now : null,
+      sharedContactMethod: option?.method ?? null,
       mentorConsentToShow: true,
     }).returning();
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const mentorName = `${escapeHtml(mentor.firstName)} ${escapeHtml(mentor.lastName)}`;
+
+    const email = option
+      ? {
+          subject: `${mentor.firstName} wants to do a 1:1 with you`,
+          html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;">
+          <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>
+          <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">Book a time with ${escapeHtml(mentor.firstName)}</h2>
+          <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;"><strong>${mentorName}</strong> enjoyed your sip and wants to do a 1:1 with you.</p>
+          ${bookingEmailBlock(option)}
+          <p style="color:#8B949E;font-size:13px;margin-top:24px;">No need to wait on a reply, the time is yours to pick.</p>
+        </div>
+      `,
+        }
+      : {
+          subject: `${mentor.firstName} wants to continue as a 1:1`,
+          html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;">
+          <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>
+          <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">Your mentor wants to keep talking</h2>
+          <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;"><strong>${mentorName}</strong> enjoyed your conversation and would like to schedule a proper 1:1.</p>
+          <a href="${appUrl}/dashboard" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">View in Dashboard →</a>
+        </div>
+      `,
+        };
 
     after(() => transporter.sendMail({
       from: `Sip <${process.env.GMAIL_USER}>`,
       to: seeker.email,
-      subject: `${mentor.firstName} wants to continue as a 1:1`,
-      html: `
-        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;">
-          <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>
-          <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">Your mentor wants to keep talking</h2>
-          <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;"><strong>${escapeHtml(mentor.firstName)} ${escapeHtml(mentor.lastName)}</strong> enjoyed your conversation and would like to schedule a proper 1:1.</p>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">View in Dashboard →</a>
-        </div>
-      `,
-    }).catch(err => logSwallowed('email.connect_request_failed', err, { roomId, seekerClerkId })));
+      subject: email.subject,
+      html: email.html,
+    }).catch(err => logSwallowed('email.connect_request_failed', err, { roomId, seekerClerkId, mode })));
 
     return NextResponse.json(created[0]);
   } catch (err) {

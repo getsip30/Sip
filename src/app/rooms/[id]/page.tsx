@@ -6,6 +6,7 @@ import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { useRoles } from '@/hooks/useRoles';
 import { ConsentGate } from '@/components/ConsentGate';
+import { bookingOptions } from '@/lib/booking';
 
 type Room = { id: string; title: string; roomUrl: string | null; status: string; mode: string; scheduledAt: string | null; firstName: string; lastName: string; role: string; company: string; mentorClerkId: string };
 type ConnectStatus = 'none' | 'pending' | 'accepted';
@@ -40,6 +41,8 @@ export default function RoomPage() {
   const [connecting, setConnecting] = useState<string | null>(null);
   const [sentConnects, setSentConnects] = useState<Set<string>>(new Set());
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [myBooking, setMyBooking] = useState<{ calendarLink: string | null; contactEmail: string | null } | null>(null);
+  const [connectChoiceFor, setConnectChoiceFor] = useState<string | null>(null);
   const [noteOpenFor, setNoteOpenFor] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [noteSaving, setNoteSaving] = useState(false);
@@ -114,6 +117,18 @@ export default function RoomPage() {
     if (myEntry?.status === 'active' && room && !room.roomUrl) fetchRoom();
   }, [myEntry?.status, room, fetchRoom]);
 
+  // The room host needs their own booking options to choose what to send. Only
+  // fetched for the host, since nobody else can see the picker.
+  useEffect(() => {
+    if (!user || !room || user.id !== room.mentorClerkId) return;
+    let cancelled = false;
+    fetch('/api/mentor')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (!cancelled) setMyBooking(d); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user, room]);
+
   useEffect(() => {
     if (myEntry?.status === 'active' && room?.roomUrl && !popupRef.current) {
       popupRef.current = window.open(room.roomUrl, '_blank', 'noopener,noreferrer');
@@ -156,11 +171,12 @@ export default function RoomPage() {
     fetchQueue();
   }
 
-  async function requestConnect(seekerClerkId: string) {
+  async function requestConnect(seekerClerkId: string, mode: 'review' | 'link', contactMethod?: string) {
     setConnecting(seekerClerkId);
     setConnectError(null);
     const res = await fetch(`/api/rooms/${id}/connect-request`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seekerClerkId }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seekerClerkId, mode, contactMethod }),
     });
 
     // The button used to flip back to "request 1:1" here because nothing
@@ -169,6 +185,7 @@ export default function RoomPage() {
     // server. 409 means a request is already open, which is the same end state.
     if (res.ok || res.status === 409) {
       setSentConnects(prev => new Set(prev).add(seekerClerkId));
+      setConnectChoiceFor(null);
     } else {
       const body = await res.json().catch(() => null);
       setConnectError(body?.error || 'Could not send that request. Try again.');
@@ -403,10 +420,12 @@ export default function RoomPage() {
                       const busy = connecting === actives[0].seekerClerkId;
                       const settled = state !== 'none';
                       const label = busy ? 'sending...' : state === 'accepted' ? '1:1 accepted ✓' : state === 'pending' ? 'requested ✓' : 'request 1:1';
+                      const choiceOpen = connectChoiceFor === actives[0].seekerClerkId;
                       return (
                         <button
-                          onClick={() => requestConnect(actives[0].seekerClerkId)}
+                          onClick={() => setConnectChoiceFor(choiceOpen ? null : actives[0].seekerClerkId)}
                           disabled={busy || settled}
+                          aria-expanded={choiceOpen}
                           title={state === 'pending' ? 'Waiting on them to accept. Track it on your dashboard.' : undefined}
                           style={{ marginTop: 10, marginRight: 8, background: settled ? 'rgba(139,148,158,0.1)' : 'rgba(91,219,138,0.1)', border: `1px solid ${settled ? 'rgba(139,148,158,0.25)' : 'rgba(91,219,138,0.3)'}`, color: settled ? MUTED : '#5BDB8A', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: busy || settled ? 'default' : 'pointer', fontFamily: 'inherit' }}>
                           {label}
@@ -430,6 +449,51 @@ export default function RoomPage() {
                     {connectError && (
                       <div role="alert" style={{ marginTop: 10, color: '#F87171', fontSize: 12 }}>{connectError}</div>
                     )}
+
+                    {connectChoiceFor === actives[0].seekerClerkId && (() => {
+                      const options = myBooking ? bookingOptions(myBooking) : [];
+                      const cid = actives[0].seekerClerkId;
+                      const busy = connecting === cid;
+                      return (
+                        <div style={{ marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>How do you want to do this?</div>
+                          <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>
+                            {actives[0].seekerName} gets an email either way.
+                          </div>
+
+                          {options.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                              {options.map(o => (
+                                <button key={o.method} onClick={() => requestConnect(cid, 'link', o.method)} disabled={busy}
+                                  style={{ textAlign: 'left', background: 'rgba(91,219,138,0.1)', border: '1px solid rgba(91,219,138,0.3)', color: '#5BDB8A', padding: '10px 14px', borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                                  Send my {o.label.toLowerCase()} now
+                                  <span style={{ display: 'block', color: MUTED, fontWeight: 400, fontSize: 11, marginTop: 3, wordBreak: 'break-all' }}>
+                                    {o.value} · they book straight away, no approval step
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 12, color: '#FBBF24', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
+                              Add a calendar link or contact email to your profile to send it here directly.
+                            </div>
+                          )}
+
+                          <button onClick={() => requestConnect(cid, 'review')} disabled={busy}
+                            style={{ textAlign: 'left', width: '100%', background: 'transparent', border: `1px solid ${BORDER}`, color: TEXT, padding: '10px 14px', borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                            I&apos;ll review and accept manually
+                            <span style={{ display: 'block', color: MUTED, fontWeight: 400, fontSize: 11, marginTop: 3 }}>
+                              Lands in your dashboard to approve later
+                            </span>
+                          </button>
+
+                          <button onClick={() => setConnectChoiceFor(null)}
+                            style={{ marginTop: 10, background: 'none', border: 'none', color: MUTED, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                            cancel
+                          </button>
+                        </div>
+                      );
+                    })()}
 
                     {noteOpenFor === actives[0].seekerClerkId && (
                       <div style={{ marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14 }}>

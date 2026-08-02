@@ -7,7 +7,8 @@ import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
 import { logSwallowed } from '@/lib/logger';
 import { recordAbuseSignal } from '@/lib/abuse';
-import { escapeHtml, safeExternalUrl } from '@/lib/utils';
+import { escapeHtml } from '@/lib/utils';
+import { resolveBookingOption, bookingEmailBlock } from '@/lib/booking';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { isUuid } from '@/lib/validate';
 
@@ -52,8 +53,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     const respondedAt = new Date();
+    // Recorded on accept so the seeker-facing view can later show only what was
+    // actually shared, rather than everything on the mentor's profile.
+    const acceptedWith = status === 'accepted' ? resolveBookingOption(mentor, contactMethod) : null;
     const updated = await db.update(requests)
-      .set({ status, respondedAt, mentorNote: status === 'accepted' ? (mentorNote?.slice(0, 300) || null) : null })
+      .set({
+        status,
+        respondedAt,
+        mentorNote: status === 'accepted' ? (mentorNote?.slice(0, 300) || null) : null,
+        sharedContactMethod: acceptedWith?.method ?? null,
+      })
       .where(and(eq(requests.id, id), eq(requests.status, 'pending')))
       .returning();
 
@@ -86,11 +95,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         }
       }
 
-      const safeCalendarLink = safeExternalUrl(mentor.calendarLink);
-      const useCalendar = safeCalendarLink && (contactMethod === 'calendar' || !mentor.contactEmail);
-      const contactBlock = useCalendar
-        ? `<a href="${escapeHtml(safeCalendarLink)}" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">Book Your Sip →</a>`
-        : `<p style="color:#70B5F9;font-size:16px;font-weight:600;margin-bottom:0;">Book a Google Meet on this email only: ${escapeHtml(mentor.contactEmail || '')}</p>`;
+      const option = resolveBookingOption(mentor, contactMethod);
+      const contactBlock = option ? bookingEmailBlock(option) : '';
       const noteBlock = r.mentorNote
         ? `<div style="background:#161B22;border:1px solid rgba(112,181,249,0.3);border-radius:12px;padding:16px 18px;margin-top:20px;"><p style="color:#8B949E;font-size:12px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Note from ${escapeHtml(mentor.firstName)}</p><p style="color:#E6EDF3;font-size:14px;line-height:1.6;margin:0;">${escapeHtml(r.mentorNote)}</p></div>`
         : '';
