@@ -11,7 +11,11 @@ export type BookingOption = {
   value: string;
 };
 
-type MentorRow = typeof mentors.$inferSelect;
+/**
+ * Only the fields a booking option is built from, so the browser can reuse this
+ * against the profile it fetched without reconstructing a full row.
+ */
+type BookingSource = Pick<typeof mentors.$inferSelect, 'calendarLink' | 'contactEmail'>;
 
 /**
  * Every way this mentor can be booked, in the order they should be offered.
@@ -23,7 +27,7 @@ type MentorRow = typeof mentors.$inferSelect;
  * Link methods are passed through safeExternalUrl, so a mentor who saved a
  * javascript: or data: URL contributes no option rather than an unsafe one.
  */
-export function bookingOptions(mentor: MentorRow): BookingOption[] {
+export function bookingOptions(mentor: BookingSource): BookingOption[] {
   const options: BookingOption[] = [];
 
   const calendar = safeExternalUrl(mentor.calendarLink);
@@ -40,7 +44,7 @@ export function bookingOptions(mentor: MentorRow): BookingOption[] {
  * a choice unless there is a genuine choice to make.
  */
 export function resolveBookingOption(
-  mentor: MentorRow,
+  mentor: BookingSource,
   requested?: string | null
 ): BookingOption | null {
   const options = bookingOptions(mentor);
