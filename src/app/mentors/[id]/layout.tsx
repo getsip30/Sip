@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { jsonLdScript } from '@/lib/utils';
 import { db } from '@/db';
 import { mentors } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -61,7 +62,7 @@ export default async function MentorProfileLayout({ children, params }: { childr
       {jsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
         />
       )}
       {children}

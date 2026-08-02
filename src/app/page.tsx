@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { jsonLdScript } from '@/lib/utils';
 import Landing from './Landing';
 
 export const metadata: Metadata = {
@@ -25,7 +26,7 @@ export default function Page() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
       <Landing />
     </>
   );

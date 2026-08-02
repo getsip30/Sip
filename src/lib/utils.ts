@@ -27,6 +27,25 @@ export function safeExternalUrl(raw: string | null | undefined): string | null {
   }
 }
 
+/**
+ * Serialise a value for embedding inside a <script type="application/ld+json">.
+ *
+ * JSON.stringify escapes quotes and backslashes but leaves `<` and `>` alone, so
+ * a value containing `</script>` closes the block early and everything after it
+ * is parsed as HTML rather than data. Mentor names, roles, companies and bios
+ * are user-supplied and reach this, which made a profile page a stored XSS.
+ *
+ * The characters that can terminate a script element are emitted as unicode
+ * escapes. JSON parses those back to exactly the same string, so consumers see
+ * unchanged content while the HTML parser sees nothing it can act on.
+ */
+export function jsonLdScript(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+}
+
 export function escapeHtml(str: string): string {
   return String(str)
     .replace(/&/g, '&amp;')
