@@ -38,16 +38,26 @@ export async function GET(req: Request) {
 
     // Contact details are the payoff for an ACCEPTED request only — a pending or
     // declined request must not hand out the mentor's private booking channel.
+    //
+    // On top of that, only the channel the mentor actually chose is released.
+    // Returning both meant a mentor who picked "email only" still had their
+    // calendar link handed over, and the reverse.
+    //
+    // sharedContactMethod is null on requests accepted before it existed. There
+    // is no record of what those seekers were shown, so they keep seeing
+    // everything rather than losing a link they may already be booking through.
     const enriched = rows.map(({ mentorCalendarLink, mentorContactEmail, ...r }) => {
       const released = r.status === 'accepted';
+      const chosen = r.sharedContactMethod;
+      const releases = (method: string) => released && (chosen == null || chosen === method);
       return {
         ...r,
         seekerFeedbackGiven: r.seekerFeedbackGiven !== null,
         mentor: r.mentorFirstName ? {
           firstName: r.mentorFirstName, lastName: r.mentorLastName,
           role: r.mentorRole, company: r.mentorCompany,
-          calendarLink: released ? mentorCalendarLink : null,
-          contactEmail: released ? mentorContactEmail : null,
+          calendarLink: releases('calendar') ? mentorCalendarLink : null,
+          contactEmail: releases('email') ? mentorContactEmail : null,
         } : null,
       };
     });
