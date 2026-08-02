@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { requests, mentors, seekers } from '@/db/schema';
+import { requests, mentors } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
@@ -8,8 +8,9 @@ import { getUserEmail } from '@/lib/clerk';
 import { emailLimiter } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
 import { logSwallowed } from '@/lib/logger';
-import { escapeHtml } from '@/lib/utils';
+import { escapeHtml, subjectSafe } from '@/lib/utils';
 import { isUuid } from '@/lib/validate';
+import { requireSeeker } from '@/lib/guards';
 import { flags } from '@/db/schema';
 import { ne, and } from 'drizzle-orm';
 
@@ -53,8 +54,8 @@ export async function POST(req: Request) {
     if (!mentor) return NextResponse.json({ error: 'Mentor not found' }, { status: 404 });
     if (mentor.banned) return NextResponse.json({ error: 'This mentor is not accepting requests.' }, { status: 403 });
 
-    const seekerCheck = await db.select().from(seekers).where(eq(seekers.clerkId, userId));
-    if (seekerCheck[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
+    const { seeker, error: seekerError } = await requireSeeker(userId);
+    if (seekerError) return seekerError;
 
     if (mentor.clerkId === userId) {
       return NextResponse.json({ error: "You can't send a sip request to your own mentor profile." }, { status: 403 });
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "You already have an open request with this mentor." }, { status: 409 });
     }
 
-    const seekerLinkedin = seekerCheck[0]?.linkedin || null;
+    const seekerLinkedin = seeker.linkedin || null;
 
     const created = await db.insert(requests).values({
       mentorId, seekerClerkId: userId, seekerName, seekerEmail, seekerLinkedin, message, status: 'pending',
@@ -86,7 +87,7 @@ export async function POST(req: Request) {
     transporter.sendMail({
       from: `Sip <${process.env.GMAIL_USER}>`,
       to: mentor.email,
-      subject: `${seekerName} wants to sip with you`,
+      subject: `${subjectSafe(seekerName)} wants to sip with you`,
       html: `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;">
           <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>

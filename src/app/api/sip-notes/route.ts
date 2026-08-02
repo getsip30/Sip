@@ -8,6 +8,7 @@ import { mutationLimiter } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
 import { recordAbuseSignal } from '@/lib/abuse';
 import { isUuid, cleanText } from '@/lib/validate';
+import { requireSeeker } from '@/lib/guards';
 
 export async function GET(req: Request) {
   try {
@@ -62,8 +63,9 @@ export async function POST(req: Request) {
     const seekerEmail = await getUserEmail(userId);
     if (!seekerEmail) return NextResponse.json({ error: 'No verified email on account' }, { status: 400 });
 
-    const seekerSelf = await db.select().from(seekers).where(eq(seekers.clerkId, userId));
-    if (seekerSelf[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
+    const { seeker: noteSeeker, error: noteSeekerError } = await requireSeeker(userId);
+    if (noteSeekerError) return noteSeekerError;
+    const seekerSelf = [noteSeeker];
 
     const { mentorId, seekerName, note } = await req.json();
     if (!mentorId || !seekerName || !note) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
