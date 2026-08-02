@@ -1,4 +1,5 @@
 import { SignUp } from '@clerk/nextjs';
+import { clerkAppearance } from '@/lib/clerk-appearance';
 
 export default function SignUpPage() {
   return (
@@ -30,25 +31,12 @@ export default function SignUpPage() {
 
       {/* RIGHT PANEL */}
       <div style={{ flex: 1, minWidth: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <SignUp forceRedirectUrl="/dashboard" appearance={{
-          variables: {
-            colorBackground: '#121923',
-            colorForeground: '#EDEFF3',
-            colorPrimary: '#3B82F6',
-            colorInput: '#EDEFF3',
-            borderRadius: '12px',
-          },
+          <SignUp forceRedirectUrl="/choose-role" appearance={{
+          ...clerkAppearance,
           elements: {
-            card: { border: '1px solid rgba(255,255,255,0.08)', boxShadow: 'none', width: '100%', maxWidth: 420 },
-            headerTitle: { color: '#EDEFF3' },
-            headerSubtitle: { color: '#8A93A3' },
-            formFieldLabel: { color: '#8A93A3' },
-            formFieldInput: { color: '#0A0E16' },
-            formFieldHintText: { color: '#8A93A3', lineHeight: 1.5, marginTop: 6 },
-            formFieldSuccessText: { color: '#5BDB8A', lineHeight: 1.5, marginTop: 4 },
-            formFieldWarningText: { lineHeight: 1.5, marginTop: 4 },
-            footerActionLink: { color: '#70B5F9' },
-          }
+            ...clerkAppearance.elements,
+            card: { ...clerkAppearance.elements.card, width: '100%', maxWidth: 420 },
+          },
         }} />
       </div>
     </div>
