@@ -130,6 +130,33 @@ export const sipNotes = pgTable('sip_notes', {
   index('sip_notes_mentor_id_idx').on(t.mentorId),
 ]);
 
+/**
+ * Private notes a mentor writes about a seeker during a live session. Not to be
+ * confused with sipNotes, which are seeker-written testimonials shown publicly
+ * once a mentor approves them. These are never exposed to the seeker.
+ *
+ * The seeker is keyed by Clerk id, matching queueEntries, requests, asks and
+ * follows. That is the identifier a live room actually holds, and it stays
+ * usable for a seeker who has no row of their own.
+ *
+ * sessionId points at the room the note was taken in and survives that room
+ * being removed, so sessionDate is stored rather than derived from the join.
+ */
+export const sessionNotes = pgTable('session_notes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  mentorId: uuid('mentor_id').references(() => mentors.id, { onDelete: 'cascade' }).notNull(),
+  sessionId: uuid('session_id').references(() => rooms.id, { onDelete: 'set null' }),
+  seekerClerkId: text('seeker_clerk_id').notNull(),
+  seekerName: text('seeker_name').notNull(),
+  sessionDate: timestamp('session_date').defaultNow().notNull(),
+  noteText: text('note_text').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('session_notes_mentor_id_idx').on(t.mentorId),
+  // Drives the dashboard accordion, which reads newest date first for one mentor.
+  index('session_notes_mentor_date_idx').on(t.mentorId, t.sessionDate),
+]);
+
 export const queueEntries = pgTable('queue_entries', {
   id: uuid('id').defaultRandom().primaryKey(),
   roomId: uuid('room_id').references(() => rooms.id, { onDelete: 'cascade' }).notNull(),

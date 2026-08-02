@@ -40,6 +40,11 @@ export default function RoomPage() {
   const [connecting, setConnecting] = useState<string | null>(null);
   const [sentConnects, setSentConnects] = useState<Set<string>>(new Set());
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [noteOpenFor, setNoteOpenFor] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
+  const [notedSeekers, setNotedSeekers] = useState<Record<string, number>>({});
   const [starting, setStarting] = useState(false);
   const popupRef = useRef<Window | null>(null);
 
@@ -170,6 +175,26 @@ export default function RoomPage() {
     }
     setConnecting(null);
     fetchQueue();
+  }
+
+  async function saveNote(seekerClerkId: string) {
+    const text = noteDraft.trim();
+    if (!text) return;
+    setNoteSaving(true);
+    setNoteError(null);
+    const res = await fetch('/api/session-notes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId: id, seekerClerkId, noteText: text }),
+    });
+    if (res.ok) {
+      setNotedSeekers(prev => ({ ...prev, [seekerClerkId]: (prev[seekerClerkId] || 0) + 1 }));
+      setNoteDraft('');
+      setNoteOpenFor(null);
+    } else {
+      const body = await res.json().catch(() => null);
+      setNoteError(body?.error || 'Could not save that note. Try again.');
+    }
+    setNoteSaving(false);
   }
 
   /**
@@ -388,9 +413,46 @@ export default function RoomPage() {
                         </button>
                       );
                     })()}
+                    {(() => {
+                      const cid = actives[0].seekerClerkId;
+                      const count = notedSeekers[cid] || 0;
+                      const open = noteOpenFor === cid;
+                      return (
+                        <button
+                          onClick={() => { setNoteOpenFor(open ? null : cid); setNoteDraft(''); setNoteError(null); }}
+                          aria-expanded={open}
+                          style={{ marginTop: 10, marginRight: 8, background: open ? 'rgba(112,181,249,0.18)' : 'rgba(112,181,249,0.1)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {open ? 'close notes' : count > 0 ? `notes (${count})` : 'notes'}
+                        </button>
+                      );
+                    })()}
                     <button onClick={() => { setFlagTarget({ id: actives[0].seekerClerkId, name: actives[0].seekerName }); setFlagOpen(true); }} style={{ marginTop: 10, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#FBBF24', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>flag & remove</button>
                     {connectError && (
                       <div role="alert" style={{ marginTop: 10, color: '#F87171', fontSize: 12 }}>{connectError}</div>
+                    )}
+
+                    {noteOpenFor === actives[0].seekerClerkId && (
+                      <div style={{ marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14 }}>
+                        <label htmlFor="session-note" style={{ display: 'block', fontSize: 12, color: MUTED, marginBottom: 6 }}>
+                          Private note about {actives[0].seekerName}. Only you ever see this.
+                        </label>
+                        <textarea
+                          id="session-note"
+                          value={noteDraft}
+                          onChange={e => setNoteDraft(e.target.value)}
+                          rows={3}
+                          maxLength={2000}
+                          placeholder="what they're working on, what to follow up on..."
+                          style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', color: TEXT, borderRadius: 10, padding: '10px 12px', fontFamily: 'inherit', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+                        {noteError && <div role="alert" style={{ color: '#F87171', fontSize: 12, marginTop: 6 }}>{noteError}</div>}
+                        <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+                          <button onClick={() => saveNote(actives[0].seekerClerkId)} disabled={noteSaving || !noteDraft.trim()}
+                            style={{ background: ACCENT, border: 'none', color: 'white', padding: '8px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: noteSaving || !noteDraft.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: noteSaving || !noteDraft.trim() ? 0.6 : 1 }}>
+                            {noteSaving ? 'saving...' : 'save note'}
+                          </button>
+                          <span style={{ color: MUTED, fontSize: 11 }}>{noteDraft.length}/2000</span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}

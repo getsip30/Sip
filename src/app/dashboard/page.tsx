@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser, SignOutButton } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -32,6 +32,10 @@ type Ask = {
 type SipNote = {
   id: string; seekerName: string; note: string; status: string; createdAt: string;
 };
+type SessionNote = {
+  id: string; sessionId: string | null; seekerClerkId: string; seekerName: string;
+  sessionDate: string; noteText: string; createdAt: string;
+};
 
 const BADGE_META: Record<string, { label: string; color: string }> = {
   'first-sip': { label: 'First Sip', color: '#D97706' },
@@ -58,6 +62,10 @@ export default function Dashboard() {
   const [asks, setAsks] = useState<Ask[]>([]);
   const [pendingNotes, setPendingNotes] = useState<SipNote[]>([]);
   const [liveNotes, setLiveNotes] = useState<SipNote[]>([]);
+  const [sessionNotes, setSessionNotes] = useState<SessionNote[]>([]);
+  const [notesSectionOpen, setNotesSectionOpen] = useState(false);
+  const [openNoteDates, setOpenNoteDates] = useState<Set<string>>(new Set());
+  const [openNoteSeekers, setOpenNoteSeekers] = useState<Set<string>>(new Set());
   const [reviewingNote, setReviewingNote] = useState<string | null>(null);
   const [deletingNote, setDeletingNote] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -158,6 +166,8 @@ export default function Dashboard() {
       if (notesRes.ok) setPendingNotes(await notesRes.json());
       const liveNotesRes = await fetch(`/api/sip-notes?mentorId=${m.id}`);
       if (liveNotesRes.ok) setLiveNotes(await liveNotesRes.json());
+      const sessionNotesRes = await fetch('/api/session-notes');
+      if (sessionNotesRes.ok) setSessionNotes(await sessionNotesRes.json());
     }
     if (rRes.ok) setRequests(await rRes.json());
     if (aRes.ok) setAsks(await aRes.json());
@@ -216,6 +226,35 @@ export default function Dashboard() {
     const res = await fetch(`/api/sip-notes/${noteId}`, { method: 'DELETE' });
     if (res.ok) setLiveNotes(prev => prev.filter(n => n.id !== noteId));
     setDeletingNote(null);
+  }
+
+  /**
+   * Sessions newest first, and within a session one group per seeker. Grouped on
+   * the calendar day rather than the raw timestamp, so two rooms opened on the
+   * same day read as one day's worth of notes.
+   */
+  const notesByDate = useMemo(() => {
+    const byDate = new Map<string, Map<string, SessionNote[]>>();
+    for (const n of sessionNotes) {
+      const day = new Date(n.sessionDate).toLocaleDateString('en-CA'); // sorts lexically
+      if (!byDate.has(day)) byDate.set(day, new Map());
+      const bySeeker = byDate.get(day)!;
+      if (!bySeeker.has(n.seekerName)) bySeeker.set(n.seekerName, []);
+      bySeeker.get(n.seekerName)!.push(n);
+    }
+    return [...byDate.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([day, bySeeker]) => ({
+        day,
+        total: [...bySeeker.values()].reduce((sum, list) => sum + list.length, 0),
+        seekers: [...bySeeker.entries()].sort((a, b) => a[0].localeCompare(b[0])),
+      }));
+  }, [sessionNotes]);
+
+  function toggleIn(set: Set<string>, key: string) {
+    const next = new Set(set);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
   }
 
   async function toggleOpen() {
@@ -614,6 +653,73 @@ export default function Dashboard() {
                       </div>
                     ))}
                   </div>
+                </motion.div>
+              )}
+
+              {/* SESSION NOTES */}
+              {sessionNotes.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.377 }} style={{ marginBottom: 32 }}>
+                  <button
+                    onClick={() => setNotesSectionOpen(v => !v)}
+                    aria-expanded={notesSectionOpen}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '18px 24px', color: TEXT, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                      <span style={{ fontSize: 22, fontWeight: 700 }}>Session Notes</span>
+                      <span style={{ color: MUTED, fontSize: 13 }}>{sessionNotes.length} across {notesByDate.length} {notesByDate.length === 1 ? 'day' : 'days'}</span>
+                    </span>
+                    <span aria-hidden style={{ color: MUTED, fontSize: 13, transform: notesSectionOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.18s' }}>▶</span>
+                  </button>
+
+                  {notesSectionOpen && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                      {notesByDate.map(({ day, total, seekers }) => {
+                        const dayOpen = openNoteDates.has(day);
+                        return (
+                          <div key={day} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
+                            <button
+                              onClick={() => setOpenNoteDates(s => toggleIn(s, day))}
+                              aria-expanded={dayOpen}
+                              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'none', border: 'none', padding: '14px 20px', color: TEXT, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>
+                                {new Date(`${day}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                              </span>
+                              <span style={{ color: MUTED, fontSize: 12 }}>{total} {total === 1 ? 'note' : 'notes'} · {seekers.length} {seekers.length === 1 ? 'person' : 'people'}</span>
+                            </button>
+
+                            {dayOpen && (
+                              <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {seekers.map(([seekerName, list]) => {
+                                  const key = `${day}::${seekerName}`;
+                                  const seekerOpen = openNoteSeekers.has(key);
+                                  return (
+                                    <div key={key} style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 10 }}>
+                                      <button
+                                        onClick={() => setOpenNoteSeekers(s => toggleIn(s, key))}
+                                        aria-expanded={seekerOpen}
+                                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: 'none', border: 'none', padding: '11px 16px', color: TEXT, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                                        <span style={{ fontSize: 13.5, fontWeight: 600 }}>{seekerName}</span>
+                                        <span style={{ color: MUTED, fontSize: 12 }}>{list.length}</span>
+                                      </button>
+                                      {seekerOpen && (
+                                        <div style={{ padding: '0 16px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                          {list.map(n => (
+                                            <div key={n.id} style={{ borderLeft: `2px solid ${BORDER}`, paddingLeft: 12 }}>
+                                              <p style={{ color: TEXT, fontSize: 13.5, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>{n.noteText}</p>
+                                              <div style={{ color: MUTED, fontSize: 11, marginTop: 4 }}>{new Date(n.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </motion.div>
               )}
 
