@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { escapeHtml } from '@/lib/utils';
 import { logSwallowed } from '@/lib/logger';
+import { NUDGE_QUERIES, claimNudge, nudgeEmail, type NudgeKind, type NudgeRow } from '@/lib/nudges';
 
 type Row = {
   id: string; seeker_email: string; seeker_name: string; scheduled_at: string;
@@ -86,5 +87,33 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ due: due.rows.length, sent, sipsCompleted: completedRows.length });
+  // Outstanding-action nudges. Folded into this cron rather than given their own
+  // path, because the plan this runs on allows very few scheduled jobs and these
+  // want the same daily cadence.
+  const nudgeCounts: Record<string, number> = {};
+  for (const kind of Object.keys(NUDGE_QUERIES) as NudgeKind[]) {
+    let sentForKind = 0;
+    try {
+      const dueRows = await db.execute(NUDGE_QUERIES[kind]);
+      for (const row of dueRows.rows as unknown as NudgeRow[]) {
+        // Claim first. If the row is not ours another run already sent it, and
+        // sending before claiming would double up whenever two runs overlap.
+        if (!(await claimNudge(row.id, kind))) continue;
+        const mail = nudgeEmail(kind, row);
+        try {
+          await transporter.sendMail({ to: mail.to, subject: mail.subject, html: mail.html });
+          sentForKind++;
+        } catch (err) {
+          // The claim stands. A retry next run would be a second attempt at an
+          // email the recipient may already have, which is worse than skipping.
+          logSwallowed('cron.nudge_failed', err, { requestId: row.id, kind });
+        }
+      }
+    } catch (err) {
+      logSwallowed('cron.nudge_query_failed', err, { kind });
+    }
+    nudgeCounts[kind] = sentForKind;
+  }
+
+  return NextResponse.json({ due: due.rows.length, sent, sipsCompleted: completedRows.length, nudges: nudgeCounts });
 }

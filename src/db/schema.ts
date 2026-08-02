@@ -112,6 +112,23 @@ export const requests = pgTable('requests', {
   index('requests_origin_ask_id_idx').on(t.originAskId),
 ]);
 
+/**
+ * One row per nudge actually sent, so a reminder cannot go out twice.
+ *
+ * A ledger rather than a column per reminder: the kinds are open-ended, and the
+ * unique index does the idempotency for free. A conflicting insert means it has
+ * already been sent, which is exactly the check the cron needs, and it holds
+ * even if two runs overlap.
+ */
+export const nudges = pgTable('nudges', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  requestId: uuid('request_id').references(() => requests.id, { onDelete: 'cascade' }).notNull(),
+  kind: text('kind').notNull(),
+  sentAt: timestamp('sent_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('nudges_request_kind_idx').on(t.requestId, t.kind),
+]);
+
 export const sipFeedback = pgTable('sip_feedback', {
   id: uuid('id').defaultRandom().primaryKey(),
   requestId: uuid('request_id').references(() => requests.id, { onDelete: 'cascade' }).notNull(),

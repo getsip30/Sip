@@ -748,7 +748,17 @@ export default function Dashboard() {
                             asked {new Date(r.createdAt).toLocaleDateString()} · waiting on them to reply
                           </div>
                         </div>
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 12, flexShrink: 0, background: 'rgba(245,158,11,0.1)', color: WARNING, border: '1px solid rgba(245,158,11,0.3)' }}>awaiting reply</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 12, background: 'rgba(245,158,11,0.1)', color: WARNING, border: '1px solid rgba(245,158,11,0.3)' }}>awaiting reply</span>
+                          {/* The one the mentor still owes them. Opens the same
+                              chooser as accepting a request, which is what sends
+                              the booking link. */}
+                          <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                            onClick={() => setChoosingContactFor(r.id)} disabled={accepting === r.id}
+                            style={{ background: 'rgba(91,219,138,0.15)', border: '1px solid rgba(91,219,138,0.3)', color: SUCCESS2, padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: accepting === r.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                            {accepting === r.id ? 'sending...' : 'send booking link'}
+                          </motion.button>
+                        </div>
                       </motion.div>
                     ))}
                   </div>
