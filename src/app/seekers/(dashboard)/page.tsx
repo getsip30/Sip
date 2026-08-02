@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Suspense } from 'react';
 import { safeExternalUrl } from '@/lib/utils';
 
-type LiveRoom = { id: string; title: string; firstName: string; lastName: string; role: string; company: string };
+type LiveRoom = { id: string; title: string; firstName: string; lastName: string; role: string; company: string; mentorId: string; startedAt: string; topics?: string; avatarData?: string | null };
 type UpcomingRoom = { id: string; title: string; scheduledAt: string; firstName: string; lastName: string; role: string; company: string };
 
 type Mentor = {
@@ -53,7 +53,7 @@ function SeekersContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isMentor, isSeeker, loaded: rolesLoaded } = useRoles();
-  const [tab, setTab] = useState<'browse' | 'mine'>('browse');
+  const [tab, setTab] = useState<'browse' | 'live' | 'mine'>('browse');
   const [page, setPage] = useState(1);
 
   const [mentors, setMentors] = useState<Mentor[]>([]);
@@ -271,7 +271,14 @@ function SeekersContent() {
     setTogglingConsent(null);
   }
 
-  const tabBtn = (id: 'browse' | 'mine', label: string, badge?: number) => (
+  // A mentor can hold more than one live room, and the badge is a count of
+  // people you could talk to, not of rooms.
+  const liveMentorCount = new Set(liveRooms.map(r => r.mentorId)).size;
+
+  // badgeColor defaults to the amber used for "my sips". Live takes the red this
+  // page already uses everywhere else to mean live, so the count reads as
+  // liveness rather than as another pile of pending items.
+  const tabBtn = (id: 'browse' | 'live' | 'mine', label: string, badge?: number, badgeColor = '#F59E0B') => (
     <button onClick={() => setTab(id)} style={{
       background: tab === id ? 'rgba(112,181,249,0.12)' : 'transparent',
       border: `1px solid ${tab === id ? 'rgba(112,181,249,0.4)' : BORDER}`,
@@ -281,7 +288,7 @@ function SeekersContent() {
     }}>
       {label}
       {!!badge && (
-        <span style={{ background: '#F59E0B', color: '#0A0E16', borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '1px 7px' }}>{badge}</span>
+        <span style={{ background: badgeColor, color: '#0A0E16', borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '1px 7px' }}>{badge}</span>
       )}
     </button>
   );
@@ -334,6 +341,7 @@ function SeekersContent() {
         })()}
         <div style={{ display: 'flex', gap: 10, marginBottom: 32 }}>
           {tabBtn('browse', 'browse mentors')}
+          {tabBtn('live', 'live now', liveMentorCount, '#DC2626')}
           {tabBtn('mine', 'my sips', pending.length)}
         </div>
       </div>
@@ -439,6 +447,50 @@ function SeekersContent() {
               ))}
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
                 style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: page === totalPages ? '#484F58' : MUTED, padding: '8px 14px', borderRadius: 20, fontSize: 13, cursor: page === totalPages ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>next {String.fromCharCode(0x2192)}</button>
+            </div>
+          )}
+        </section>
+      ) : tab === 'live' ? (
+        <section style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px 60px' }}>
+          {liveRooms.length === 0 ? (
+            <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, padding: '60px 40px', textAlign: 'center' }}>
+              <p style={{ color: TEXT, fontWeight: 600, marginBottom: 8 }}>Nobody&apos;s live right now.</p>
+              <p style={{ color: MUTED, fontSize: 14, marginBottom: 24 }}>Rooms open through the day. Follow a mentor and you&apos;ll hear when they start one.</p>
+              <button onClick={() => setTab('browse')} style={{ background: ACCENT, color: 'white', border: 'none', padding: '12px 26px', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>browse mentors</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {liveRooms.map(r => {
+                const mins = Math.max(0, Math.round((Date.now() - new Date(r.startedAt).getTime()) / 60000));
+                const topics = (r.topics || '').split(',').map(t => t.trim()).filter(Boolean).slice(0, 4);
+                return (
+                  <div key={r.id} style={{ background: SURFACE, border: '1px solid rgba(220,38,38,0.22)', borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+                    {r.avatarData
+                      ? <PixelAvatar data={r.avatarData} size={48} />
+                      : <div style={{ width: 48, height: 48, borderRadius: '50%', background: ACCENT, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>{r.firstName[0]}{r.lastName[0]}</div>}
+
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                        <span style={{ fontWeight: 600 }}>{r.firstName} {r.lastName}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: '#F87171', background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', padding: '2px 9px', borderRadius: 999 }}>
+                          <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }} style={{ width: 6, height: 6, borderRadius: '50%', background: '#DC2626', display: 'inline-block' }} />
+                          live {mins < 1 ? 'just started' : `${mins}m`}
+                        </span>
+                      </div>
+                      <div style={{ color: MUTED, fontSize: 13 }}>{r.role} @ {r.company}</div>
+                      {topics.length > 0 && (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                          {topics.map(t => (
+                            <span key={t} style={{ fontSize: 11, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '2px 8px' }}>{t}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <Link href={`/rooms/${r.id}`} style={{ background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.3)', color: '#F87171', padding: '10px 22px', borderRadius: 20, fontSize: 14, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>join queue →</Link>
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>
