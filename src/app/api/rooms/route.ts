@@ -44,6 +44,9 @@ export async function GET(req: Request) {
         id: rooms.id, title: rooms.title, startedAt: rooms.startedAt,
         mentorId: mentors.id, firstName: mentors.firstName, lastName: mentors.lastName,
         role: mentors.role, company: mentors.company,
+        // Both are already public fields (see publicMentor), and the live-now
+        // tab needs them to render a mentor the way the directory does.
+        topics: mentors.topics, avatarData: mentors.avatarData,
       })
       .from(rooms)
       .innerJoin(mentors, eq(rooms.mentorId, mentors.id))
