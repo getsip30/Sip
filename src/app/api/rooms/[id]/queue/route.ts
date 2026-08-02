@@ -8,6 +8,7 @@ import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter, readLimiter, getIp } from '@/lib/ratelimit';
 import { isUuid, cleanText } from '@/lib/validate';
 import { connectCooldownUntil } from '@/lib/booking';
+import { requireSeeker } from '@/lib/guards';
 
 const STALE_WAITING_MS = 30 * 60 * 1000;
 
@@ -166,8 +167,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "You can't join your own room's queue." }, { status: 403 });
     }
 
-    const seekerCheck = await db.select().from(seekers).where(eq(seekers.clerkId, userId));
-    if (seekerCheck[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
+    const { error: queueSeekerError } = await requireSeeker(userId);
+    if (queueSeekerError) return queueSeekerError;
 
     const existing = await db.select().from(queueEntries).where(and(
       eq(queueEntries.roomId, id),

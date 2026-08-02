@@ -10,6 +10,7 @@ import { moderateQuestion } from '@/lib/groq';
 import { escapeHtml } from '@/lib/utils';
 import { isUuid, cleanText } from '@/lib/validate';
 import { handleApiError } from '@/lib/api-handler';
+import { requireSeeker } from '@/lib/guards';
 import { recordAbuseSignal } from '@/lib/abuse';
 import { seekers, flags } from '@/db/schema';
 import { ne } from 'drizzle-orm';
@@ -38,7 +39,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "You can't ask yourself a question." }, { status: 403 });
     }
 
-    const seekerCheck = await db.select().from(seekers).where(eq(seekers.clerkId, userId));
+    const { seeker: askSeeker, error: askSeekerError } = await requireSeeker(userId);
+    if (askSeekerError) return askSeekerError;
+    const seekerCheck = [askSeeker];
     if (seekerCheck[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
 
     const clerkUser = await getClerkUser(userId);
