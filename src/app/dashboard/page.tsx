@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import Collapse from '@/components/Collapse';
+import { useRequestList, RequestFilterBar, ShowMore } from '@/components/RequestFilters';
 import { ease, DUR, listItem, badgeVariants, badgeTransition } from '@/lib/motion';
 import Logo from '@/components/Logo';
 import RoleSwitchLink from '@/components/RoleSwitchLink';
@@ -287,18 +288,20 @@ export default function Dashboard() {
     setTogglingOpen(false);
   }
 
-  if (!isLoaded || loadingMentor) return (
-    <div style={{ background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ color: MUTED, fontSize: 15 }}>loading...</motion.div>
-    </div>
-  );
-
   // A 1:1 the mentor sent from a live room is not something they act on, so it
   // is pulled out of Incoming Sips while it waits. Anything already answered
   // stays in the main list, which is where the consent, cancel and feedback
   // controls live.
   const sentPending = requests.filter(r => r.originRoomId && r.status === 'pending');
   const incoming = requests.filter(r => !(r.originRoomId && r.status === 'pending'));
+
+  const incomingList = useRequestList(incoming);
+
+  if (!isLoaded || loadingMentor) return (
+    <div style={{ background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ color: MUTED, fontSize: 15 }}>loading...</motion.div>
+    </div>
+  );
 
   const earnedBadges = mentor?.badges ? mentor.badges.split(',').filter(Boolean) : [];
   const nextMilestone = mentor ? (mentor.sipCount < 1 ? 1 : mentor.sipCount < 5 ? 5 : mentor.sipCount < 10 ? 10 : mentor.sipCount < 25 ? 25 : 50) : 1;
@@ -820,9 +823,16 @@ export default function Dashboard() {
                     <p>No requests yet - share your profile link to get started</p>
                   </div>
                 ) : (
+                  <>
+                  <RequestFilterBar filter={incomingList.filter} onChange={incomingList.setFilter} counts={incomingList.counts} />
+                  {incomingList.filtered.length === 0 ? (
+                    <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: '36px 24px', textAlign: 'center', color: MUTED }}>
+                      Nothing {incomingList.filter === 'all' ? 'here' : incomingList.filter} right now.
+                    </div>
+                  ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {incoming.map((r, i) => (
-                      <motion.div key={r.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
+                    {incomingList.shown.map((r, i) => (
+                      <motion.div key={r.id} layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={listItem(i)}
                         whileHover={{ borderColor: 'rgba(255,255,255,0.15)' }}
                         style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '20px 24px', transition: 'all 0.2s', opacity: (r.status === 'declined' || r.status === 'cancelled') ? 0.45 : 1 }}>
 
@@ -913,6 +923,9 @@ export default function Dashboard() {
                       </motion.div>
                     ))}
                   </div>
+                  )}
+                  <ShowMore hiddenCount={incomingList.hiddenCount} expanded={incomingList.expanded} onMore={incomingList.showMore} onCollapse={incomingList.collapse} />
+                  </>
                 )}
               </motion.div>
 

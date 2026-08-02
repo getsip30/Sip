@@ -7,6 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useRoles } from '@/hooks/useRoles';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import { ease, DUR, swapVariants, badgeVariants, badgeTransition, listItem } from '@/lib/motion';
+import { useRequestList, RequestFilterBar, ShowMore } from '@/components/RequestFilters';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 import AppTour, { TourStep } from '@/components/AppTour';
@@ -270,6 +271,7 @@ function SeekersContent() {
     setLoadingLookup(false);
   }
 
+  const sipList = useRequestList(requests);
   const pending = requests.filter(r => r.status === 'pending');
   const accepted = requests.filter(r => r.status === 'accepted');
 
@@ -584,11 +586,19 @@ function SeekersContent() {
                   <button onClick={() => setTab('browse')} style={{ color: LINK, background: 'none', border: 'none', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>browse mentors →</button>
                 </div>
               ) : (
+                <>
+                <RequestFilterBar filter={sipList.filter} onChange={sipList.setFilter} counts={sipList.counts} />
+                {sipList.filtered.length === 0 ? (
+                  <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '36px 24px', textAlign: 'center', color: MUTED }}>
+                    Nothing {sipList.filter === 'all' ? 'here' : sipList.filter} right now.
+                  </div>
+                ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {requests.map(r => {
+                  {sipList.shown.map((r, idx) => {
                     const s = STATUS_STYLE[r.status];
                     return (
-                      <div key={r.id} style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24, opacity: (r.status === 'declined' || r.status === 'cancelled') ? 0.5 : 1 }}>
+                      <motion.div key={r.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={listItem(idx)}
+                        style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24, opacity: (r.status === 'declined' || r.status === 'cancelled') ? 0.5 : 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 16 }}>{r.mentor ? `${r.mentor.firstName} ${r.mentor.lastName}` : 'Mentor'}</div>
@@ -667,10 +677,13 @@ function SeekersContent() {
                             )}
                           </div>
                         )}
-                      </div>
+                      </motion.div>
                     );
                   })}
                 </div>
+                )}
+                <ShowMore hiddenCount={sipList.hiddenCount} expanded={sipList.expanded} onMore={sipList.showMore} onCollapse={sipList.collapse} />
+                </>
               )}
             </div>
           )}
