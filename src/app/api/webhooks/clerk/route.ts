@@ -9,8 +9,12 @@ import { transporter } from '@/lib/mailer';
 import { verificationCodeEmail } from '@/lib/email-template';
 
 /**
- * Clerk email templates Sip renders and sends itself. Anything not listed stays
- * with Clerk, which is why the dashboard toggle is per template.
+ * Clerk email templates Sip would render and send itself. Anything not listed
+ * stays with Clerk.
+ *
+ * Both of these are currently unreachable. See the email.created branch below:
+ * Clerk will not hand over delivery of either one, so nothing in this list can
+ * fire today.
  */
 const SELF_SENT_EMAIL_SLUGS = ['verification_code', 'reset_password_code'];
 
@@ -48,11 +52,23 @@ export async function POST(req: Request) {
 
   // Clerk emails we render and send ourselves.
   //
-  // Nothing happens here until "Delivered by Clerk" is switched off for the
-  // template in the Clerk dashboard. Until then Clerk still sends its own copy
-  // and delivered_by_clerk is true, so sending here as well would put two codes
-  // in the same inbox. The guard is what makes this safe to deploy ahead of
-  // flipping that switch.
+  // DORMANT, and not because a switch is waiting to be flipped. Clerk refuses to
+  // hand over delivery of any template that carries a credential: on this
+  // instance verification_code, reset_password_code, the magic_link templates
+  // and invitation all report can_toggle:false, while notification templates
+  // like password_changed and new_device_sign_in report true. Same instance,
+  // same plan, so this is policy rather than billing. The reasoning is sound
+  // enough: if this endpoint were down, nobody could sign in.
+  //
+  // So this branch only starts running if Clerk un-gates the instance, which
+  // means a support request rather than a dashboard setting. Separately,
+  // editing the template's own body is gated on the app:custom_email_template
+  // plan feature, so neither route to a branded code email is open right now.
+  //
+  // The guard below is still the thing that makes this safe: while Clerk
+  // delivers, delivered_by_clerk is true and we return without sending, so two
+  // codes can never land in one inbox. If delivery is ever granted, this works
+  // as written with no changes.
   if (evt.type === 'email.created') {
     const email = evt.data;
     const slug = email.slug ?? '';
