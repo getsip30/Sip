@@ -87,7 +87,7 @@ export default function Leaderboard() {
                 style={{ background: i < 3 ? `rgba(${i===0?'245,158,11':i===1?'148,163,184':'205,127,50'},0.06)` : SURFACE, border: `1px solid ${i < 3 ? `rgba(${i===0?'245,158,11':i===1?'148,163,184':'205,127,50'},0.25)` : 'rgba(255,255,255,0.07)'}`, borderRadius: 16, padding: '16px', display: 'flex', alignItems: 'center', gap: 10, transition: 'all 0.2s', cursor: 'default' }}>
 
                 {/* rank */}
-                <div style={{ width: 36, textAlign: 'center', fontSize: i < 3 ? 18 : 14, color: i < 3 ? RANK_COLORS[i] : MUTED, fontWeight: 700, fontFamily: 'Space Mono', flexShrink: 0 }}>
+                <div style={{ width: 36, textAlign: 'center', fontSize: i < 3 ? 18 : 14, color: i < 3 ? RANK_COLORS[i] : MUTED, fontWeight: 700, fontFamily: "var(--font-space-mono), 'Space Mono', monospace", flexShrink: 0 }}>
                   #{i + 1}
                 </div>
 
@@ -115,7 +115,7 @@ export default function Leaderboard() {
 
                 {/* xp + sips */}
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: i === 0 ? '#F59E0B' : LINK, fontFamily: 'Space Mono' }}>{m.xp.toLocaleString()}</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: i === 0 ? '#F59E0B' : LINK, fontFamily: "var(--font-space-mono), 'Space Mono', monospace" }}>{m.xp.toLocaleString()}</div>
                   <div style={{ color: MUTED, fontSize: 12 }}>XP</div>
                   <div style={{ color: '#5BDB8A', fontSize: 12, marginTop: 2 }}>{m.sipCount} sips</div>
                 </div>

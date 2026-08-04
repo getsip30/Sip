@@ -315,7 +315,7 @@ export default function RoomPage() {
   }
 
   return (
-    <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "'Space Grotesk', sans-serif", padding: 'clamp(32px,8vw,80px) 16px' }}>
+    <div style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif", padding: 'clamp(32px,8vw,80px) 16px' }}>
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>{room.title}</h1>
           <p style={{ color: MUTED, fontSize: 14, marginBottom: 32, wordBreak: 'break-word' }}>

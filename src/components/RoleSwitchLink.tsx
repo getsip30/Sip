@@ -38,7 +38,7 @@ export default function RoleSwitchLink({ to, role, label, style }: { to: string;
                 style={{ textAlign: 'center' }}>
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   style={{ width: 32, height: 32, border: `3px solid ${BORDER}`, borderTopColor: LINK, borderRadius: '50%', margin: '0 auto 16px' }} />
-                <div style={{ color: LINK, fontFamily: 'Space Mono', fontSize: 20, fontWeight: 700 }}>
+                <div style={{ color: LINK, fontFamily: "var(--font-space-mono), 'Space Mono', monospace", fontSize: 20, fontWeight: 700 }}>
                   switching to {role}...
                 </div>
               </motion.div>

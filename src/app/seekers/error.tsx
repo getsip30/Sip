@@ -26,7 +26,7 @@ export default function RouteError({ error, reset }: { error: Error & { digest?:
           through the feedback button.
         </p>
         {error.digest && (
-          <p style={{ color: MUTED, fontSize: 12, fontFamily: "'Space Mono', monospace", marginBottom: 22 }}>
+          <p style={{ color: MUTED, fontSize: 12, fontFamily: "var(--font-space-mono), 'Space Mono', monospace", marginBottom: 22 }}>
             Reference: {error.digest}
           </p>
         )}

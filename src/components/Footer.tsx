@@ -83,7 +83,7 @@ export default function Footer() {
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
-          <span style={{ fontFamily: 'Space Mono, monospace', fontSize: 11, color: MUTED }}>
+          <span style={{ fontFamily: "var(--font-space-mono), 'Space Mono', monospace", fontSize: 11, color: MUTED }}>
             Sip {new Date().getFullYear()}
           </span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 22 }}>

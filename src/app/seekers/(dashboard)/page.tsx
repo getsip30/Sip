@@ -315,7 +315,7 @@ function SeekersContent() {
   );
 
   return (
-    <div style={{ fontFamily: "'Space Grotesk', sans-serif", background: BG, minHeight: '100vh', color: TEXT }}>
+    <div style={{ fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif", background: BG, minHeight: '100vh', color: TEXT }}>
 
       <motion.nav initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4 }}
         style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 40px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -691,7 +691,7 @@ function SeekersContent() {
                   { label: 'Pending', value: pending.length, color: '#F59E0B' },
                 ].map(s => (
                   <div key={s.label} style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '20px 24px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: s.color, fontFamily: 'Space Mono' }}>{s.value}</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: s.color, fontFamily: "var(--font-space-mono), 'Space Mono', monospace" }}>{s.value}</div>
                     <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>{s.label}</div>
                   </div>
                 ))}

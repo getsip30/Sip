@@ -7,14 +7,118 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/Logo';
 import PixelAvatarPicker from '@/components/PixelAvatarPicker';
+import { MENTOR_FAQ } from './faq';
 
 const TOPIC_OPTIONS = ['tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'co-op', 'grad school'];
 
+/**
+ * Why this page is split the way it is.
+ *
+ * The whole page used to be one client component wrapped in
+ * `<Suspense fallback={null}>`, because it calls useSearchParams() to read the
+ * `?ref=` referral code. useSearchParams forces its nearest Suspense boundary
+ * to bail out to the fallback during server rendering, and the fallback was
+ * `null` — so the HTML this route served was a complete, valid document with an
+ * entirely empty body. Verified against production: 13KB of framework markup,
+ * zero words of content, no h1.
+ *
+ * That is the worst possible state for a page that is listed in the sitemap and
+ * is one of the two conversion routes on the site. Google indexes the rendered
+ * DOM eventually, but the initial HTML is what it judges first and what every
+ * non-JS crawler and link preview sees, and an empty page has nothing to rank.
+ *
+ * The fix is to shrink the boundary rather than remove it: everything that does
+ * not depend on the query string — nav, heading, the pitch, the FAQ — renders
+ * outside it and is therefore present in the server HTML. Only the form, which
+ * genuinely needs `ref`, sits inside, and it now has a real skeleton for a
+ * fallback instead of nothing.
+ */
 export default function MentorSignupPage() {
   return (
-    <Suspense fallback={null}>
-      <MentorSignup />
-    </Suspense>
+    <div style={{ background: BG, minHeight: '100vh', color: TEXT }}>
+      <motion.nav
+        initial={{ y: -60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.4 }}
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <Logo />
+        <Link href="/dashboard" style={{ color: MUTED, textDecoration: 'none', fontSize: 14 }}>← back to dashboard</Link>
+      </motion.nav>
+
+      <main id="main-content" style={{ maxWidth: 860, margin: '0 auto', padding: '90px 16px 60px' }}>
+        <div style={{ marginBottom: 48 }}>
+          <div
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(112,181,249,0.08)', border: '1px solid rgba(112,181,249,0.2)', padding: '6px 16px', borderRadius: 20, fontSize: 12, color: LINK, marginBottom: 20, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
+            Mentor Signup
+          </div>
+          <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: -2, lineHeight: 1.1, marginBottom: 12 }}>
+            Open Your Door.<br />
+            <span style={{ color: '#70B5F9' }}>Change Someone&apos;s Path.</span>
+          </h1>
+          <p style={{ color: MUTED, fontSize: 15, lineHeight: 1.7 }}>
+            You know something someone needs to hear. List yourself, stay in control, show up when you want to.
+          </p>
+        </div>
+
+        <Suspense fallback={<FormSkeleton />}>
+          <MentorSignup />
+        </Suspense>
+
+        <WhatMentoringInvolves />
+      </main>
+    </div>
+  );
+}
+
+/**
+ * Shown while the form waits on the query string. A skeleton rather than null:
+ * the boundary can still bail during streaming, and a blank region where the
+ * form should be reads as a broken page.
+ */
+function FormSkeleton() {
+  return (
+    <div aria-hidden style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {[1, 2, 3].map(s => <div key={s} style={{ flex: 1, height: 3, borderRadius: 4, background: BORDER }} />)}
+      </div>
+      {[0, 1, 2, 3].map(n => (
+        <div key={n} style={{ height: 46, borderRadius: 10, background: 'rgba(255,255,255,0.04)' }} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Static content below the form.
+ *
+ * Before this, the only words on the page were the heading and a one-line
+ * subhead — under 40 words, which is a thin page by any measure, on the route
+ * that has to convince a working professional to volunteer their time. It also
+ * gave the page nothing to rank for: someone searching "how to become a mentor
+ * for students" was looking at a page that never used those words.
+ *
+ * Every question is one a prospective mentor actually has to resolve before
+ * signing up. They live in ./faq so the layout can emit the same strings as
+ * FAQPage structured data — see the note there.
+ */
+function WhatMentoringInvolves() {
+  return (
+    <section aria-labelledby="mentor-faq-heading" style={{ marginTop: 72, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 48 }}>
+      <h2 id="mentor-faq-heading" style={{ fontSize: 26, fontWeight: 700, letterSpacing: -1, marginBottom: 8 }}>
+        What being a mentor on Sip involves
+      </h2>
+      <p style={{ color: MUTED, fontSize: 15, lineHeight: 1.7, marginBottom: 32 }}>
+        The questions people ask before they list themselves.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        {MENTOR_FAQ.map(item => (
+          <div key={item.q}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{item.q}</h3>
+            <p style={{ color: MUTED, fontSize: 15, lineHeight: 1.75 }}>{item.a}</p>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -83,34 +187,8 @@ function MentorSignup() {
   };
 
   return (
-    <div style={{ background: BG, minHeight: '100vh', color: TEXT }}>
-
-      {/* NAV */}
-      <motion.nav
-        initial={{ y: -60, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.4 }}
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <Logo />
-        <Link href="/dashboard" style={{ color: MUTED, textDecoration: 'none', fontSize: 14 }}>← back to dashboard</Link>
-      </motion.nav>
-
-      <div id="main-content" style={{ maxWidth: 860, margin: '0 auto', padding: '90px 16px 60px' }}>
-
-        {/* HEADER */}
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} style={{ marginBottom: 48 }}>
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(112,181,249,0.08)', border: '1px solid rgba(112,181,249,0.2)', padding: '6px 16px', borderRadius: 20, fontSize: 12, color: LINK, marginBottom: 20, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
-            Mentor Signup
-          </motion.div>
-          <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: -2, lineHeight: 1.1, marginBottom: 12 }}>
-            Open Your Door.<br />
-            <span style={{ color: '#70B5F9' }}>Change Someone&apos;s Path.</span>
-          </h1>
-          <p style={{ color: MUTED, fontSize: 15, lineHeight: 1.7 }}>
-            You know something someone needs to hear. List yourself, stay in control, show up when you want to.
-          </p>
-        </motion.div>
+    <>
+      <div>
 
         {/* STEP PROGRESS */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -291,6 +369,6 @@ function MentorSignup() {
           </AnimatePresence>
         )}
       </div>
-    </div>
+    </>
   );
 }

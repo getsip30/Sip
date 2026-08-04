@@ -47,7 +47,7 @@ export const clerkAppearance = {
     colorSuccess: SIP.success,
     colorDanger: SIP.danger,
     colorModalBackdrop: 'rgba(6,9,15,0.72)',
-    fontFamily: "'Space Grotesk', sans-serif",
+    fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif",
     borderRadius: '10px',
   },
   elements: {

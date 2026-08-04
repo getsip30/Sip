@@ -27,7 +27,7 @@ export function FeedbackWidget() {
   }
 
   return (
-    <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 150, fontFamily: "'Space Grotesk', sans-serif" }}>
+    <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 150, fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif" }}>
       {open ? (
         <div style={{ width: 288, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>

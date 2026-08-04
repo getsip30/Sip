@@ -1,13 +1,18 @@
+import type { Metadata } from 'next';
 import { SignUp } from '@clerk/nextjs';
 import { clerkAppearance } from '@/lib/clerk-appearance';
+import { noIndex } from '@/lib/site';
+
+/** See the note in the sign-in page for why this is not indexed. */
+export const metadata: Metadata = noIndex('Sign up');
 
 export default function SignUpPage() {
   return (
-    <div style={{ background: '#0A0E16', minHeight: '100vh', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', color: '#EDEFF3', fontFamily: 'Space Grotesk, sans-serif' }}>
+    <div style={{ background: '#0A0E16', minHeight: '100vh', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', color: '#EDEFF3', fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif" }}>
 
       {/* LEFT PANEL */}
       <div style={{ flex: 1, minWidth: 340, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '48px 24px', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ fontFamily: 'Space Mono', fontSize: 26, fontWeight: 700, color: '#70B5F9', marginBottom: 48 }}>sip</div>
+        <div style={{ fontFamily: "var(--font-space-mono), 'Space Mono', monospace", fontSize: 26, fontWeight: 700, color: '#70B5F9', marginBottom: 48 }}>sip</div>
         <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: -2, lineHeight: 1.1, marginBottom: 16 }}>
           Open your door.<br />
           <span style={{ color: '#70B5F9' }}>Change someone&apos;s path.</span>

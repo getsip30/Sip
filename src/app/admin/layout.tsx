@@ -1,5 +1,15 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { isAdmin } from '@/lib/admin';
+import { noIndex } from '@/lib/site';
+
+/**
+ * Admin console. The gate below already redirects non-admins, so this is not a
+ * security control — it is to stop the route existing as a search result at
+ * all. Confirming an /admin URL exists is information worth withholding, and it
+ * is the same reasoning as the redirect-instead-of-403 note further down.
+ */
+export const metadata: Metadata = noIndex('Admin');
 
 /**
  * Admin gate.
