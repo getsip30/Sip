@@ -1,14 +1,15 @@
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { requests, mentors, seekers, referralEvents } from '@/db/schema';
+import { requests, mentors } from '@/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { handleApiError } from '@/lib/api-handler';
 import { logSwallowed } from '@/lib/logger';
 import { recordAbuseSignal } from '@/lib/abuse';
-import { escapeHtml, subjectSafe } from '@/lib/utils';
-import { resolveBookingOption, bookingEmailBlock, bookingOptions } from '@/lib/booking';
+import { escapeHtml } from '@/lib/utils';
+import { resolveBookingOption, bookingOptions } from '@/lib/booking';
+import { recordFirstSipBooked, sendAcceptedEmail } from '@/lib/accept';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { isUuid } from '@/lib/validate';
 
@@ -82,45 +83,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }).catch(err => logSwallowed('mentor.avg_response_update_failed', err, { mentorId: mentor.id }));
 
     if (status === 'accepted') {
-      const bookingSeeker = await db.select().from(seekers).where(eq(seekers.email, r.seekerEmail));
-      if (bookingSeeker[0]?.invitedByClerkId) {
-        const alreadyLogged = await db.select().from(referralEvents).where(and(
-          eq(referralEvents.referredClerkId, bookingSeeker[0].clerkId),
-          eq(referralEvents.milestone, 'first_sip_booked')
-        ));
-        if (alreadyLogged.length === 0) {
-          await db.insert(referralEvents).values({
-            referrerClerkId: bookingSeeker[0].invitedByClerkId,
-            referredClerkId: bookingSeeker[0].clerkId,
-            referredRole: 'seeker',
-            milestone: 'first_sip_booked',
-          });
-        }
-      }
-
-      const option = resolveBookingOption(mentor, contactMethod);
-      const contactBlock = option ? bookingEmailBlock(option) : '';
-      const noteBlock = r.mentorNote
-        ? `<div style="background:#161B22;border:1px solid rgba(112,181,249,0.3);border-radius:12px;padding:16px 18px;margin-top:20px;"><p style="color:#8B949E;font-size:12px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Note from ${escapeHtml(mentor.firstName)}</p><p style="color:#E6EDF3;font-size:14px;line-height:1.6;margin:0;">${escapeHtml(r.mentorNote)}</p></div>`
-        : '';
-
-      transporter.sendMail({
-        from: `Sip <${process.env.GMAIL_USER}>`,
-        to: r.seekerEmail,
-        subject: `${subjectSafe(mentor.firstName)} accepted your sip request`,
-        html: `
-          <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;">
-            <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>
-            <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">Your request was accepted</h2>
-            <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;">
-            <strong style="color:#E6EDF3;">${escapeHtml(mentor.firstName)} ${escapeHtml(mentor.lastName)}</strong> (${escapeHtml(mentor.role)} @ ${escapeHtml(mentor.company)}) accepted your sip request.
-            </p>
-            ${contactBlock}
-            ${noteBlock}
-            <p style="color:#8B949E;font-size:13px;margin-top:24px;">Show up curious. That's all they ask.</p>
-          </div>
-        `,
-      }).catch(err => logSwallowed('email.accept_failed', err, { requestId: id }));
+      await recordFirstSipBooked(r.seekerEmail);
+      sendAcceptedEmail({ mentor, request: r, option: resolveBookingOption(mentor, contactMethod) });
     }
 
     if (status === 'declined') {

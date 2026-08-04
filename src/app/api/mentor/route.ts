@@ -6,6 +6,7 @@ import { NextResponse, after } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { generateUniqueReferralCode } from '@/lib/referral';
 import { publicMentor } from '@/lib/mentor';
+import { bookingOptions } from '@/lib/booking';
 import { escapeHtml, safeExternalUrl } from '@/lib/utils';
 import { mutationLimiter, limitKey } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
@@ -168,20 +169,53 @@ export async function GET(req: Request) {
   return NextResponse.json({ ...m, referrerName }, { status: 200 });
 }
 
+/**
+ * Toggles on the mentor's own row. Deliberately narrow: this endpoint takes only
+ * the two switches the dashboard flips, so a wider body cannot reach profile
+ * fields that POST validates and this route does not.
+ */
 export async function PATCH(req: Request) {
   try {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Was unlimited, unlike every other mutation. Each open toggle can fan out
+  // into a batch of "new mentor for you" emails, so it is not a cheap write.
+  const { success } = await mutationLimiter.limit(userId);
+  if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
   const existing = await db.select().from(mentors).where(eq(mentors.clerkId, userId));
   if (!existing[0]) return NextResponse.json({ error: 'No mentor profile' }, { status: 404 });
   if (existing[0].banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
   const wasOpen = existing[0].isOpen;
 
-  const { isOpen } = await req.json();
-  if (typeof isOpen !== 'boolean') return NextResponse.json({ error: 'isOpen must be true or false' }, { status: 400 });
+  const { isOpen, autoAccept } = await req.json();
+  if (isOpen !== undefined && typeof isOpen !== 'boolean') {
+    return NextResponse.json({ error: 'isOpen must be true or false' }, { status: 400 });
+  }
+  if (autoAccept !== undefined && typeof autoAccept !== 'boolean') {
+    return NextResponse.json({ error: 'autoAccept must be true or false' }, { status: 400 });
+  }
+  if (isOpen === undefined && autoAccept === undefined) {
+    return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+  }
 
-  const updated = await db.update(mentors).set({ isOpen }).where(eq(mentors.clerkId, userId)).returning();
+  // Turning auto-accept on releases a booking link to whoever asks next, so
+  // there has to be one. Refusing here rather than silently accepting the
+  // setting keeps the dashboard from showing "on" for something that would
+  // quietly fall back to the pending flow on every request.
+  if (autoAccept === true && bookingOptions(existing[0]).length === 0) {
+    return NextResponse.json(
+      { error: 'Add a booking link or contact email before turning on auto-accept.' },
+      { status: 400 }
+    );
+  }
+
+  const patch: Partial<typeof mentors.$inferInsert> = {};
+  if (isOpen !== undefined) patch.isOpen = isOpen;
+  if (autoAccept !== undefined) patch.autoAccept = autoAccept;
+
+  const updated = await db.update(mentors).set(patch).where(eq(mentors.clerkId, userId)).returning();
   if (!updated[0]) return NextResponse.json({ error: 'No mentor profile' }, { status: 404 });
 
   const COOLDOWN_MS = 60 * 60 * 1000;

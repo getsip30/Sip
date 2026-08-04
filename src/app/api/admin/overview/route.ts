@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { adminLimiter, limitKey, tooManyRequests } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
 import { isAdmin } from '@/lib/admin';
+import { badgesForMentors } from '@/lib/badges';
 
 export async function GET(req: Request) {
   try {
@@ -30,6 +31,9 @@ export async function GET(req: Request) {
 
     const liveRooms = allRooms.filter(r => r.status === 'live');
 
+    // One grouped query for the whole page rather than one per mentor row.
+    const badgesByMentor = await badgesForMentors(allMentors.map(m => m.id));
+
     const stats = {
       totalMentors: allMentors.length,
       bannedMentors: allMentors.filter(m => m.banned).length,
@@ -53,11 +57,16 @@ export async function GET(req: Request) {
       totalReferralConversions: allReferrals.filter(r => r.milestone === 'first_sip_booked').length,
       totalFollows: allFollows.length,
       totalConsents: allConsents.length,
+      totalBadges: Object.values(badgesByMentor).reduce((sum, list) => sum + list.length, 0),
+      autoAcceptMentors: allMentors.filter(m => m.autoAccept).length,
     };
 
     return NextResponse.json({
       stats,
-      mentors: allMentors,
+      mentors: allMentors.map(m => ({
+        ...m,
+        badgeTypes: (badgesByMentor[m.id] ?? []).map(b => b.badgeType),
+      })),
       seekers: allSeekers,
       rooms: allRooms,
       requests: recentRequests,

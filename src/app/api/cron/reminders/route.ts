@@ -7,6 +7,7 @@ import { transporter } from '@/lib/mailer';
 import { escapeHtml } from '@/lib/utils';
 import { logSwallowed } from '@/lib/logger';
 import { NUDGE_QUERIES, claimNudge, nudgeEmail, type NudgeKind, type NudgeRow } from '@/lib/nudges';
+import { awardBadgesQuietly } from '@/lib/badges';
 
 type Row = {
   id: string; seeker_email: string; seeker_name: string; scheduled_at: string;
@@ -62,7 +63,11 @@ export async function GET(req: Request) {
   `);
 
   const completedRows = eligible.rows as { id: string; mentor_id: string }[];
+  // Legacy CSV milestones on mentors.badges. Still written because the
+  // leaderboard reads that column; the badges table below is what the profile,
+  // the dashboard and the certificates use.
   const milestones: [number, string][] = [[1, 'first-sip'], [5, 'regular'], [10, 'veteran'], [25, 'legend'], [50, 'goat']];
+  let badgesAwarded = 0;
 
   for (const row of completedRows) {
     const claimed = await db.update(requests)
@@ -85,6 +90,12 @@ export async function GET(req: Request) {
     if (newBadges.length !== existingBadges.length) {
       await db.update(mentors).set({ badges: newBadges.join(',') }).where(eq(mentors.id, row.mentor_id));
     }
+
+    // Runs after the sip count is committed, so it sees the fresh total. Swallows
+    // its own failures: a badge that does not get written is picked up by the
+    // next completed sip, whereas throwing here would abandon the mentors still
+    // queued behind this one.
+    badgesAwarded += (await awardBadgesQuietly(row.mentor_id)).length;
   }
 
   // Outstanding-action nudges. Folded into this cron rather than given their own
@@ -115,5 +126,5 @@ export async function GET(req: Request) {
     nudgeCounts[kind] = sentForKind;
   }
 
-  return NextResponse.json({ due: due.rows.length, sent, sipsCompleted: completedRows.length, nudges: nudgeCounts });
+  return NextResponse.json({ due: due.rows.length, sent, sipsCompleted: completedRows.length, badgesAwarded, nudges: nudgeCounts });
 }

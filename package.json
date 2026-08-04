@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "seed": "npx tsx --env-file=.env.local src/db/seed.ts",
+    "db:backfill-badges": "npx tsx --env-file=.env.local src/db/backfill-badges.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },

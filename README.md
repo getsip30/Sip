@@ -21,7 +21,8 @@ getsip.co
 - **Sip requests** — seekers send a short message to an open mentor; mentors accept/decline from a dashboard, triggering emailed responses either way.
 - **Quick Asks** — a lightweight alternative to a full request, capped at 2 questions per mentor per week to prevent spam, with AI-moderated content before delivery.
 - **Sip Notes** — seekers can leave a note on a mentor's public profile after a completed sip, but only if a prior accepted request between that email and mentor exists (prevents fake testimonials).
-- **XP / badges / leaderboard** — mentors earn XP and unlock badges (first-sip, regular, veteran, legend, GOAT) based on sip count.
+- **XP / badges / leaderboard** — mentors earn XP and unlock badges based on sip count. Badges live in their own table (`founding_mentor`, `first_sip`, `five_sips`, `ten_sips`, `super_mentor`), are awarded idempotently after each completed sip, and each one comes with a branded certificate image generated on the fly with `next/og` that the mentor can download or share to LinkedIn. The older CSV column on `mentors.badges` still backs the leaderboard and is left in place.
+- **Auto-accept** — a mentor can opt in to having incoming requests confirmed on arrival, which sends their Calendly/Google Calendar link straight to the seeker so the booking lands on their calendar without them opening the site. Off by default, refused if there is no booking method on file, and skipped for seekers with open flags. Auto-accepted sips stay cancellable from the dashboard.
 - **Referral chain tracking** — tracks who invited whom and whether the invite converted into an actual booked sip.
 - **Live rooms** — mentors can spin up an instant video room; stale rooms auto-expire server-side.
 - **Automated re-engagement** — a cron job emails seekers who've gone quiet for two weeks.
@@ -36,6 +37,21 @@ npm run db:generate   # writes a numbered SQL file into drizzle/ and updates the
 # 2. read the generated SQL before running it
 npm run db:migrate    # applies anything not yet recorded in drizzle.__drizzle_migrations
 ```
+
+### One-off backfills
+
+`0017` adds the badges table. Existing mentors hold nothing in it until the
+backfill runs, which awards Founding Mentor to everyone who signed up before the
+cutoff and fills in the sip-count badges their existing totals already earn:
+
+```bash
+npm run db:backfill-badges   # run once, after db:migrate
+```
+
+It is idempotent — the unique index on `(mentor_id, badge_type)` means a second
+run inserts nothing — and it marks what it awards as already seen, so nobody is
+met with a stack of celebration modals for badges they have effectively held for
+months.
 
 `migrate` decides what to run by comparing each journal entry's `when` against
 the newest `created_at` in `drizzle.__drizzle_migrations`, so the numbered files

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUser, SignOutButton } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -15,13 +15,17 @@ import RoleSwitchLink from '@/components/RoleSwitchLink';
 import AppTour, { TourStep } from '@/components/AppTour';
 import PixelAvatar from '@/components/PixelAvatar';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import BadgeCelebration from '@/components/BadgeCelebration';
+import { OwnBadgePill } from '@/components/BadgePill';
+import { SIP_MILESTONES, type BadgeType } from '@/lib/badge-meta';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, SUCCESS2, WARNING, DANGER, CLAY } from '@/lib/theme';
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
   bio: string; topics: string; calendarLink: string | null; googleCalendarLink: string | null; contactEmail: string | null; availability: string;
-  isOpen: boolean; xp: number; sipCount: number; badges: string; referrerName?: string | null; avatarData?: string;
+  isOpen: boolean; autoAccept: boolean; xp: number; sipCount: number; badges: string; referrerName?: string | null; avatarData?: string;
 };
+type EarnedBadge = { badgeType: BadgeType; awardedAt: string; seen: boolean };
 type Request = {
   id: string; seekerName: string; seekerEmail: string; message: string; status: string; createdAt: string;
   seekerLinkedin?: string; seekerConsentToShow: boolean; mentorConsentToShow: boolean;
@@ -40,14 +44,6 @@ type SipNote = {
 type SessionNote = {
   id: string; sessionId: string | null; seekerClerkId: string; seekerName: string;
   sessionDate: string; noteText: string; createdAt: string;
-};
-
-const BADGE_META: Record<string, { label: string; color: string }> = {
-  'first-sip': { label: 'First Sip', color: '#D97706' },
-  'regular':   { label: 'Regular',   color: '#DC2626' },
-  'veteran':   { label: 'Veteran',   color: CLAY },
-  'legend':    { label: 'Legend',    color: '#0891B2' },
-  'goat':      { label: 'GOAT',      color: '#059669' },
 };
 
 const MENTOR_TOUR_STEPS: TourStep[] = [
@@ -80,6 +76,17 @@ export default function Dashboard() {
   const [submittingAnswer, setSubmittingAnswer] = useState<string | null>(null);
   const [loadingMentor, setLoadingMentor] = useState(true);
   const [togglingOpen, setTogglingOpen] = useState(false);
+  const [badges, setBadges] = useState<EarnedBadge[]>([]);
+  const [celebrating, setCelebrating] = useState<BadgeType | null>(null);
+  const [togglingAutoAccept, setTogglingAutoAccept] = useState(false);
+  const [autoAcceptError, setAutoAcceptError] = useState('');
+  /**
+   * Badges dismissed in this tab. The live refresh re-reads badges every few
+   * seconds, and without this a mentor who closes the modal would have it thrown
+   * straight back at them by the next poll that lands before the "mark seen"
+   * write does.
+   */
+  const dismissedBadges = useRef<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
   const [refCopied, setRefCopied] = useState(false);
   const [referrals, setReferrals] = useState<{ referralCode: string | null; totalInvites: number; totalConverted: number } | null>(null);
@@ -175,6 +182,17 @@ export default function Dashboard() {
       if (liveNotesRes.ok) setLiveNotes(await liveNotesRes.json());
       const sessionNotesRes = await fetch('/api/session-notes');
       if (sessionNotesRes.ok) setSessionNotes(await sessionNotesRes.json());
+      const badgesRes = await fetch('/api/badges');
+      if (badgesRes.ok) {
+        const earned: EarnedBadge[] = await badgesRes.json();
+        setBadges(earned);
+        // Badges are awarded by the nightly sip-completion job, not by anything
+        // this tab did, so the only way a mentor finds out is by being told on
+        // the next load. Highest-prestige unseen one first — if a single run
+        // pushed them past two milestones, celebrate the bigger one.
+        const unseen = earned.find(b => !b.seen && !dismissedBadges.current.has(b.badgeType));
+        if (unseen) setCelebrating(unseen.badgeType);
+      }
     }
     if (rRes.ok) setRequests(await rRes.json());
     if (aRes.ok) setAsks(await aRes.json());
@@ -289,6 +307,35 @@ export default function Dashboard() {
     setTogglingOpen(false);
   }
 
+  async function toggleAutoAccept() {
+    if (!mentor) return;
+    setTogglingAutoAccept(true);
+    setAutoAcceptError('');
+    const res = await fetch('/api/mentor', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ autoAccept: !mentor.autoAccept }),
+    });
+    const data = await res.json().catch(() => null);
+    // The server refuses to switch this on without a booking method, since an
+    // auto-accept with nothing to send would be a yes the seeker cannot act on.
+    if (res.ok) setMentor(data);
+    else setAutoAcceptError(data?.error || 'Could not change that setting.');
+    setTogglingAutoAccept(false);
+  }
+
+  /** Closing the modal is what marks the badge seen, so it shows exactly once. */
+  async function dismissBadge() {
+    const badgeType = celebrating;
+    setCelebrating(null);
+    if (!badgeType) return;
+    dismissedBadges.current.add(badgeType);
+    setBadges(prev => prev.map(b => b.badgeType === badgeType ? { ...b, seen: true } : b));
+    await fetch('/api/badges', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ badgeTypes: [badgeType] }),
+    }).catch(() => {});
+  }
+
   // A 1:1 the mentor sent from a live room is not something they act on, so it
   // is pulled out of Incoming Sips while it waits. Anything already answered
   // stays in the main list, which is where the consent, cancel and feedback
@@ -304,9 +351,12 @@ export default function Dashboard() {
     </div>
   );
 
-  const earnedBadges = mentor?.badges ? mentor.badges.split(',').filter(Boolean) : [];
-  const nextMilestone = mentor ? (mentor.sipCount < 1 ? 1 : mentor.sipCount < 5 ? 5 : mentor.sipCount < 10 ? 10 : mentor.sipCount < 25 ? 25 : 50) : 1;
-  const progressPct = mentor ? Math.min((mentor.sipCount / nextMilestone) * 100, 100) : 0;
+  // Read off the same milestone table the awarding uses, so the bar cannot
+  // promise a badge at a count that no longer earns one.
+  const sipCount = mentor?.sipCount ?? 0;
+  const nextMilestone = SIP_MILESTONES.find(([threshold]) => sipCount < threshold)?.[0]
+    ?? SIP_MILESTONES[SIP_MILESTONES.length - 1][0];
+  const progressPct = Math.min((sipCount / nextMilestone) * 100, 100);
 
   return (
     <div style={{ background: BG, minHeight: '100vh', color: TEXT }}>
@@ -321,6 +371,15 @@ export default function Dashboard() {
       />
 
       <AppTour steps={MENTOR_TOUR_STEPS} open={showTour} onClose={() => setShowTour(false)} />
+
+      {mentor && (
+        <BadgeCelebration
+          mentorId={mentor.id}
+          badgeType={celebrating}
+          open={!!celebrating}
+          onClose={dismissBadge}
+        />
+      )}
 
       <AnimatePresence>
         {choosingContactFor && (
@@ -896,20 +955,65 @@ export default function Dashboard() {
                   <motion.div initial={{ width: 0 }} animate={{ width: `${progressPct}%` }} transition={{ duration: 1, delay: 0.5, ease: 'easeOut' }}
                     style={{ height: '100%', background: ACCENT, borderRadius: 8 }} />
                 </div>
-                {earnedBadges.length > 0 ? (
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    {earnedBadges.map(b => (
-                      <motion.div key={b} whileHover={{ scale: 1.05 }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 14 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: BADGE_META[b]?.color, display: 'inline-block' }} />
-                        <span style={{ fontSize: 13, color: TEXT }}>{BADGE_META[b]?.label}</span>
-                      </motion.div>
-                    ))}
-                  </div>
+                {badges.length > 0 ? (
+                  <>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      {badges.map(b => (
+                        <OwnBadgePill key={b.badgeType} mentorId={mentor.id} badgeType={b.badgeType} />
+                      ))}
+                    </div>
+                    <p style={{ color: MUTED, fontSize: 12, marginTop: 12, marginBottom: 0 }}>
+                      Tap a badge for its certificate — yours to download or post.
+                    </p>
+                  </>
                 ) : (
                   <p style={{ color: MUTED, fontSize: 13 }}>No badges yet. Completing your first sip earns you the First Sip badge.</p>
                 )}
               </motion.div>
+
+              {/* SETTINGS: AUTO-ACCEPT */}
+              {(() => {
+                const canAutoAccept = bookingOptions(mentor).length > 0;
+                return (
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
+                    style={{ background: SURFACE, border: `1px solid ${mentor.autoAccept ? 'rgba(82,189,194,0.3)' : BORDER}`, borderRadius: 16, padding: '20px 28px', marginBottom: 32 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, marginBottom: 4 }}>Auto-accept session requests</div>
+                        <div style={{ color: MUTED, fontSize: 13, lineHeight: 1.5 }}>
+                          {canAutoAccept
+                            ? 'New requests are confirmed the moment they arrive and your booking link goes straight out, so people can book onto your calendar without waiting on you.'
+                            : 'Add a booking link or contact email to your profile first — auto-accept needs something to send.'}
+                        </div>
+                      </div>
+                      <motion.button whileHover={canAutoAccept ? { scale: 1.04 } : undefined} whileTap={canAutoAccept ? { scale: 0.97 } : undefined}
+                        onClick={toggleAutoAccept} disabled={togglingAutoAccept || !canAutoAccept}
+                        role="switch" aria-checked={mentor.autoAccept} aria-label="Auto-accept session requests"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
+                          background: mentor.autoAccept ? 'rgba(82,189,194,0.14)' : 'rgba(139,148,158,0.1)',
+                          border: `1px solid ${mentor.autoAccept ? 'rgba(82,189,194,0.4)' : 'rgba(139,148,158,0.2)'}`,
+                          color: mentor.autoAccept ? '#52bdc2' : MUTED,
+                          padding: '10px 20px', borderRadius: 24, fontSize: 14, fontWeight: 600,
+                          cursor: (togglingAutoAccept || !canAutoAccept) ? 'not-allowed' : 'pointer',
+                          opacity: canAutoAccept ? 1 : 0.55,
+                          fontFamily: 'inherit', transition: 'all 0.25s',
+                        }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: mentor.autoAccept ? '#52bdc2' : MUTED, display: 'inline-block' }} />
+                        {togglingAutoAccept ? '...' : mentor.autoAccept ? 'on' : 'off'}
+                      </motion.button>
+                    </div>
+                    {mentor.autoAccept && (
+                      <div style={{ color: MUTED, fontSize: 12, marginTop: 12, borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}>
+                        Auto-accepted sips still show up in Incoming Sips, and you can cancel any of them from there.
+                      </div>
+                    )}
+                    {autoAcceptError && (
+                      <div style={{ color: WARNING, fontSize: 12.5, marginTop: 10 }}>{autoAcceptError}</div>
+                    )}
+                  </motion.div>
+                );
+              })()}
 
               {/* SHARE LINK */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
