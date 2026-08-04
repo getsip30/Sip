@@ -6,19 +6,19 @@ import { motion } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
 import Logo from '@/components/Logo';
 import PixelAvatar from '@/components/PixelAvatar';
+import BadgePill from '@/components/BadgePill';
+import { BADGE_META, BADGE_TYPES, byPrestige, type BadgeType } from '@/lib/badge-meta';
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
-  xp: number; sipCount: number; badges: string; isOpen: boolean; avatarData?: string;
+  xp: number; sipCount: number; isOpen: boolean; avatarData?: string;
+  /** From the badges table, prestige order. Replaced the legacy CSV column. */
+  badgeTypes?: BadgeType[];
 };
 
-const BADGE_META: Record<string, { label: string; color: string }> = {
-  'first-sip':  { label: 'First Sip',  color: '#D97706' },
-  'regular':    { label: 'Regular',    color: '#DC2626' },
-  'veteran':    { label: 'Veteran',    color: CLAY },
-  'legend':     { label: 'Legend',     color: '#0891B2' },
-  'goat':       { label: 'GOAT',       color: '#059669' },
-};
+// The legend, highest prestige first, so it reads in the same order as the
+// pills on a mentor's row.
+const LEGEND = byPrestige(BADGE_TYPES.map(badgeType => ({ badgeType })));
 
 const AVATARS = [ACCENT, CLAY, '#059669', '#DC2626', '#D97706', '#0891B2'];
 const RANK_COLORS = ['#F59E0B', '#94A3B8', '#CD7F32'];
@@ -58,12 +58,16 @@ export default function Leaderboard() {
         {/* XP LEGEND */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
           style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 48 }}>
-          {Object.entries(BADGE_META).map(([key, b]) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, background: SURFACE, border: `1px solid ${b.color}40`, padding: '8px 16px', borderRadius: 20 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: b.color }} />
-              <span style={{ fontSize: 13, color: MUTED }}>{b.label}</span>
-            </div>
-          ))}
+          {LEGEND.map(({ badgeType }) => {
+            const b = BADGE_META[badgeType];
+            return (
+              <div key={badgeType} title={b.criteria}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: SURFACE, border: `1px solid ${b.color}40`, padding: '8px 16px', borderRadius: 20 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: b.color }} />
+                <span style={{ fontSize: 13, color: MUTED }}>{b.label}</span>
+              </div>
+            );
+          })}
         </motion.div>
 
         {/* LIST */}
@@ -102,12 +106,10 @@ export default function Leaderboard() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 2 }}>{m.firstName} {m.lastName}</div>
                   <div style={{ color: MUTED, fontSize: 13 }}>{m.role} @ {m.company}</div>
-                  {m.badges && (
+                  {(m.badgeTypes?.length ?? 0) > 0 && (
                     <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                      {m.badges.split(',').filter(Boolean).map(b => (
-                        <span key={b} style={{ fontSize: 11, padding: '2px 10px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BADGE_META[b]?.color}40`, color: '#EDEFF3' }}>
-                          {BADGE_META[b]?.label}
-                        </span>
+                      {m.badgeTypes!.map(b => (
+                        <BadgePill key={b} badgeType={b} size="sm" />
                       ))}
                     </div>
                   )}

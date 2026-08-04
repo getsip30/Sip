@@ -23,7 +23,7 @@ import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, SUCCESS2, WARNING, DANG
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
   bio: string; topics: string; calendarLink: string | null; googleCalendarLink: string | null; contactEmail: string | null; availability: string;
-  isOpen: boolean; autoAccept: boolean; xp: number; sipCount: number; badges: string; referrerName?: string | null; avatarData?: string;
+  isOpen: boolean; autoAccept: boolean; xp: number; sipCount: number; referrerName?: string | null; avatarData?: string;
 };
 type EarnedBadge = { badgeType: BadgeType; awardedAt: string; seen: boolean };
 type Request = {

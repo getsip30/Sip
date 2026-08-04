@@ -37,10 +37,21 @@ export const mentors = pgTable('mentors', {
   xp: integer('xp').default(0).notNull(),
   sipCount: integer('sip_count').default(0).notNull(),
   /**
-   * Legacy CSV of badge slugs ('first-sip,regular,...'), still written by the
-   * sip-completion cron and still read by the leaderboard. The mentorBadges
-   * table below is the system of record for everything added since; this column
-   * is left alone rather than migrated so no existing surface changes.
+   * @deprecated Legacy CSV of badge slugs ('first-sip,regular,...'). The
+   * mentorBadges table is the single source of truth for badges; nothing reads
+   * this column any more.
+   *
+   * It is still WRITTEN by the sip-completion cron, on purpose, for one release
+   * cycle. The column has existed for months and the cost of keeping a shadow
+   * write is one UPDATE on a path that already runs several; the cost of being
+   * wrong about the last reader is a mentor's badges silently vanishing. Once
+   * the cycle is up, drop in this order: the write in the reminders cron, the
+   * mapping in @/lib/badge-legacy, then the column.
+   *
+   * Do not add readers. The thresholds here have already diverged from the real
+   * ones — 'legend' (25) and 'goat' (50) have no equivalent in mentorBadges and
+   * both collapse into super_mentor (20) — so this column can disagree with the
+   * badges a mentor actually holds.
    */
   badges: text('badges').default('').notNull(),
   avatarData: text('avatar_data'),

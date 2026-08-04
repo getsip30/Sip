@@ -14,7 +14,7 @@ type EarnedBadge = { badgeType: BadgeType; awardedAt: string };
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
-  bio: string; topics: string; availability: string; isOpen: boolean; xp: number; sipCount: number; badges: string;
+  bio: string; topics: string; availability: string; isOpen: boolean; xp: number; sipCount: number;
   linkedin?: string; showLinkedin?: boolean; avgResponseMinutes?: number | null; avatarData?: string;
 };
 

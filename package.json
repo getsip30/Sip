@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "seed": "npx tsx --env-file=.env.local src/db/seed.ts",
     "db:backfill-badges": "npx tsx --env-file=.env.local src/db/backfill-badges.ts",
+    "db:backfill-legacy-badges": "npx tsx --env-file=.env.local src/db/backfill-legacy-badges.ts",
+    "db:compare-badges": "npx tsx --env-file=.env.local src/db/compare-badge-systems.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },

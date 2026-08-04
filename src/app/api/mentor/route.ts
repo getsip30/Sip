@@ -6,6 +6,7 @@ import { NextResponse, after } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { generateUniqueReferralCode } from '@/lib/referral';
 import { publicMentor } from '@/lib/mentor';
+import { badgesForMentors } from '@/lib/badges';
 import { bookingOptions } from '@/lib/booking';
 import { escapeHtml, safeExternalUrl } from '@/lib/utils';
 import { mutationLimiter, limitKey } from '@/lib/ratelimit';
@@ -144,7 +145,13 @@ export async function GET(req: Request) {
 
   if (leaderboard === 'true') {
     const result = await db.select().from(mentors).where(eq(mentors.banned, false)).orderBy(desc(mentors.xp)).limit(10);
-    return NextResponse.json(result.map(publicMentor));
+    // Badges come from the badges table, not the legacy CSV on the row. One
+    // grouped query for all ten rather than one per mentor.
+    const badgesByMentor = await badgesForMentors(result.map(m => m.id));
+    return NextResponse.json(result.map(m => ({
+      ...publicMentor(m),
+      badgeTypes: (badgesByMentor[m.id] ?? []).map(b => b.badgeType),
+    })));
   }
 
   if (all === 'true') {

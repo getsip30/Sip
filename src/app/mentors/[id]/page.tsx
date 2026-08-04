@@ -90,7 +90,6 @@ export default async function MentorProfilePage({ params }: MentorPageProps) {
         isOpen: safe.isOpen,
         xp: safe.xp,
         sipCount: safe.sipCount,
-        badges: safe.badges,
         linkedin: safe.linkedin ?? undefined,
         showLinkedin: safe.showLinkedin,
         avgResponseMinutes: safe.avgResponseMinutes,
