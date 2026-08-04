@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
+import { BADGE_META, type BadgeType } from '@/lib/badge-meta';
 
 type Flag = {
   id: string; roomId: string; reporterClerkId: string; reporterRole: string;
@@ -8,7 +9,9 @@ type Flag = {
 };
 type Mentor = {
   id: string; firstName: string; lastName: string; email: string; role: string; company: string;
-  isOpen: boolean; xp: number; sipCount: number; banned: boolean; createdAt: string;
+  isOpen: boolean; autoAccept: boolean; xp: number; sipCount: number; banned: boolean; createdAt: string;
+  /** Prestige order, from the badges table. */
+  badgeTypes: BadgeType[];
 };
 type Seeker = {
   id: string; firstName: string; lastName: string; email: string;
@@ -36,6 +39,7 @@ type Overview = {
     scheduledSips: number; cancelledSips: number; avgRating: number | null;
     totalAsks: number; pendingAsks: number; totalNotes: number;
     totalReferralSignups: number; totalReferralConversions: number; totalFollows: number; totalConsents: number;
+    totalBadges: number; autoAcceptMentors: number;
   };
   mentors: Mentor[]; seekers: Seeker[]; rooms: Room[]; requests: Req[]; feedback: FeedbackEntry[];
   asks: Ask[]; notes: Note[]; referrals: Referral[]; follows: Follow[]; consents: Consent[];
@@ -134,6 +138,7 @@ export default function AdminPage() {
               ['Avg rating', s.avgRating ?? '—'], ['Asks', s.totalAsks], ['Pending asks', s.pendingAsks],
               ['Notes', s.totalNotes], ['Referral signups', s.totalReferralSignups], ['Referral conversions', s.totalReferralConversions],
               ['Follows', s.totalFollows], ['Consents logged', s.totalConsents],
+              ['Badges awarded', s.totalBadges], ['Auto-accept on', s.autoAcceptMentors],
             ].map(([label, val]) => (
               <div key={label as string} style={card}>
                 <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 6 }}>{label}</div>
@@ -184,7 +189,16 @@ export default function AdminPage() {
               <div key={m.id} style={{ ...card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, flexWrap: 'wrap', gap: 10 }}>
                 <div>
                   <div style={{ fontWeight: 600 }}>{m.firstName} {m.lastName} <span style={{ color: '#8A93A3', fontWeight: 400 }}>· {m.role} @ {m.company}</span></div>
-                  <div style={{ fontSize: 12, color: '#8A93A3' }}>{m.email} · xp {m.xp} · {m.sipCount} sips · {m.isOpen ? 'open' : 'closed'}{m.banned ? ' · BANNED' : ''}</div>
+                  <div style={{ fontSize: 12, color: '#8A93A3' }}>{m.email} · xp {m.xp} · {m.sipCount} sips · {m.isOpen ? 'open' : 'closed'}{m.autoAccept ? ' · auto-accept' : ''}{m.banned ? ' · BANNED' : ''}</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6, fontSize: 11, color: '#8A93A3' }}>
+                    <span style={{ alignSelf: 'center' }}>badges:</span>
+                    {(m.badgeTypes ?? []).length === 0 ? <span style={{ alignSelf: 'center' }}>none</span> : m.badgeTypes.map(b => (
+                      <span key={b} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '2px 9px', color: '#EDEFF3' }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: BADGE_META[b]?.color, display: 'inline-block' }} />
+                        {BADGE_META[b]?.label ?? b}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 <button onClick={() => toggleBan('mentors', m.id, m.banned)}
                   style={{ ...btn, background: m.banned ? 'rgba(34,197,94,0.15)' : 'rgba(220,38,38,0.15)', borderColor: m.banned ? 'rgba(34,197,94,0.3)' : 'rgba(220,38,38,0.3)', color: m.banned ? '#4ADE80' : '#F87171' }}>

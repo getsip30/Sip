@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { mentors, sipNotes } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { publicMentor } from '@/lib/mentor';
+import { badgesForMentor } from '@/lib/badges';
 import { isUuid } from '@/lib/validate';
 import MentorProfileClient from './MentorProfileClient';
 
@@ -72,7 +73,7 @@ export default async function MentorProfilePage({ params }: MentorPageProps) {
   // meant a profile removed for conduct reasons stayed indexable.
   if (!mentor || mentor.banned) notFound();
 
-  const [notes] = await Promise.all([getNotes(mentor.id)]);
+  const [notes, badges] = await Promise.all([getNotes(mentor.id), badgesForMentor(mentor.id)]);
   const safe = publicMentor(mentor);
 
   return (
@@ -89,7 +90,6 @@ export default async function MentorProfilePage({ params }: MentorPageProps) {
         isOpen: safe.isOpen,
         xp: safe.xp,
         sipCount: safe.sipCount,
-        badges: safe.badges,
         linkedin: safe.linkedin ?? undefined,
         showLinkedin: safe.showLinkedin,
         avgResponseMinutes: safe.avgResponseMinutes,
@@ -101,6 +101,7 @@ export default async function MentorProfilePage({ params }: MentorPageProps) {
         note: n.note,
         createdAt: n.createdAt.toISOString(),
       }))}
+      badges={badges.map(b => ({ badgeType: b.badgeType, awardedAt: b.awardedAt.toISOString() }))}
     />
   );
 }

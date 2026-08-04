@@ -23,6 +23,12 @@ export function publicMentor(m: typeof mentors.$inferSelect) {
     isOpen: m.isOpen,
     xp: m.xp,
     sipCount: m.sipCount,
+    /**
+     * @deprecated The legacy CSV column. Badges now come from the badges table
+     * (see badgesForMentor / badgesForMentors); no caller in this repo reads
+     * this field. Kept on the payload for one release cycle only, alongside the
+     * column itself, so an unknown consumer does not break mid-deprecation.
+     */
     badges: m.badges,
     avatarData: m.avatarData,
     avgResponseMinutes: m.avgResponseMinutes,

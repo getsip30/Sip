@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, uuid, integer, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, text, timestamp, boolean, uuid, integer, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const referralEvents = pgTable('referral_events', {
@@ -27,9 +27,32 @@ export const mentors = pgTable('mentors', {
   availability: text('availability').notNull(),
   linkedin: text('linkedin'),
   showLinkedin: boolean('show_linkedin').default(false).notNull(),
-  isOpen: boolean('is_open').default(true).notNull(),   
+  isOpen: boolean('is_open').default(true).notNull(),
+  /**
+   * Skip the manual accept step: an incoming request is confirmed on arrival and
+   * the seeker is sent the mentor's booking link straight away. Opt-in, because
+   * turning it on releases the mentor's contact method to anyone who asks.
+   */
+  autoAccept: boolean('auto_accept').default(false).notNull(),
   xp: integer('xp').default(0).notNull(),
   sipCount: integer('sip_count').default(0).notNull(),
+  /**
+   * @deprecated Legacy CSV of badge slugs ('first-sip,regular,...'). The
+   * mentorBadges table is the single source of truth for badges; nothing reads
+   * this column any more.
+   *
+   * It is still WRITTEN by the sip-completion cron, on purpose, for one release
+   * cycle. The column has existed for months and the cost of keeping a shadow
+   * write is one UPDATE on a path that already runs several; the cost of being
+   * wrong about the last reader is a mentor's badges silently vanishing. Once
+   * the cycle is up, drop in this order: the write in the reminders cron, the
+   * mapping in @/lib/badge-legacy, then the column.
+   *
+   * Do not add readers. The thresholds here have already diverged from the real
+   * ones — 'legend' (25) and 'goat' (50) have no equivalent in mentorBadges and
+   * both collapse into super_mentor (20) — so this column can disagree with the
+   * badges a mentor actually holds.
+   */
   badges: text('badges').default('').notNull(),
   avatarData: text('avatar_data'),
   avgResponseMinutes: integer('avg_response_minutes'),
@@ -60,6 +83,51 @@ export const seekers = pgTable('seekers', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   banned: boolean('banned').default(false).notNull(),
 });
+
+/**
+ * The badge kinds a mentor can hold. A real Postgres enum rather than free text:
+ * a badge type reaches the certificate renderer and the public profile, and the
+ * set is small and closed, so the database refusing an unknown value is worth
+ * the migration cost of adding one later (`ALTER TYPE ... ADD VALUE`).
+ */
+// Kept as a literal rather than imported from '@/lib/badge-meta', because
+// drizzle-kit compiles this file on its own and does not resolve the '@/' path
+// alias. `@/lib/badges` asserts at compile time that the two lists still match.
+export const badgeTypeEnum = pgEnum('badge_type', [
+  'founding_mentor',
+  'first_sip',
+  'five_sips',
+  'ten_sips',
+  'super_mentor',
+]);
+
+/**
+ * One row per badge a mentor has earned.
+ *
+ * A table rather than more slugs in `mentors.badges`, because each award now
+ * carries its own date (it is printed on the shareable certificate) and needs to
+ * be individually addressable — the dashboard has to know which badges it has
+ * already shown a modal for.
+ *
+ * The unique index is what makes awarding idempotent: `checkAndAwardBadges` runs
+ * on every completed sip and after the backfill, and both rely on a conflicting
+ * insert being a no-op rather than on having read first.
+ */
+export const mentorBadges = pgTable('badges', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  mentorId: uuid('mentor_id').references(() => mentors.id, { onDelete: 'cascade' }).notNull(),
+  badgeType: badgeTypeEnum('badge_type').notNull(),
+  awardedAt: timestamp('awarded_at').defaultNow().notNull(),
+  /**
+   * When the mentor was shown the "you earned this" modal. Null means they have
+   * not seen it yet, which is the only thing that triggers it — otherwise the
+   * modal would reappear on every dashboard load.
+   */
+  seenAt: timestamp('seen_at'),
+}, (t) => [
+  index('badges_mentor_id_idx').on(t.mentorId),
+  uniqueIndex('badges_mentor_type_idx').on(t.mentorId, t.badgeType),
+]);
 
 export const rooms = pgTable('rooms', {
   id: uuid('id').defaultRandom().primaryKey(),

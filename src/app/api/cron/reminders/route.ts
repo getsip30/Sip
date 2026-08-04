@@ -7,6 +7,7 @@ import { transporter } from '@/lib/mailer';
 import { escapeHtml } from '@/lib/utils';
 import { logSwallowed } from '@/lib/logger';
 import { NUDGE_QUERIES, claimNudge, nudgeEmail, type NudgeKind, type NudgeRow } from '@/lib/nudges';
+import { awardBadgesQuietly } from '@/lib/badges';
 
 type Row = {
   id: string; seeker_email: string; seeker_name: string; scheduled_at: string;
@@ -62,7 +63,22 @@ export async function GET(req: Request) {
   `);
 
   const completedRows = eligible.rows as { id: string; mentor_id: string }[];
-  const milestones: [number, string][] = [[1, 'first-sip'], [5, 'regular'], [10, 'veteran'], [25, 'legend'], [50, 'goat']];
+  /**
+   * DEPRECATED: the legacy milestone list, written to the CSV `mentors.badges`.
+   *
+   * Nothing reads this column any more — the leaderboard was the last consumer
+   * and now reads the badges table like every other surface. It is still written
+   * for one release cycle as a safety net, in case something we did not find
+   * still depends on it. Once that cycle is up, this list, the write below and
+   * the column itself all go together (see the note on the column in the schema
+   * and the mapping in @/lib/badge-legacy).
+   *
+   * Note the thresholds no longer match the real ones: `legend` at 25 and `goat`
+   * at 50 have no equivalent in the badges table and both collapse into
+   * super_mentor at 20. That divergence is exactly why this cannot stay.
+   */
+  const LEGACY_MILESTONES: [number, string][] = [[1, 'first-sip'], [5, 'regular'], [10, 'veteran'], [25, 'legend'], [50, 'goat']];
+  let badgesAwarded = 0;
 
   for (const row of completedRows) {
     const claimed = await db.update(requests)
@@ -76,10 +92,18 @@ export async function GET(req: Request) {
       .where(eq(mentors.id, row.mentor_id))
       .returning({ sipCount: mentors.sipCount, badges: mentors.badges });
 
+    // The real award. Runs after the sip count is committed, so it sees the
+    // fresh total. Swallows its own failures: a badge that does not get written
+    // is picked up by the next completed sip, whereas throwing here would
+    // abandon the mentors still queued behind this one.
+    badgesAwarded += (await awardBadgesQuietly(row.mentor_id)).length;
+
+    // DEPRECATED shadow write. Keep below the real award so a failure in the
+    // legacy path can never cost a mentor a badge that counts.
     const freshSipCount = bumped[0].sipCount;
     const existingBadges = bumped[0].badges ? bumped[0].badges.split(',').filter(Boolean) : [];
     const newBadges = [...existingBadges];
-    for (const [threshold, badge] of milestones) {
+    for (const [threshold, badge] of LEGACY_MILESTONES) {
       if (freshSipCount >= threshold && !newBadges.includes(badge)) newBadges.push(badge);
     }
     if (newBadges.length !== existingBadges.length) {
@@ -115,5 +139,5 @@ export async function GET(req: Request) {
     nudgeCounts[kind] = sentForKind;
   }
 
-  return NextResponse.json({ due: due.rows.length, sent, sipsCompleted: completedRows.length, nudges: nudgeCounts });
+  return NextResponse.json({ due: due.rows.length, sent, sipsCompleted: completedRows.length, badgesAwarded, nudges: nudgeCounts });
 }

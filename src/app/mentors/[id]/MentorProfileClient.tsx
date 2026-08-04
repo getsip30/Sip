@@ -7,10 +7,14 @@ import { useUser } from '@clerk/nextjs';
 import Logo from '@/components/Logo';
 import PixelAvatar from '@/components/PixelAvatar';
 import { MessageConsentGate } from '@/components/MessageConsentGate';
+import BadgePill from '@/components/BadgePill';
+import type { BadgeType } from '@/lib/badge-meta';
+
+type EarnedBadge = { badgeType: BadgeType; awardedAt: string };
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
-  bio: string; topics: string; availability: string; isOpen: boolean; xp: number; sipCount: number; badges: string;
+  bio: string; topics: string; availability: string; isOpen: boolean; xp: number; sipCount: number;
   linkedin?: string; showLinkedin?: boolean; avgResponseMinutes?: number | null; avatarData?: string;
 };
 
@@ -20,14 +24,6 @@ function formatResponseTime(minutes: number): string {
   return `~${Math.round(minutes / 1440)} day${minutes >= 2880 ? 's' : ''}`;
 }
 type SipNote = { id: string; seekerName: string; note: string; createdAt: string; };
-
-const BADGE_META: Record<string, { label: string }> = {
-  'first-sip': { label: 'First Sip' },
-  'regular':   { label: 'Regular' },
-  'veteran':   { label: 'Veteran' },
-  'legend':    { label: 'Legend' },
-  'goat':      { label: 'GOAT' },
-};
 
 const NOTES_PER_PAGE = 3;
 
@@ -49,9 +45,12 @@ const NOTES_PER_PAGE = 3;
 export default function MentorProfileClient({
   mentor: initialMentor,
   notes: initialNotes,
+  badges = [],
 }: {
   mentor: Mentor;
   notes: SipNote[];
+  /** Already in prestige order — the server sorts, so every surface agrees. */
+  badges?: EarnedBadge[];
 }) {
   const { id } = useParams();
   const { user } = useUser();
@@ -274,7 +273,7 @@ export default function MentorProfileClient({
               {[
                 { label: 'XP', value: mentor.xp.toLocaleString(), color: LINK },
                 { label: 'Sips', value: mentor.sipCount, color: '#5BDB8A' },
-                { label: 'Badges', value: mentor.badges.split(',').filter(Boolean).length, color: '#F59E0B' },
+                { label: 'Badges', value: badges.length, color: '#F59E0B' },
               ].map(s => (
                 <div key={s.label} style={{ background: BG, borderRadius: 12, padding: '12px 8px', textAlign: 'center' }}>
                   <div style={{ fontSize: 20, fontWeight: 700, color: s.color, fontFamily: "var(--font-space-mono), 'Space Mono', monospace" }}>{s.value}</div>
@@ -282,12 +281,10 @@ export default function MentorProfileClient({
                 </div>
               ))}
             </div>
-            {mentor.badges && (
+            {badges.length > 0 && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {mentor.badges.split(',').filter(Boolean).map(b => (
-                  <span key={b} style={{ fontSize: 12, padding: '5px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#EDEFF3' }}>
-                    {BADGE_META[b]?.label}
-                  </span>
+                {badges.map(b => (
+                  <BadgePill key={b.badgeType} badgeType={b.badgeType} size="sm" />
                 ))}
               </div>
             )}
