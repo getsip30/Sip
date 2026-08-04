@@ -37,10 +37,14 @@ h1, h2, h3, h4, p, span, div {
   color: inherit;
 }
 
+/* Fonts come from next/font (see layout.tsx), which exposes them as these two
+   variables. The literal family names are kept as a fallback in the stack so
+   any element still naming 'Space Grotesk' or 'Space Mono' directly in an
+   inline style keeps rendering the same face. */
 body {
   background: var(--bg) !important;
   color: var(--text) !important;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif;
   transition: background 0.2s ease, color 0.2s ease;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

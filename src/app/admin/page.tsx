@@ -111,7 +111,7 @@ export default function AdminPage() {
   const resolvedFlags = flags.filter(f => f.status !== 'open');
 
   return (
-    <div style={{ background: '#0A0E16', minHeight: '100vh', color: '#EDEFF3', fontFamily: "'Space Grotesk', sans-serif", padding: '40px 16px' }}>
+    <div style={{ background: '#0A0E16', minHeight: '100vh', color: '#EDEFF3', fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif", padding: '40px 16px' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 24 }}>Admin</h1>
 

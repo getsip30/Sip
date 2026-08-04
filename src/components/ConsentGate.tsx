@@ -4,7 +4,7 @@ import { BG, SURFACE, TEXT, MUTED, ACCENT } from '@/lib/theme';
 export function ConsentGate({ onAccept, onDecline }: { onAccept: () => void; onDecline: () => void }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
-      <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 32, width: '100%', maxWidth: 460, fontFamily: "'Space Grotesk', sans-serif" }}>
+      <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 32, width: '100%', maxWidth: 460, fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif" }}>
         <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: TEXT }}>Before you join a call</h3>
         <ul style={{ fontSize: 14, color: MUTED, lineHeight: 1.8, marginBottom: 22, paddingLeft: 18 }}>
           <li>No recording, screenshotting, or sharing this call without consent</li>

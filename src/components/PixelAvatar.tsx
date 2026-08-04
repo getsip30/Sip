@@ -5,10 +5,21 @@ export function decodeAvatar(data: string): number[] {
   return data.split('').map(c => parseInt(c, 36));
 }
 
+/**
+ * A user's chosen pixel avatar.
+ *
+ * Both branches are marked aria-hidden. The avatar is decorative in every place
+ * it is used: it always sits next to the person's name as text, so announcing
+ * it would make a screen reader read the same person twice, and there is no
+ * meaningful alternative text for an abstract 16x16 grid anyway. Leaving an
+ * unlabelled <svg> in the accessibility tree is what produces the "image
+ * without alt" class of finding — hiding it is the correct fix here, not
+ * inventing a description.
+ */
 export default function PixelAvatar({ data, size = 40 }: { data: string | null; size?: number }) {
   if (!data || data.length !== GRID_SIZE * GRID_SIZE) {
     return (
-      <div style={{ width: size, height: size, borderRadius: '50%', background: '#1E2733', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div aria-hidden="true" style={{ width: size, height: size, borderRadius: '50%', background: '#1E2733', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <span style={{ fontSize: size * 0.4, color: '#70B5F9' }}>?</span>
       </div>
     );
@@ -20,6 +31,8 @@ export default function PixelAvatar({ data, size = 40 }: { data: string | null; 
       height={size}
       viewBox={`0 0 ${GRID_SIZE} ${GRID_SIZE}`}
       shapeRendering="crispEdges"
+      aria-hidden="true"
+      focusable="false"
       style={{ borderRadius: '50%', flexShrink: 0, display: 'block' }}
     >
       <rect x="0" y="0" width={GRID_SIZE} height={GRID_SIZE} fill="#0A0E16" />

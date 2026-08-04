@@ -1,13 +1,26 @@
+import type { Metadata } from 'next';
 import { SignIn } from '@clerk/nextjs';
 import { clerkAppearance } from '@/lib/clerk-appearance';
+import { noIndex } from '@/lib/site';
+
+/**
+ * Sign-in and sign-up are noindexed deliberately, not by oversight.
+ *
+ * They are thin, near-identical pages whose whole content is a third-party auth
+ * widget, and their marketing copy repeats the landing page's. Left indexable
+ * they compete with `/` for brand queries and give a search visitor a login
+ * form where they wanted an explanation. The landing page is the right result
+ * for "Sip mentorship", and the sign-up CTA is on it.
+ */
+export const metadata: Metadata = noIndex('Sign in');
 
 export default function SignInPage() {
   return (
-    <div style={{ background: '#0A0E16', minHeight: '100vh', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', color: '#EDEFF3', fontFamily: 'Space Grotesk, sans-serif' }}>
+    <div style={{ background: '#0A0E16', minHeight: '100vh', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', color: '#EDEFF3', fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif" }}>
 
       {/* LEFT PANEL */}
       <div style={{ flex: 1, minWidth: 340, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '48px 24px', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ fontFamily: 'Space Mono', fontSize: 26, fontWeight: 700, color: '#70B5F9', marginBottom: 48 }}>sip</div>
+        <div style={{ fontFamily: "var(--font-space-mono), 'Space Mono', monospace", fontSize: 26, fontWeight: 700, color: '#70B5F9', marginBottom: 48 }}>sip</div>
         <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: -2, lineHeight: 1.1, marginBottom: 16 }}>
           Welcome back.<br />
           <span style={{ color: '#70B5F9' }}>People are waiting.</span>

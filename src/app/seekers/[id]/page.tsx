@@ -74,11 +74,11 @@ export default function SeekerProfile() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
             <div style={{ background: BG, borderRadius: 12, padding: '16px', textAlign: 'center' }}>
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#F59E0B', fontFamily: 'Space Mono' }}>{seeker.currentStreak}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: '#F59E0B', fontFamily: "var(--font-space-mono), 'Space Mono', monospace" }}>{seeker.currentStreak}</div>
               <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>Week Streak</div>
             </div>
             <div style={{ background: BG, borderRadius: 12, padding: '16px', textAlign: 'center' }}>
-              <div style={{ fontSize: 24, fontWeight: 700, color: LINK, fontFamily: 'Space Mono' }}>{seeker.sips.length}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: LINK, fontFamily: "var(--font-space-mono), 'Space Mono', monospace" }}>{seeker.sips.length}</div>
               <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>Sips Shared</div>
             </div>
           </div>

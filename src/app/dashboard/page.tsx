@@ -557,7 +557,7 @@ export default function Dashboard() {
                   <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.07 }}
                     whileHover={{ y: -4, borderColor: 'rgba(255,255,255,0.15)' }}
                     style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '22px 24px', transition: 'border-color 0.2s' }}>
-                    <div style={{ fontSize: 30, fontWeight: 700, color: stat.color, marginBottom: 4, fontFamily: 'Space Mono' }}>{stat.value}</div>
+                    <div style={{ fontSize: 30, fontWeight: 700, color: stat.color, marginBottom: 4, fontFamily: "var(--font-space-mono), 'Space Mono', monospace" }}>{stat.value}</div>
                     <div style={{ color: MUTED, fontSize: 13 }}>{stat.label}</div>
                   </motion.div>
                 ))}

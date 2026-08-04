@@ -2,6 +2,17 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  /**
+   * Note for whoever looks at bundle size next:
+   * `experimental.optimizePackageImports: ['framer-motion']` was tried here and
+   * measured at exactly 416.3KB of first-party JS both with and without it, so
+   * it was removed rather than left in as config that does nothing. framer-motion
+   * v12 already ships ESM that Turbopack tree-shakes on its own.
+   *
+   * The remaining weight is genuine usage, not barrel imports: framer-motion is
+   * used on every page, including the landing hero. Cutting it further means
+   * replacing animations with CSS, which is a real refactor rather than a flag.
+   */
   async headers() {
     return [
       {

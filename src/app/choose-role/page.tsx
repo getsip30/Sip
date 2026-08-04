@@ -59,7 +59,7 @@ export default function ChooseRole() {
   );
 
   return (
-    <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "'Space Grotesk', sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+    <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ background: BG, minHeight: '100vh', color: TEXT, fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ marginBottom: 40 }}><Logo /></div>
       <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 8 }}>{bothRoles ? 'Continue as...' : 'Which side are you on?'}</h1>
       <p style={{ color: MUTED, fontSize: 14, marginBottom: 36 }}>
