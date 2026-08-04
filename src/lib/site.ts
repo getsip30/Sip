@@ -9,14 +9,21 @@
  * never drift: two spellings of the same page is how a site competes with
  * itself in search results.
  *
- * NOTE ON THE HOST: production currently answers on www.getsip.co and 308s
- * getsip.co to it, while this constant says getsip.co. That mismatch predates
- * this file and is deliberately preserved here rather than silently flipped,
- * because changing the canonical host changes which URLs Google keeps and is
- * not a decision to make on someone's behalf. Set NEXT_PUBLIC_SITE_URL to
- * change it in one move once that call is made.
+ * THE HOST IS www.getsip.co. This matches what production actually serves:
+ * the apex, getsip.co, answers every request with a 308 to the www host. Before
+ * this was settled the app declared the apex everywhere while the server served
+ * www, so each of the 37 URLs in the sitemap redirected, and every canonical
+ * pointed at a host that is not the one returning the page.
+ *
+ * The www spelling is the default in code rather than only an environment
+ * variable, and that is deliberate. `.env*` is gitignored, so no env file in
+ * this repo reaches a Vercel build; if the origin lived only in the dashboard,
+ * a project restored from this source with no env configured would silently go
+ * back to emitting apex canonicals — the exact bug being fixed. The env var
+ * stays as an override for anyone running against a different origin, but the
+ * correct production value is committed and cannot be lost.
  */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://getsip.co').replace(/\/$/, '');
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.getsip.co').replace(/\/$/, '');
 
 export const SITE_NAME = 'Sip';
 
