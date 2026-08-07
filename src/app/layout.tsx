@@ -1,6 +1,7 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 import { Space_Grotesk, Space_Mono } from 'next/font/google';
 import { FeedbackWidget } from '@/components/feedback-widget';
+import { Analytics } from '@vercel/analytics/next';
 
 import { ClerkThemeBridge } from '@/components/clerk-theme-bridge';
 import { jsonLdScript } from '@/lib/utils';
@@ -145,6 +146,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </ClerkThemeBridge>
         <FeedbackWidget />
+        <Analytics />
       </body>
     </html>
   );
