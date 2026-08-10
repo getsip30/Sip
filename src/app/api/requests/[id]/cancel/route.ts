@@ -10,6 +10,7 @@ import { handleApiError } from '@/lib/api-handler';
 import { logSwallowed } from '@/lib/logger';
 import { escapeHtml } from '@/lib/utils';
 import { mutationLimiter } from '@/lib/ratelimit';
+import { cancellationStatus } from '@/lib/no-show';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -44,8 +45,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     // Re-assert status in the WHERE so two concurrent cancels can't both win and
     // send duplicate mail — only the caller that flips 'accepted' gets rows back.
+    const cancelledAt = new Date();
     const updated = await db.update(requests)
-      .set({ status: 'cancelled', cancelledAt: new Date(), cancelledBy })
+      .set({
+        status: 'cancelled',
+        cancelledAt,
+        cancelledBy,
+        sessionStatus: cancellationStatus(r.scheduledAt, cancelledAt),
+      })
       .where(and(eq(requests.id, id), eq(requests.status, 'accepted')))
       .returning();
 

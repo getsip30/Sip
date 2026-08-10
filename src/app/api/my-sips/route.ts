@@ -47,7 +47,11 @@ export async function GET(req: Request) {
     // sharedContactMethod is null on requests accepted before it existed. There
     // is no record of what those seekers were shown, so they keep seeing
     // everything rather than losing a link they may already be booking through.
-    const enriched = rows.map(({ mentorCalendarLink, mentorGoogleCalendarLink, mentorContactEmail, ...r }) => {
+    // confirmToken is dropped for the same reason it is dropped in
+    // GET /api/requests: it is a bearer secret for the confirm link, and it
+    // arrives here only because getTableColumns takes every column.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const enriched = rows.map(({ mentorCalendarLink, mentorGoogleCalendarLink, mentorContactEmail, confirmToken: _confirmToken, ...r }) => {
       const released = r.status === 'accepted';
       const chosen = r.sharedContactMethod;
       const releases = (method: string) => released && (chosen == null || chosen === method);

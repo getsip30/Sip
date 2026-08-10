@@ -53,8 +53,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const previous = r.scheduledAt ? new Date(r.scheduledAt) : null;
     const dayChanged = !previous || previous.toDateString() !== new Date(scheduledAt).toDateString();
 
+    // A time on the calendar is what makes this a session that can be attended
+    // or missed, so this is where session tracking starts. Re-scheduling resets
+    // it: the new slot has not been missed yet, whatever happened to the old one.
     const updated = await db.update(requests)
-      .set({ scheduledAt: new Date(scheduledAt), ...(dayChanged ? { reminderSentAt: null } : {}) })
+      .set({
+        scheduledAt: new Date(scheduledAt),
+        sessionStatus: 'scheduled',
+        ...(dayChanged ? { reminderSentAt: null } : {}),
+      })
       .where(eq(requests.id, id))
       .returning();
 

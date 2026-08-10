@@ -27,6 +27,14 @@ export async function GET(req: Request) {
     .orderBy(desc(requests.createdAt))
     .limit(300);
 
-  const result = rows.map(r => ({ ...r, mentorFeedbackGiven: r.mentorFeedbackGiven !== null }));
+  // confirmToken is the bearer secret behind the seeker's "still coming?" link.
+  // getTableColumns pulls in every column, so it has to be dropped explicitly —
+  // otherwise the mentor's own dashboard hands them a token that lets them
+  // answer on the seeker's behalf.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const result = rows.map(({ confirmToken: _confirmToken, ...r }) => ({
+    ...r,
+    mentorFeedbackGiven: r.mentorFeedbackGiven !== null,
+  }));
   return NextResponse.json(result.reverse());
 }
