@@ -16,6 +16,7 @@ import AppTour, { TourStep } from '@/components/AppTour';
 import PixelAvatar from '@/components/PixelAvatar';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import BadgeCelebration from '@/components/BadgeCelebration';
+import NoShowButton from '@/components/NoShowButton';
 import { OwnBadgePill } from '@/components/BadgePill';
 import { SIP_MILESTONES, type BadgeType } from '@/lib/badge-meta';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, SUCCESS2, WARNING, DANGER, CLAY } from '@/lib/theme';
@@ -30,6 +31,7 @@ type Request = {
   id: string; seekerName: string; seekerEmail: string; message: string; status: string; createdAt: string;
   seekerLinkedin?: string; seekerConsentToShow: boolean; mentorConsentToShow: boolean;
   scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null;
+  sessionStatus?: string | null;
   mentorFeedbackGiven?: boolean;
   // Set only by the in-room "request 1:1" button, so it marks the requests this
   // mentor sent rather than the ones sent to them.
@@ -907,6 +909,13 @@ export default function Dashboard() {
                               {r.scheduledAt && (
                                 <span style={{ color: MUTED, fontSize: 12 }}>scheduled: {new Date(r.scheduledAt).toLocaleString()}</span>
                               )}
+                              <NoShowButton
+                                requestId={r.id}
+                                scheduledAt={r.scheduledAt}
+                                sessionStatus={r.sessionStatus}
+                                reporting="seeker"
+                                onMarked={status => setRequests(prev => prev.map(x => x.id === r.id ? { ...x, sessionStatus: status } : x))}
+                              />
                             </div>
 
                             {!r.mentorFeedbackGiven ? (

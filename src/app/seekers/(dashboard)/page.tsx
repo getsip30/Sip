@@ -16,6 +16,7 @@ import PixelAvatar from '@/components/PixelAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Suspense } from 'react';
 import { safeExternalUrl } from '@/lib/utils';
+import NoShowButton from '@/components/NoShowButton';
 
 type LiveRoom = { id: string; title: string; firstName: string; lastName: string; role: string; company: string; mentorId: string; startedAt: string; topics?: string; avatarData?: string | null };
 type UpcomingRoom = { id: string; title: string; scheduledAt: string; firstName: string; lastName: string; role: string; company: string };
@@ -29,6 +30,7 @@ type SipRequest = {
   status: 'pending' | 'accepted' | 'declined' | 'cancelled'; createdAt: string; originRoomId?: string | null;
   seekerConsentToShow: boolean; mentorConsentToShow: boolean;
   scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null;
+  sessionStatus?: string | null;
   seekerFeedbackGiven?: boolean; mentorNote?: string | null;
   mentor?: { firstName: string; lastName: string; role: string; company: string; calendarLink: string | null; googleCalendarLink?: string | null; contactEmail?: string | null; };
 };
@@ -621,7 +623,16 @@ function SeekersContent() {
                                 {scheduleErrors[r.id] && <span style={{ color: '#F87171', fontSize: 11 }}>{scheduleErrors[r.id]}</span>}
                               </div>
                             ) : (
-                              <span style={{ color: MUTED, fontSize: 12 }}>scheduled: {new Date(r.scheduledAt).toLocaleString()}</span>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                <span style={{ color: MUTED, fontSize: 12 }}>scheduled: {new Date(r.scheduledAt).toLocaleString()}</span>
+                                <NoShowButton
+                                  requestId={r.id}
+                                  scheduledAt={r.scheduledAt}
+                                  sessionStatus={r.sessionStatus}
+                                  reporting="mentor"
+                                  onMarked={status => setRequests(prev => prev.map(x => x.id === r.id ? { ...x, sessionStatus: status } : x))}
+                                />
+                              </div>
                             )}
 
                             {r.seekerFeedbackGiven ? (
