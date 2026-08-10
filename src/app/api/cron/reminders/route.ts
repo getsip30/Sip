@@ -82,7 +82,14 @@ export async function GET(req: Request) {
 
   for (const row of completedRows) {
     const claimed = await db.update(requests)
-      .set({ sipCountedAt: new Date() })
+      .set({
+        sipCountedAt: new Date(),
+        // Both sides rated this 3+, so it happened. An explicit no-show report
+        // still wins: someone pressed a button to say a person did not turn up,
+        // and a cron quietly overwriting that would destroy the only record of
+        // a disagreement worth looking at by hand.
+        sessionStatus: sql`CASE WHEN ${requests.sessionStatus} IN ('no_show_mentor', 'no_show_seeker') THEN ${requests.sessionStatus} ELSE 'completed' END`,
+      })
       .where(and(eq(requests.id, row.id), sql`sip_counted_at is null`))
       .returning({ id: requests.id });
     if (claimed.length === 0) continue;
