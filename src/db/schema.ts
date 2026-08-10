@@ -174,10 +174,77 @@ export const requests = pgTable('requests', {
   // Set when a mentor skips the pending step and sends their link immediately,
   // which distinguishes that from a request they accepted after reviewing.
   linkSentAt: timestamp('link_sent_at'),
+  /**
+   * What actually happened at the scheduled time:
+   * 'scheduled' | 'completed' | 'no_show_mentor' | 'no_show_seeker' |
+   * 'cancelled_late' | 'cancelled_ok'.
+   *
+   * Deliberately NULLABLE with no default, rather than NOT NULL DEFAULT
+   * 'scheduled'. A default would backfill every request ever made — including
+   * pending, declined and long-cancelled ones — as 'scheduled', which is a
+   * claim about history that is simply untrue. Null means "this request predates
+   * no-show tracking, or never got as far as having a session", and every reader
+   * has to handle that anyway.
+   *
+   * Plain text, not a pgEnum, matching the `status` column above. The value list
+   * is still settling, and `ALTER TYPE ... ADD VALUE` is not reversible, which
+   * is the opposite of what an in-progress feature wants. Values are constrained
+   * in @/lib/no-show instead.
+   */
+  sessionStatus: text('session_status'),
+  /**
+   * Set when the seeker answers the "still coming?" prompt in the 1h reminder.
+   * Tracking only — nothing blocks or cancels a booking that is never confirmed.
+   */
+  confirmed: boolean('confirmed').default(false).notNull(),
+  /**
+   * Unguessable token behind the confirm link in the 1h reminder email, minted
+   * when that email is sent. Seekers can be email-only (seekerClerkId is
+   * nullable), so the confirm action cannot require a signed-in Clerk session.
+   */
+  confirmToken: text('confirm_token'),
 }, (t) => [
   index('requests_mentor_id_idx').on(t.mentorId),
   index('requests_seeker_clerk_id_idx').on(t.seekerClerkId),
   index('requests_origin_ask_id_idx').on(t.originAskId),
+  index('requests_session_status_idx').on(t.sessionStatus),
+  uniqueIndex('requests_confirm_token_idx').on(t.confirmToken),
+]);
+
+/**
+ * One row per no-show report. Logging only for now: nothing here punishes
+ * anyone, it exists so there is real data to look at before deciding what
+ * should.
+ *
+ * Shaped after `flags` below, which already solves the same problem for
+ * conduct reports — reporter and reported are Clerk ids plus a role, not
+ * foreign keys, because mentors and seekers live in separate tables and a
+ * seeker may have no row at all.
+ *
+ * The unique index makes marking idempotent, the same trick `badges` and
+ * `nudges` use: a double-submit conflicts instead of stacking duplicates.
+ */
+export const noShowReports = pgTable('no_show_reports', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  requestId: uuid('request_id').references(() => requests.id, { onDelete: 'cascade' }).notNull(),
+  /** Clerk id of whoever pressed the button. Always signed in, so never null. */
+  reportedByClerkId: text('reported_by_clerk_id').notNull(),
+  /**
+   * Clerk id of the person reported, NULLABLE on purpose: a seeker who was
+   * invited by email and never signed up has no Clerk id to record. The report
+   * is still worth keeping — requestId identifies who it was about — it just
+   * cannot be counted against an account.
+   */
+  reportedClerkId: text('reported_clerk_id'),
+  reportedRole: text('reported_role').notNull(), // mentor | seeker
+  /** Optional screenshot or recording link the reporter pasted in. */
+  evidenceUrl: text('evidence_url'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('no_show_reports_request_id_idx').on(t.requestId),
+  // Drives the rolling 30-day counter in Phase 4.
+  index('no_show_reports_reported_created_idx').on(t.reportedClerkId, t.createdAt),
+  uniqueIndex('no_show_reports_request_reporter_idx').on(t.requestId, t.reportedByClerkId),
 ]);
 
 /**
