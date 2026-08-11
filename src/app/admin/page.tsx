@@ -7,6 +7,13 @@ type Flag = {
   reportedClerkId: string; reportedName: string; reason: string; details: string;
   status: string; createdAt: string; resolvedAt: string | null;
 };
+type NoShowReport = {
+  id: string; requestId: string; reportedByClerkId: string; reportedClerkId: string | null;
+  reportedRole: string; evidenceUrl: string | null; status: string;
+  reviewedAt: string | null; createdAt: string;
+  reportedName: string; reportedEmail: string | null; reporterName: string; reporterRole: string;
+  sipLabel: string; scheduledAt: string | null; sessionStatus: string | null; requestStatus: string | null;
+};
 type Mentor = {
   id: string; firstName: string; lastName: string; email: string; role: string; company: string;
   isOpen: boolean; autoAccept: boolean; xp: number; sipCount: number; banned: boolean; createdAt: string;
@@ -45,7 +52,7 @@ type Overview = {
   asks: Ask[]; notes: Note[]; referrals: Referral[]; follows: Follow[]; consents: Consent[];
 };
 
-const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Follows', 'Consents', 'Flags', 'Feedback', 'Session Feedback'] as const;
+const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Follows', 'Consents', 'Flags', 'No-shows', 'Feedback', 'Session Feedback'] as const;
 type Tab = typeof TABS[number];
 
 const card: React.CSSProperties = { background: '#121923', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20 };
@@ -55,6 +62,7 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('Overview');
   const [data, setData] = useState<Overview | null>(null);
   const [flags, setFlags] = useState<Flag[]>([]);
+  const [noShows, setNoShows] = useState<NoShowReport[]>([]);
   const [siteFeedback, setSiteFeedback] = useState<SiteFeedbackEntry[]>([]);
   const [sessionFeedback, setSessionFeedback] = useState<SessionFeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,17 +70,19 @@ export default function AdminPage() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [ov, fl, sf, sess] = await Promise.all([
+      const [ov, fl, sf, sess, ns] = await Promise.all([
         fetch('/api/admin/overview'),
         fetch('/api/admin/flags'),
         fetch('/api/admin/site-feedback'),
         fetch('/api/admin/session-feedback'),
+        fetch('/api/admin/no-show-reports'),
       ]);
       if (sess.ok) setSessionFeedback(await sess.json());
       if (ov.status === 403 || fl.status === 403 || sf.status === 403) { setForbidden(true); setLoading(false); return; }
       if (ov.ok) setData(await ov.json());
       if (fl.ok) setFlags(await fl.json());
       if (sf.ok) setSiteFeedback(await sf.json());
+      if (ns.ok) setNoShows(await ns.json());
       setLoading(false);
     } catch (err) {
       console.error('fetchAll failed:', err);
@@ -89,6 +99,13 @@ export default function AdminPage() {
 
   async function resolveFlag(id: string, action: 'dismiss' | 'action' | 'ban') {
     await fetch(`/api/admin/flags/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
+    });
+    fetchAll();
+  }
+
+  async function resolveNoShow(id: string, action: 'review' | 'dismiss') {
+    await fetch(`/api/admin/no-show-reports/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
     });
     fetchAll();
@@ -113,6 +130,8 @@ export default function AdminPage() {
   const s = data.stats;
   const openFlags = flags.filter(f => f.status === 'open');
   const resolvedFlags = flags.filter(f => f.status !== 'open');
+  const openNoShows = noShows.filter(n => n.status === 'open');
+  const resolvedNoShows = noShows.filter(n => n.status !== 'open');
 
   return (
     <div style={{ background: '#0A0E16', minHeight: '100vh', color: '#EDEFF3', fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif", padding: '40px 16px' }}>
@@ -123,7 +142,7 @@ export default function AdminPage() {
           {TABS.map(t => (
             <button key={t} onClick={() => setTab(t)}
               style={{ ...btn, background: tab === t ? 'rgba(112,181,249,0.15)' : 'transparent', borderColor: tab === t ? 'rgba(112,181,249,0.4)' : 'rgba(255,255,255,0.1)', color: tab === t ? '#70B5F9' : '#8A93A3', padding: '8px 16px', fontSize: 13 }}>
-              {t}{t === 'Flags' && openFlags.length > 0 ? ` (${openFlags.length})` : ''}{t === 'Feedback' && siteFeedback.length > 0 ? ` (${siteFeedback.length})` : ''}
+              {t}{t === 'Flags' && openFlags.length > 0 ? ` (${openFlags.length})` : ''}{t === 'No-shows' && openNoShows.length > 0 ? ` (${openNoShows.length})` : ''}{t === 'Feedback' && siteFeedback.length > 0 ? ` (${siteFeedback.length})` : ''}
             </button>
           ))}
         </div>
@@ -342,6 +361,60 @@ export default function AdminPage() {
               {resolvedFlags.map(f => (
                 <div key={f.id} style={{ background: '#121923', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: 14, opacity: 0.6 }}>
                   <div style={{ fontSize: 12, color: '#8A93A3' }}>{f.reportedName} · {f.reason} · {f.status}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {tab === 'No-shows' && (
+          <>
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#FBBF24' }}>Open ({openNoShows.length})</h2>
+            {openNoShows.length === 0 ? <p style={{ color: '#8A93A3', fontSize: 14, marginBottom: 30 }}>no open no-show reports</p> : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 30 }}>
+                {openNoShows.map(n => (
+                  <div key={n.id} style={{ background: '#121923', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 12, padding: 18 }}>
+                    <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 6 }}>
+                      reported {new Date(n.createdAt).toLocaleString()} · sip {n.requestId.slice(0, 8)}
+                      {n.scheduledAt ? ` · was scheduled ${new Date(n.scheduledAt).toLocaleString()}` : ' · no scheduled time'}
+                    </div>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                      {n.reportedName} <span style={{ color: '#8A93A3', fontWeight: 400 }}>did not turn up ({n.reportedRole})</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: '#8A93A3', marginBottom: 6 }}>
+                      reported by {n.reporterName} ({n.reporterRole})
+                      {n.reportedEmail ? ` · reported party: ${n.reportedEmail}` : ''}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 10 }}>
+                      sip: {n.sipLabel} · session {n.sessionStatus ?? 'unset'}
+                      {n.requestStatus && n.requestStatus !== 'accepted' ? ` · request ${n.requestStatus}` : ''}
+                      {' · reporter '}{n.reportedByClerkId.slice(0, 12)}…
+                      {n.reportedClerkId ? ` → reported ${n.reportedClerkId.slice(0, 12)}…` : ' → reported party has no account'}
+                    </div>
+                    {n.evidenceUrl && (
+                      <div style={{ fontSize: 13, marginBottom: 12 }}>
+                        evidence:{' '}
+                        <a href={n.evidenceUrl} target="_blank" rel="noopener noreferrer nofollow" style={{ color: '#70B5F9', wordBreak: 'break-all' }}>
+                          {n.evidenceUrl.length > 80 ? `${n.evidenceUrl.slice(0, 80)}…` : n.evidenceUrl}
+                        </a>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => resolveNoShow(n.id, 'review')} style={{ background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.3)', color: '#FBBF24', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>mark reviewed</button>
+                      <button onClick={() => { if (confirm(`Dismiss this report? This also clears the no-show from the sip, unless another report against it is still open.`)) resolveNoShow(n.id, 'dismiss'); }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#8A93A3', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>dismiss</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#8A93A3' }}>Resolved ({resolvedNoShows.length})</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {resolvedNoShows.map(n => (
+                <div key={n.id} style={{ background: '#121923', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: 14, opacity: 0.6 }}>
+                  <div style={{ fontSize: 12, color: '#8A93A3' }}>
+                    {n.reportedName} · {n.reportedRole} no-show · {n.status}
+                    {n.reviewedAt ? ` ${new Date(n.reviewedAt).toLocaleString()}` : ''} · sip now {n.sessionStatus ?? 'unset'}
+                  </div>
                 </div>
               ))}
             </div>
