@@ -239,12 +239,25 @@ export const noShowReports = pgTable('no_show_reports', {
   reportedRole: text('reported_role').notNull(), // mentor | seeker
   /** Optional screenshot or recording link the reporter pasted in. */
   evidenceUrl: text('evidence_url'),
+  /**
+   * Admin review state: open | reviewed | dismissed.
+   *
+   * Mirrors `flags.status` deliberately, minus 'actioned' — there is no action
+   * to take from this queue yet. Phase 4 decides what a confirmed no-show costs;
+   * until then 'reviewed' means "I looked at this and it stands".
+   */
+  status: text('status').default('open').notNull(),
+  /** Set when the report leaves 'open', whichever way it went. */
+  reviewedAt: timestamp('reviewed_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   index('no_show_reports_request_id_idx').on(t.requestId),
   // Drives the rolling 30-day counter in Phase 4.
   index('no_show_reports_reported_created_idx').on(t.reportedClerkId, t.createdAt),
   uniqueIndex('no_show_reports_request_reporter_idx').on(t.requestId, t.reportedByClerkId),
+  // The admin queue reads open reports first, and the dismissal path counts
+  // remaining open reports for a request.
+  index('no_show_reports_status_idx').on(t.status),
 ]);
 
 /**
