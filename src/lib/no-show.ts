@@ -42,6 +42,25 @@ export function isSessionStatus(v: unknown): v is SessionStatus {
   return typeof v === 'string' && (SESSION_STATUSES as readonly string[]).includes(v);
 }
 
+/**
+ * Admin review states for a no-show report.
+ *
+ * 'reviewed' means the report was looked at and stands; 'dismissed' means it
+ * was judged wrong, which also clears the no-show from the sip itself (see
+ * PATCH /api/admin/no-show-reports/[id]) — otherwise a dismissal would be
+ * cosmetic and the accused would keep the hit to their attendance rate.
+ */
+export const REVIEW_STATUSES = ['open', 'reviewed', 'dismissed'] as const;
+export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
+
+/** The actions an admin can take, and the state each lands in. */
+export const REVIEW_ACTIONS = { review: 'reviewed', dismiss: 'dismissed' } as const;
+export type ReviewAction = keyof typeof REVIEW_ACTIONS;
+
+export function isReviewAction(v: unknown): v is ReviewAction {
+  return typeof v === 'string' && v in REVIEW_ACTIONS;
+}
+
 /** Which party is being reported, and the status that implies. */
 export type ReportedRole = 'mentor' | 'seeker';
 

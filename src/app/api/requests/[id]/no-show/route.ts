@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { getUserEmail } from '@/lib/clerk';
 import { db } from '@/db';
 import { requests, mentors, noShowReports } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or, isNull } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter } from '@/lib/ratelimit';
@@ -92,10 +92,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // second one still gets its report row (different reporter, no conflict),
     // but the session keeps the first verdict rather than flip-flopping. A
     // mutual no-show is exactly the case that wants a human to look at it.
+    //
+    // NULL counts as scheduled here. session_status is only written from the
+    // moment a sip is scheduled, so every sip booked before this feature shipped
+    // still has NULL — matching on 'scheduled' alone silently did nothing for
+    // all of them, and the reporter saw the button do no visible work.
     const updated = await db
       .update(requests)
       .set({ sessionStatus: noShowStatusFor(reportedRole) })
-      .where(and(eq(requests.id, r.id), eq(requests.sessionStatus, 'scheduled')))
+      .where(and(
+        eq(requests.id, r.id),
+        or(isNull(requests.sessionStatus), eq(requests.sessionStatus, 'scheduled'))
+      ))
       .returning({ sessionStatus: requests.sessionStatus });
 
     return NextResponse.json({
