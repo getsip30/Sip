@@ -1,19 +1,7 @@
 'use client';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import Link from 'next/link';
 import { ACCENT } from '@/lib/theme';
-
-async function hasRole(endpoint: string) {
-  try {
-    const res = await fetch(endpoint);
-    if (!res.ok) return false;
-    const data = await res.json();
-    return !!data;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * @param label  Accessible name for the link. The logo is a link, not a
@@ -34,28 +22,14 @@ export default function Logo({
   size?: number;
   label?: string;
 }) {
-  const { user, isLoaded } = useUser();
-  const router = useRouter();
-
-  async function handleClick(e: React.MouseEvent) {
-    e.preventDefault();
-    if (!isLoaded || !user) { router.push('/'); return; }
-
-    const [mentorFlag, seekerFlag] = await Promise.all([
-      hasRole('/api/mentor'),
-      hasRole('/api/seeker'),
-    ]);
-
-    const lastRole = typeof window !== 'undefined' ? localStorage.getItem('sip_last_role') : null;
-    if (lastRole === 'seeker' && seekerFlag) { router.push('/seekers'); return; }
-    if (lastRole === 'mentor' && mentorFlag) { router.push('/dashboard'); return; }
-    if (mentorFlag) { router.push('/dashboard'); return; }
-    if (seekerFlag) { router.push('/seekers'); return; }
-    router.push('/');
-  }
-
   return (
-    <a href="/" onClick={handleClick} aria-label={label}
+    // Standard logo-as-home link. This used to intercept the click and route
+    // signed-in users to their own dashboard, which made the logo look dead:
+    // it renders in the nav of those same dashboards, so the click pushed the
+    // route the user was already on. Preventing the default also cost
+    // cmd/middle-click to open in a new tab, and put two API calls in front of
+    // every navigation.
+    <Link href="/" aria-label={label}
       style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: "var(--font-space-mono), 'Space Mono', monospace", fontSize: 28, fontWeight: 700, color: ACCENT, letterSpacing: -1, textDecoration: 'none', cursor: 'pointer', ...style }}>
       {/*
         Was a raw <img> pointing at the 500x500, 84KB source PNG, rendered at
@@ -77,6 +51,6 @@ export default function Logo({
         style={{ width: size, height: size, objectFit: 'contain' }}
       />
       {children}
-    </a>
+    </Link>
   );
 }
