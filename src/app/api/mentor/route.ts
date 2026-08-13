@@ -55,7 +55,7 @@ export async function POST(req: Request) {
   if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
   const body = await req.json();
-  const { firstName, lastName, role, company, bio, topics, calendarLink, googleCalendarLink, contactEmail, availability, linkedin, showLinkedin, avatarData, ref } = body;
+  const { firstName, lastName, role, company, bio, topics, calendarLink, googleCalendarLink, contactEmail, availability, linkedin, showLinkedin, avatarData, defaultNote, ref } = body;
 
   if (!firstName || !lastName || !role || !company) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -94,13 +94,19 @@ export async function POST(req: Request) {
   if (avatarData && (typeof avatarData !== 'string' || avatarData.length > 256)) {
     return NextResponse.json({ error: 'Invalid avatar' }, { status: 400 });
   }
+  // Same 300-char ceiling the per-request note is held to in
+  // PATCH /api/requests/[id], since both end up in the same column.
+  if (defaultNote && (typeof defaultNote !== 'string' || defaultNote.length > 300)) {
+    return NextResponse.json({ error: 'Default note is too long' }, { status: 400 });
+  }
+  const safeDefaultNote = typeof defaultNote === 'string' ? (defaultNote.trim() || null) : null;
 
   const existing = await db.select().from(mentors).where(eq(mentors.clerkId, userId));
   if (existing[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
 
   if (existing.length > 0) {
     const updated = await db.update(mentors)
-      .set({ firstName, lastName, email, role, company, bio: bio || '', topics: topics || '', calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null })      .where(eq(mentors.clerkId, userId))
+      .set({ firstName, lastName, email, role, company, bio: bio || '', topics: topics || '', calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null, defaultNote: safeDefaultNote })      .where(eq(mentors.clerkId, userId))
       .returning();
     return NextResponse.json(updated[0]);
   }
@@ -116,6 +122,7 @@ export async function POST(req: Request) {
   const mentor = await db.insert(mentors).values({
     clerkId: userId, firstName, lastName, email, role, company, bio: bio || '', topics: topics || '',    calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin,
     avatarData: avatarData || null,
+    defaultNote: safeDefaultNote,
     referralCode,
     invitedByClerkId,
   }).returning();

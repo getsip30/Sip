@@ -54,6 +54,20 @@ export async function recordFirstSipBooked(seekerEmail: string) {
  * @param auto Adds a line explaining why there was no wait, so an instant
  *   acceptance does not read as a bot or a mistake.
  */
+/**
+ * The "Note from <mentor>" card that rides along with a booking link.
+ *
+ * Shared because three paths now hand out contact details — the dashboard
+ * accept, auto-accept, and the in-room "send my link" shortcut — and a note
+ * that renders differently depending on which one sent it would read as a
+ * different feature. Returns '' for an absent note so callers can interpolate
+ * it unconditionally.
+ */
+export function mentorNoteEmailBlock(mentorFirstName: string, note: string | null | undefined) {
+  if (!note) return '';
+  return `<div style="background:#161B22;border:1px solid rgba(112,181,249,0.3);border-radius:12px;padding:16px 18px;margin-top:20px;"><p style="color:#8B949E;font-size:12px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Note from ${escapeHtml(mentorFirstName)}</p><p style="color:#E6EDF3;font-size:14px;line-height:1.6;margin:0;">${escapeHtml(note)}</p></div>`;
+}
+
 export function sendAcceptedEmail({
   mentor,
   request,
@@ -66,9 +80,7 @@ export function sendAcceptedEmail({
   auto?: boolean;
 }) {
   const contactBlock = option ? bookingEmailBlock(option) : '';
-  const noteBlock = request.mentorNote
-    ? `<div style="background:#161B22;border:1px solid rgba(112,181,249,0.3);border-radius:12px;padding:16px 18px;margin-top:20px;"><p style="color:#8B949E;font-size:12px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Note from ${escapeHtml(mentor.firstName)}</p><p style="color:#E6EDF3;font-size:14px;line-height:1.6;margin:0;">${escapeHtml(request.mentorNote)}</p></div>`
-    : '';
+  const noteBlock = mentorNoteEmailBlock(mentor.firstName, request.mentorNote);
   const autoBlock = auto
     ? `<p style="color:#8B949E;font-size:13px;line-height:1.7;margin-bottom:20px;">${escapeHtml(mentor.firstName)} has instant booking switched on, so there was nothing to wait for. Pick a time that works and you're set.</p>`
     : '';

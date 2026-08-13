@@ -1,0 +1,1 @@
+ALTER TABLE "mentors" ADD COLUMN "default_note" text;

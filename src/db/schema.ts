@@ -34,6 +34,15 @@ export const mentors = pgTable('mentors', {
    * turning it on releases the mentor's contact method to anyone who asks.
    */
   autoAccept: boolean('auto_accept').default(false).notNull(),
+  /**
+   * Standing note for the accept paths where the mentor is not present to write
+   * one: auto-accept, and the in-room "send my link" shortcut when the mentor
+   * leaves its note box empty. It lands in requests.mentorNote like any other
+   * note, so the seeker sees it in the same two places.
+   *
+   * A per-request note always wins — this is the fallback, not an override.
+   */
+  defaultNote: text('default_note'),
   xp: integer('xp').default(0).notNull(),
   sipCount: integer('sip_count').default(0).notNull(),
   /**

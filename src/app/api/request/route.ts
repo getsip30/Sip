@@ -104,6 +104,9 @@ export async function POST(req: Request) {
       // the same thing the in-room "send my link" shortcut records.
       linkSentAt: autoAccepting ? now : null,
       sharedContactMethod: autoAccepting ? autoOption.method : null,
+      // Nobody is here to write a note on this path, so the mentor's standing
+      // one stands in. sendAcceptedEmail reads it off the row below.
+      mentorNote: autoAccepting ? (mentor.defaultNote || null) : null,
     }).returning();
 
     if (autoAccepting) {

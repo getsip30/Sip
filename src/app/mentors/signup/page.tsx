@@ -133,7 +133,7 @@ function MentorSignup() {
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '', role: '', company: '',
     bio: '', topics: [] as string[], calendarLink: '', googleCalendarLink: '', contactEmail: '', availability: 'flexible',
-    linkedin: '', showLinkedin: false, avatarData: '',
+    linkedin: '', showLinkedin: false, avatarData: '', defaultNote: '',
   });
 
   const set = (k: string, v: string | string[]) => setForm(f => ({ ...f, [k]: v }));
@@ -151,6 +151,7 @@ function MentorSignup() {
           calendarLink: data.calendarLink || '', googleCalendarLink: data.googleCalendarLink || '', contactEmail: data.contactEmail || '', availability: data.availability,
           linkedin: data.linkedin || '', showLinkedin: data.showLinkedin,
           avatarData: data.avatarData || '',
+          defaultNote: data.defaultNote || '',
         }));
       } else {
         setForm(f => ({
@@ -318,6 +319,14 @@ function MentorSignup() {
                   {!form.calendarLink && !form.contactEmail && (
                     <div style={{ color: '#F87171', fontSize: 12, marginTop: 6 }}>Add at least a calendar link or an email.</div>
                   )}
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={label} htmlFor="defaultNote">Default note (optional)</label>
+                  <textarea id="defaultNote" value={form.defaultNote} onChange={e => set('defaultNote', e.target.value)} maxLength={300} rows={2}
+                    placeholder="usually free evenings, will confirm exact time" style={{ ...input, resize: 'none' }} />
+                  <div style={{ color: MUTED, fontSize: 12, marginTop: 6 }}>
+                    Sent alongside your booking link when a request is accepted without you — instant booking, or the &quot;send my link&quot; shortcut in a room. A note you type while accepting always wins. {form.defaultNote.length}/300 chars
+                  </div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
                   <label style={label} htmlFor="linkedin">LinkedIn profile (optional)</label>

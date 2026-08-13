@@ -47,6 +47,9 @@ export default function RoomPage() {
   const [connectError, setConnectError] = useState<string | null>(null);
   const [myBooking, setMyBooking] = useState<{ calendarLink: string | null; googleCalendarLink: string | null; contactEmail: string | null } | null>(null);
   const [connectChoiceFor, setConnectChoiceFor] = useState<string | null>(null);
+  // Goes to the seeker with the booking link. Distinct from noteDraft below,
+  // which is the private note only the mentor ever reads.
+  const [connectNote, setConnectNote] = useState('');
   const [rateSeeker, setRateSeeker] = useState<{ clerkId: string; name: string } | null>(null);
   const [noteOpenFor, setNoteOpenFor] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
@@ -184,7 +187,9 @@ export default function RoomPage() {
     setConnectError(null);
     const res = await fetch(`/api/rooms/${id}/connect-request`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ seekerClerkId, mode, contactMethod }),
+      // Only meaningful on a direct send. A 'review' request is accepted later
+      // from the dashboard, which asks for its own note there.
+      body: JSON.stringify({ seekerClerkId, mode, contactMethod, mentorNote: mode === 'link' ? connectNote : undefined }),
     });
 
     // The button used to flip back to "request 1:1" here because nothing
@@ -198,6 +203,7 @@ export default function RoomPage() {
     if (res.ok || (res.status === 409 && !body?.cooldownUntil)) {
       setSentConnects(prev => new Set(prev).add(seekerClerkId));
       setConnectChoiceFor(null);
+      setConnectNote('');
     } else {
       setConnectError(body?.error || 'Could not send that request. Try again.');
       if (body?.cooldownUntil) setConnectChoiceFor(null);
@@ -508,6 +514,17 @@ export default function RoomPage() {
                             {actives[0].seekerName} gets an email either way.
                           </div>
 
+                          {options.length > 0 && (
+                            <div style={{ marginBottom: 12 }}>
+                              <label htmlFor="connect-note" style={{ display: 'block', fontSize: 12, color: MUTED, marginBottom: 6 }}>
+                                Add a note for {actives[0].seekerName} (optional). Goes out with your link.
+                              </label>
+                              <textarea id="connect-note" value={connectNote} onChange={e => setConnectNote(e.target.value)}
+                                rows={2} maxLength={300} placeholder="e.g. I'm free next week after 6pm, book then!"
+                                style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 12px', color: TEXT, fontSize: 13, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+                            </div>
+                          )}
+
                           {options.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
                               {options.map(o => (
@@ -534,7 +551,7 @@ export default function RoomPage() {
                             </span>
                           </button>
 
-                          <button onClick={() => setConnectChoiceFor(null)}
+                          <button onClick={() => { setConnectChoiceFor(null); setConnectNote(''); }}
                             style={{ marginTop: 10, background: 'none', border: 'none', color: MUTED, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
                             cancel
                           </button>

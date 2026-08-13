@@ -8,6 +8,7 @@ import { handleApiError } from '@/lib/api-handler';
 import { logSwallowed } from '@/lib/logger';
 import { escapeHtml, subjectSafe } from '@/lib/utils';
 import { resolveBookingOption, bookingEmailBlock, connectCooldownUntil } from '@/lib/booking';
+import { mentorNoteEmailBlock } from '@/lib/accept';
 import { isUuid } from '@/lib/validate';
 import { mutationLimiter } from '@/lib/ratelimit';
 
@@ -22,7 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { success } = await mutationLimiter.limit(userId);
     if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
-    const { seekerClerkId, mode = 'review', contactMethod } = await req.json();
+    const { seekerClerkId, mode = 'review', contactMethod, mentorNote } = await req.json();
     if (typeof seekerClerkId !== 'string' || !seekerClerkId.trim()) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
@@ -90,6 +91,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       );
     }
 
+    // Same 300-char ceiling as the dashboard accept modal, since both land in
+    // requests.mentorNote. Falls back to the mentor's standing note so the
+    // shortcut is not the one path that silently drops it. Only on a direct
+    // send: 'review' lands pending and collects its note at the accept step.
+    const noteToSend = mode === 'link'
+      ? ((typeof mentorNote === 'string' ? mentorNote.trim().slice(0, 300) : '') || mentor.defaultNote || null)
+      : null;
+
     const now = new Date();
     const created = await db.insert(requests).values({
       mentorId: mentor.id,
@@ -105,6 +114,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       respondedAt: mode === 'link' ? now : null,
       linkSentAt: mode === 'link' ? now : null,
       sharedContactMethod: option?.method ?? null,
+      mentorNote: noteToSend,
       mentorConsentToShow: true,
     }).returning();
 
@@ -120,6 +130,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">Book a time with ${escapeHtml(mentor.firstName)}</h2>
           <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;"><strong>${mentorName}</strong> enjoyed your sip and wants to do a 1:1 with you.</p>
           ${bookingEmailBlock(option)}
+          ${mentorNoteEmailBlock(mentor.firstName, noteToSend)}
           <p style="color:#8B949E;font-size:13px;margin-top:24px;">No need to wait on a reply, the time is yours to pick.</p>
         </div>
       `,
