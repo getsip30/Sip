@@ -44,7 +44,19 @@ export default function SignInPage() {
 
       {/* RIGHT PANEL */}
       <div style={{ flex: 1, minWidth: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <SignIn forceRedirectUrl="/" appearance={{
+          {/*
+            fallback, not force. Verified against @clerk/shared's RedirectUrls:
+            the resolution order is signInForceRedirectUrl, then the
+            ?redirect_url= search param, then signInFallbackRedirectUrl. Forcing
+            "/" here therefore outranked redirect_url and threw away wherever the
+            visitor was headed — someone bounced here from /mentors/signup landed
+            on the marketing page and had to find their way back.
+
+            /choose-role is the right default rather than a dashboard: it sends
+            single-role users straight through to their own side and only stops
+            for people who genuinely have a choice to make.
+          */}
+          <SignIn fallbackRedirectUrl="/choose-role" appearance={{
           ...clerkAppearance,
           elements: {
             ...clerkAppearance.elements,

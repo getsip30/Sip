@@ -1,9 +1,10 @@
 'use client';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK } from '@/lib/theme';
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
+import { useRoles } from '@/hooks/useRoles';
 import Logo from '@/components/Logo';
 import PixelAvatar from '@/components/PixelAvatar';
 import { MessageConsentGate } from '@/components/MessageConsentGate';
@@ -54,6 +55,8 @@ export default function MentorProfileClient({
 }) {
   const { id } = useParams();
   const { user } = useUser();
+  const router = useRouter();
+  const { isSeeker, loaded: rolesLoaded } = useRoles();
   const [mentor] = useState<Mentor>(initialMentor);
   const [following, setFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
@@ -83,6 +86,42 @@ export default function MentorProfileClient({
     if (mentor && !mentor.isOpen) setActiveTab('ask');
   }, [mentor]);
   const [pendingSubmit, setPendingSubmit] = useState<null | 'request' | 'note' | 'ask'>(null);
+  /**
+   * Whether this user has already agreed to the messaging reminder. The gate was
+   * client-only, so it reappeared on every send forever and left no record.
+   * `null` means "not known yet" and holds the gate back rather than flashing it
+   * at someone who agreed months ago.
+   */
+  const [messageConsented, setMessageConsented] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetch('/api/consent?context=message')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (!cancelled) setMessageConsented(!!d?.consented); })
+      .catch(() => { if (!cancelled) setMessageConsented(false); });
+    return () => { cancelled = true; };
+  }, [user]);
+
+  /**
+   * Every send goes through here. Sign-in and seeker onboarding are checked
+   * before the gate rather than after the POST, which is where they used to
+   * surface — as a bare error string under a form the visitor had already
+   * filled in and could not act on.
+   */
+  function startSubmit(action: 'request' | 'note' | 'ask') {
+    if (!user) { router.push(`/sign-in?redirect_url=/mentors/${id}`); return; }
+    if (rolesLoaded && !isSeeker) { router.push('/seekers/onboarding'); return; }
+    if (messageConsented) { runSubmit(action); return; }
+    setPendingSubmit(action);
+  }
+
+  function runSubmit(action: 'request' | 'note' | 'ask') {
+    if (action === 'request') handleSubmit();
+    if (action === 'note') handleNoteSubmit();
+    if (action === 'ask') handleAskSubmit();
+  }
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -171,13 +210,15 @@ export default function MentorProfileClient({
   }
 
   async function handleSubmit() {
-    if (!mentor || !form.name || !form.email || !form.message) return;
+    // No email check, and none sent: the server takes it from the verified
+    // session and ignores the body either way.
+    if (!mentor || !form.name || !form.message) return;
     setSubmitting(true);
     setRequestError('');
     const res = await fetch('/api/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mentorId: mentor.id, seekerName: form.name, seekerEmail: form.email, message: form.message }),
+      body: JSON.stringify({ mentorId: mentor.id, seekerName: form.name, message: form.message }),
     });
     if (res.ok) { setSent(true); }
     else { const data = await res.json(); setRequestError(data.error || 'Something went wrong'); }
@@ -362,9 +403,13 @@ export default function MentorProfileClient({
                         <div style={{ marginBottom: 12 }}>
                           <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Your name" autoComplete="name" name="name" aria-label="Your name" style={inputStyle} />
                         </div>
-                        <div style={{ marginBottom: 12 }}>
-                          <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} type="email" placeholder="Your email" autoComplete="email" name="email" aria-label="Your email" style={inputStyle} />
-                        </div>
+                        {/* The email input that used to sit here was inert:
+                            /api/request reads the address off the verified Clerk
+                            session and drops whatever the body carries. All it
+                            did was block the submit below when left blank. */}
+                        {form.email && (
+                          <div style={{ color: MUTED, fontSize: 12, marginBottom: 12 }}>sending as {form.email}</div>
+                        )}
                         <div style={{ marginBottom: 16 }}>
                           <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder="What are you trying to figure out?" rows={3} aria-label="What are you trying to figure out?" style={{ ...inputStyle, resize: 'none' }} />
                         </div>
@@ -373,9 +418,9 @@ export default function MentorProfileClient({
                             {requestError}
                           </div>
                         )}
-                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => setPendingSubmit('request')} disabled={submitting}
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => startSubmit('request')} disabled={submitting}
                           style={{ width: '100%', background: ACCENT, color: 'white', border: 'none', padding: '13px', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                          {submitting ? 'Sending...' : 'Send it *'}
+                          {submitting ? 'Sending...' : !user ? 'Sign in to send' : 'Send it *'}
                         </motion.button>
                       </div>
                     )}
@@ -402,9 +447,9 @@ export default function MentorProfileClient({
                             {noteError}
                           </div>
                         )}
-                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => setPendingSubmit('note')} disabled={submittingNote}
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => startSubmit('note')} disabled={submittingNote}
                           style={{ width: '100%', background: 'rgba(91,219,138,0.12)', border: '1px solid rgba(91,219,138,0.3)', color: '#5BDB8A', padding: '13px', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: submittingNote ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                          {submittingNote ? 'Posting...' : 'Post it'}
+                          {submittingNote ? 'Posting...' : !user ? 'Sign in to post' : 'Post it'}
                         </motion.button>
                       </div>
                     )}
@@ -432,9 +477,9 @@ export default function MentorProfileClient({
                             {askError}
                           </div>
                         )}
-                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => setPendingSubmit('ask')} disabled={submittingAsk}
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => startSubmit('ask')} disabled={submittingAsk}
                           style={{ width: '100%', background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '13px', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: submittingAsk ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                          {submittingAsk ? 'Sending...' : 'Ask'}
+                          {submittingAsk ? 'Sending...' : !user ? 'Sign in to ask' : 'Ask'}
                         </motion.button>
                       </div>
                     )}
@@ -452,9 +497,15 @@ export default function MentorProfileClient({
           onAccept={() => {
             const action = pendingSubmit;
             setPendingSubmit(null);
-            if (action === 'request') handleSubmit();
-            if (action === 'note') handleNoteSubmit();
-            if (action === 'ask') handleAskSubmit();
+            // Recorded, not just dismissed, so this is the last time they see it.
+            // Same call the room gate makes, with the context this one is for.
+            setMessageConsented(true);
+            fetch('/api/consent', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ context: 'message' }),
+            }).catch(err => console.error('record message consent failed:', err));
+            runSubmit(action);
           }}
         />
       )}

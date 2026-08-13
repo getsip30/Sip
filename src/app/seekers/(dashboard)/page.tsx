@@ -216,7 +216,9 @@ function SeekersContent() {
   }, [filter, search]);
 
   async function handleSubmit() {
-    if (!form.name || !form.email || !form.message || !modal) return;
+    // No email check: the server reads it off the verified Clerk identity and
+    // ignores anything sent in the body, so a blank one never reached it anyway.
+    if (!form.name || !form.message || !modal) return;
     setSubmitting(true);
     setModalError('');
     const res = await fetch('/api/request', {
@@ -452,7 +454,7 @@ function SeekersContent() {
                     </div>
                       <p style={{ color: MUTED, fontSize: 13, lineHeight: 1.65, marginBottom: 20 }}>&quot;{mentor.bio}&quot;</p>
                     <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                      onClick={e => { e.stopPropagation(); if (!user) { router.push('/sign-in'); } else if (rolesLoaded && !isSeeker) { router.push('/seekers/onboarding'); } else { setModal(mentor); } }}
+                      onClick={e => { e.stopPropagation(); if (!user) { router.push('/sign-in?redirect_url=/seekers'); } else if (rolesLoaded && !isSeeker) { router.push('/seekers/onboarding'); } else { setModal(mentor); } }}
                       style={{ width: '100%', background: 'rgba(10,102,194,0.12)', border: '1px solid rgba(10,102,194,0.3)', color: LINK, padding: '11px 0', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                       request a sip →
                     </motion.button>
@@ -528,7 +530,7 @@ function SeekersContent() {
               {!user ? (
                 <>
                 <p style={{ color: MUTED, marginBottom: 20 }}>Sign in to see the sips you&apos;ve requested.</p>
-                  <Link href="/sign-in" style={{ display: 'inline-block', background: ACCENT, color: 'white', padding: '13px 28px', borderRadius: 12, fontSize: 15, fontWeight: 600, textDecoration: 'none' }}>sign in →</Link>
+                  <Link href="/sign-in?redirect_url=/seekers" style={{ display: 'inline-block', background: ACCENT, color: 'white', padding: '13px 28px', borderRadius: 12, fontSize: 15, fontWeight: 600, textDecoration: 'none' }}>sign in →</Link>
                 </>
               ) : (
                 <>
@@ -738,11 +740,12 @@ function SeekersContent() {
                     <input id="seekerReqName" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                       style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: TEXT, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
                   </div>
-                  <div style={{ marginBottom: 16 }}>
-                    <label htmlFor="seekerReqEmail" style={{ fontSize: 13, color: MUTED, display: 'block', marginBottom: 6 }}>your email</label>
-                    <input id="seekerReqEmail" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} type="email"
-                      style={{ width: '100%', background: BG, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: TEXT, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
-                  </div>
+                  {/* The email input that used to sit here was inert: /api/request
+                      takes the address from the verified Clerk session and drops
+                      whatever the body carries. It only ever blocked submits. */}
+                  {form.email && (
+                    <div style={{ color: MUTED, fontSize: 12, marginBottom: 16 }}>sending as {form.email}</div>
+                  )}
                   <div style={{ marginBottom: 28 }}>
                   <label htmlFor="seekerReqMessage" style={{ fontSize: 13, color: MUTED, display: 'block', marginBottom: 6 }}>what&apos;s on your mind?</label>
                     <textarea id="seekerReqMessage" value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={3}
