@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, text, timestamp, boolean, uuid, integer, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, text, timestamp, boolean, uuid, integer, index, uniqueIndex, check } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const referralEvents = pgTable('referral_events', {
@@ -373,6 +373,85 @@ export const sessionNotes = pgTable('session_notes', {
   index('session_notes_mentor_id_idx').on(t.mentorId),
   // Drives the dashboard accordion, which reads newest date first for one mentor.
   index('session_notes_mentor_date_idx').on(t.mentorId, t.sessionDate),
+]);
+
+/**
+ * Private post-session takeaways, written by either side, readable only by
+ * whoever wrote them.
+ *
+ * Not to be confused with sessionNotes above, which are a mentor's private notes
+ * ABOUT a seeker in a live room. These are a person's own reflections on a
+ * session they were in, and both sides write them independently: a mentor's
+ * takeaways and a seeker's takeaways on the same session never see each other.
+ * There is deliberately no route that reads another person's rows, and no
+ * request-to-view flow — that is a possible future feature, not this one.
+ *
+ * Both parents are nullable and at most one is ever set: a takeaway hangs off a
+ * booked 1:1 (requests) or a live room (rooms). That follows the two-nullable-FK
+ * shape `requests` already uses for originAskId / originRoomId, rather than a
+ * type+id pair no foreign key could protect.
+ *
+ * Both FKs are ON DELETE SET NULL rather than CASCADE. These are personal notes,
+ * and a mentor closing their account should not erase a seeker's own reflections.
+ * sessionLabel, subjectName and sessionDate are denormalised for exactly that
+ * case, so an orphaned row still reads correctly — the same call sessionNotes
+ * makes for sessionDate.
+ */
+export const takeaways = pgTable('takeaways', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  requestId: uuid('request_id').references(() => requests.id, { onDelete: 'set null' }),
+  roomId: uuid('room_id').references(() => rooms.id, { onDelete: 'set null' }),
+  authorClerkId: text('author_clerk_id').notNull(),
+  /**
+   * mentor | seeker. A user can hold both roles (see useRoles), so each
+   * dashboard filters on this rather than assuming which side is asking.
+   */
+  authorRole: text('author_role').notNull(),
+  /**
+   * Which seeker a room takeaway is about, for the mentor's per-person option.
+   * NULL means the takeaway covers the whole session — the group note, and the
+   * only shape a 1:1 or a seeker-authored takeaway ever has.
+   *
+   * Only ever set alongside roomId, and only by a mentor. That rule is enforced
+   * in POST /api/takeaways rather than by the check constraint below: a check of
+   * `subject_seeker_clerk_id IS NULL OR room_id IS NOT NULL` would abort the
+   * DELETE of a room, because ON DELETE SET NULL fires as an UPDATE that nulls
+   * room_id while the subject stays put, violating the constraint.
+   */
+  subjectSeekerClerkId: text('subject_seeker_clerk_id'),
+  /** Resolved server-side at write time, never taken from the request body. */
+  subjectName: text('subject_name'),
+  /** Up to MAX_BULLETS newline-separated lines. Split on render. */
+  bullets: text('bullets').notNull(),
+  /** The counterpart's name for a 1:1, the room title for a room. */
+  sessionLabel: text('session_label').notNull(),
+  sessionDate: timestamp('session_date').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  // Drives each dashboard's Takeaways section, newest session first.
+  index('takeaways_author_idx').on(t.authorClerkId, t.sessionDate),
+  index('takeaways_room_idx').on(t.roomId),
+
+  // One takeaway per author per 1:1.
+  uniqueIndex('takeaways_author_request_idx').on(t.authorClerkId, t.requestId)
+    .where(sql`request_id is not null`),
+
+  // One group takeaway per author per room. The subject-is-null predicate is
+  // what keeps this from colliding with the per-seeker rows below; NULLs being
+  // distinct in Postgres is why it has to be a predicate rather than another
+  // column in the key, which would let duplicate group notes through.
+  uniqueIndex('takeaways_author_room_group_idx').on(t.authorClerkId, t.roomId)
+    .where(sql`room_id is not null and subject_seeker_clerk_id is null`),
+
+  // One per author per room per seeker, so a mentor can keep a group note and a
+  // note on each person in the same room without them fighting over one row.
+  uniqueIndex('takeaways_author_room_subject_idx')
+    .on(t.authorClerkId, t.roomId, t.subjectSeekerClerkId)
+    .where(sql`room_id is not null and subject_seeker_clerk_id is not null`),
+
+  // Parent exclusivity only. Stays true when SET NULL drops a parent to zero.
+  check('takeaways_one_parent', sql`num_nonnulls(${t.requestId}, ${t.roomId}) <= 1`),
 ]);
 
 export const queueEntries = pgTable('queue_entries', {
