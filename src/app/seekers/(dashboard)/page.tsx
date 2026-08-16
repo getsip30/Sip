@@ -1,7 +1,7 @@
 
 'use client';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, CLAY } from '@/lib/theme';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useRoles } from '@/hooks/useRoles';
@@ -13,10 +13,13 @@ import Logo from '@/components/Logo';
 import AppTour, { TourStep } from '@/components/AppTour';
 import RoleSwitchLink from '@/components/RoleSwitchLink';
 import PixelAvatar from '@/components/PixelAvatar';
+import Collapse from '@/components/Collapse';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Suspense } from 'react';
 import { safeExternalUrl } from '@/lib/utils';
 import NoShowButton from '@/components/NoShowButton';
+import SessionTakeaways from '@/components/SessionTakeaways';
+import { useTakeaways } from '@/hooks/useTakeaways';
 
 type LiveRoom = { id: string; title: string; firstName: string; lastName: string; role: string; company: string; mentorId: string; startedAt: string; topics?: string; avatarData?: string | null };
 type UpcomingRoom = { id: string; title: string; scheduledAt: string; firstName: string; lastName: string; role: string; company: string };
@@ -78,6 +81,13 @@ function SeekersContent() {
   const [error, setError] = useState('');
   const [streak, setStreak] = useState<{ currentStreak: number; longestStreak: number } | null>(null);
   const [myFlags, setMyFlags] = useState<{ id: string; reason: string; createdAt: string }[]>([]);
+  // The seeker's own takeaways. Never leaves this side: the mentor writes their
+  // own on the same sessions and neither can see the other's.
+  const takeaways = useTakeaways('seeker');
+  // Stable callback, so refreshSips can depend on it rather than on the hook's
+  // result object, which is rebuilt every render.
+  const refreshTakeaways = takeaways.refresh;
+  const [takeawaysSectionOpen, setTakeawaysSectionOpen] = useState(false);
   const [seekerId, setSeekerId] = useState<string | null>(null);
   const [seekerProfile, setSeekerProfile] = useState<{ age?: number | null; linkedin?: string | null; interests?: string | null; avatarData?: string | null } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -246,9 +256,20 @@ function SeekersContent() {
     } catch {
       // A failed refresh keeps whatever is already on screen.
     }
-  }, []);
+    await refreshTakeaways();
+  }, [refreshTakeaways]);
 
   useLiveRefresh(refreshSips, { enabled: lookupDone });
+
+  /**
+   * Live sessions always, since a room has no card of its own on this tab and
+   * this is the only way back to one after leaving it. 1:1s only once written
+   * on, because their composer already sits on the request card.
+   */
+  const takeawaySessions = useMemo(
+    () => takeaways.sessions.filter(s => s.kind === 'room' || s.takeaways.length > 0),
+    [takeaways.sessions]
+  );
 
   async function handleLookup() {
     setLoadingLookup(true);
@@ -656,6 +677,24 @@ function SeekersContent() {
                                 </button>
                               </div>
                             )}
+
+                            {/* The seeker's own takeaways. The mentor writes
+                                theirs separately and neither side sees the
+                                other's, which is what the caption says. */}
+                            {(() => {
+                              const session = takeaways.bySession.get(r.id);
+                              if (!session) return null;
+                              return (
+                                <SessionTakeaways
+                                  compact
+                                  readOnly={!session.writable}
+                                  target={{ kind: 'request', sessionId: r.id }}
+                                  takeaways={session.takeaways}
+                                  onSaved={saved => takeaways.applySaved(r.id, saved)}
+                                  onDeleted={id => takeaways.applyDeleted(r.id, id)}
+                                />
+                              );
+                            })()}
                           </div>
                         )}
                       </motion.div>
@@ -665,6 +704,60 @@ function SeekersContent() {
                 )}
                 <ShowMore hiddenCount={sipList.hiddenCount} expanded={sipList.expanded} onMore={sipList.showMore} onCollapse={sipList.collapse} />
                 </>
+              )}
+
+              {/* TAKEAWAYS — live sessions and anything already written on.
+                  A 1:1 with no note yet is offered on its own card above, so it
+                  is left out here rather than asked for twice. */}
+              {takeawaySessions.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={ease(DUR.base)} style={{ marginTop: 28 }}>
+                  <button
+                    onClick={() => setTakeawaysSectionOpen(v => !v)}
+                    aria-expanded={takeawaysSectionOpen}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '16px 20px', color: TEXT, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 18, fontWeight: 700 }}>Takeaways</span>
+                      <span style={{ color: MUTED, fontSize: 12 }}>
+                        {takeaways.total} {takeaways.total === 1 ? 'note' : 'notes'} · only you can see these
+                      </span>
+                    </span>
+                    <motion.span aria-hidden animate={{ rotate: takeawaysSectionOpen ? 90 : 0 }} transition={ease(DUR.fast)}
+                      style={{ display: 'inline-flex', color: MUTED }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </motion.span>
+                  </button>
+
+                  <Collapse open={takeawaysSectionOpen}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                      {takeawaySessions.map(s => (
+                        <div key={`${s.kind}:${s.sessionId}`} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '14px 20px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+                            <span style={{ fontWeight: 600, fontSize: 14 }}>{s.sessionLabel}</span>
+                            <span style={{ color: MUTED, fontSize: 12 }}>
+                              {s.kind === 'room' ? 'live session' : s.kind === 'archived' ? 'session no longer on Sip' : '1:1'}
+                              {' · '}
+                              {new Date(s.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          </div>
+                          {s.kind === 'archived' ? (
+                            <ul style={{ margin: 0, paddingLeft: 18, color: TEXT, fontSize: 13, lineHeight: 1.6 }}>
+                              {s.takeaways.flatMap(t => t.bullets).map((b, i) => <li key={i}>{b}</li>)}
+                            </ul>
+                          ) : (
+                            <SessionTakeaways
+                              compact
+                              readOnly={!s.writable}
+                              target={{ kind: s.kind, sessionId: s.sessionId }}
+                              takeaways={s.takeaways}
+                              onSaved={saved => takeaways.applySaved(s.sessionId, saved)}
+                              onDeleted={id => takeaways.applyDeleted(s.sessionId, id)}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </Collapse>
+                </motion.div>
               )}
 
                 </div>

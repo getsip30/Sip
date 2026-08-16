@@ -9,6 +9,8 @@ import { ConsentGate } from '@/components/ConsentGate';
 import { bookingOptions } from '@/lib/booking';
 import SessionFeedbackPrompt from '@/components/SessionFeedbackPrompt';
 import Collapse from '@/components/Collapse';
+import SessionTakeaways from '@/components/SessionTakeaways';
+import { useTakeaways } from '@/hooks/useTakeaways';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ease, DUR, listItem } from '@/lib/motion';
 
@@ -305,6 +307,19 @@ export default function RoomPage() {
   const myPosition = myEntry?.status === 'waiting' ? waiting.findIndex(w => w.id === myEntry.id) + 1 : 0;
   const isRoomMentor = !!user && !!room && user.id === room.mentorClerkId;
   const isScheduled = room?.status === 'scheduled';
+
+  // Takeaways for this room only, private to whoever is reading. Both sides
+  // write them from here; neither ever sees the other's.
+  const takeaways = useTakeaways(isRoomMentor ? 'mentor' : 'seeker');
+  const roomTakeaways = takeaways.bySession.get(id);
+  const refreshTakeaways = takeaways.refresh;
+  // Re-read as people finish, so the host's per-person options cover everyone
+  // who has actually been seen rather than only whoever was there on load. The
+  // queue's own 4s poll is left alone — this is not worth that cadence.
+  useEffect(() => {
+    if (!room) return;
+    refreshTakeaways();
+  }, [room, recap.length, refreshTakeaways]);
   const modeBtn = (active: boolean): React.CSSProperties => ({ background: active ? 'rgba(112,181,249,0.15)' : 'transparent', border: `1px solid ${active ? 'rgba(112,181,249,0.4)' : BORDER}`, color: active ? LINK : MUTED, padding: '7px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: modeUpdating || actives.length > 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' });
 
   if (!userLoaded || !user || !room || !rolesLoaded) return (
@@ -664,6 +679,27 @@ export default function RoomPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* TAKEAWAYS — both sides write their own here, and neither can read the
+            other's. Rendered once for both roles rather than inside each branch:
+            the composer offers the host a group note plus one per person from
+            `participants`, which the API sends only to the host, and everyone
+            else the single note that is every other case.
+
+            Distinct from the mentor's Session Notes above, which are notes ABOUT
+            a seeker and are the other feature entirely. */}
+        {roomTakeaways && (
+          <div style={{ marginTop: 32, borderTop: `1px solid ${BORDER}`, paddingTop: 20 }}>
+            <SessionTakeaways
+              readOnly={!roomTakeaways.writable}
+              target={{ kind: 'room', sessionId: id }}
+              takeaways={roomTakeaways.takeaways}
+              participants={roomTakeaways.participants}
+              onSaved={saved => takeaways.applySaved(id, saved)}
+              onDeleted={deletedId => takeaways.applyDeleted(id, deletedId)}
+            />
+          </div>
         )}
       </div>
 

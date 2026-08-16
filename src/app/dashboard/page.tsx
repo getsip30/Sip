@@ -17,6 +17,8 @@ import PixelAvatar from '@/components/PixelAvatar';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import BadgeCelebration from '@/components/BadgeCelebration';
 import NoShowButton from '@/components/NoShowButton';
+import SessionTakeaways from '@/components/SessionTakeaways';
+import { useTakeaways } from '@/hooks/useTakeaways';
 import { OwnBadgePill } from '@/components/BadgePill';
 import { SIP_MILESTONES, type BadgeType } from '@/lib/badge-meta';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, SUCCESS2, WARNING, DANGER, CLAY } from '@/lib/theme';
@@ -67,6 +69,13 @@ export default function Dashboard() {
   const [liveNotes, setLiveNotes] = useState<SipNote[]>([]);
   const [sessionNotes, setSessionNotes] = useState<SessionNote[]>([]);
   const [notesSectionOpen, setNotesSectionOpen] = useState(false);
+  // Private to this mentor, and separate from the Session Notes above: those are
+  // notes ABOUT a seeker, these are the mentor's own takeaways from a session.
+  const takeaways = useTakeaways('mentor');
+  // Pulled out so fetchData can depend on the stable callback rather than the
+  // hook's result object, which is rebuilt on every render.
+  const refreshTakeaways = takeaways.refresh;
+  const [takeawaysSectionOpen, setTakeawaysSectionOpen] = useState(false);
   const [openNoteDates, setOpenNoteDates] = useState<Set<string>>(new Set());
   const [openNoteSeekers, setOpenNoteSeekers] = useState<Set<string>>(new Set());
   const [reviewingNote, setReviewingNote] = useState<string | null>(null);
@@ -198,12 +207,13 @@ export default function Dashboard() {
     }
     if (rRes.ok) setRequests(await rRes.json());
     if (aRes.ok) setAsks(await aRes.json());
+    await refreshTakeaways();
   } catch (err) {
     console.error('fetchData failed:', err);
   } finally {
     setLoadingMentor(false);
   }
-}, []);
+}, [refreshTakeaways]);
 
   useEffect(() => {
     if (isLoaded && !user) router.push('/');
@@ -294,6 +304,21 @@ export default function Dashboard() {
         seekers: [...bySeeker.entries()].sort((a, b) => a[0].localeCompare(b[0])),
       }));
   }, [sessionNotes]);
+
+  /**
+   * What the Takeaways section lists.
+   *
+   * Every eligible live room, written on or not, because a room has no card of
+   * its own on this dashboard and this is the only place a mentor can reach one
+   * after leaving it. 1:1s appear only once they have a note, since an empty one
+   * is already offered inline on the request card and would otherwise be asked
+   * for twice on the same screen. Archived notes always show — the session they
+   * belonged to is gone and this is all that is left of it.
+   */
+  const takeawaySessions = useMemo(
+    () => takeaways.sessions.filter(s => s.kind === 'room' || s.takeaways.length > 0),
+    [takeaways.sessions]
+  );
 
   function toggleIn(set: Set<string>, key: string) {
     const next = new Set(set);
@@ -700,6 +725,62 @@ export default function Dashboard() {
                 </motion.div>
               )}
 
+              {/* TAKEAWAYS — the mentor's own notes to self, private to them.
+                  Deliberately its own section above Session Notes rather than
+                  folded into it: that one holds notes ABOUT a seeker, and the
+                  two must never read as the same feature. */}
+              {takeawaySessions.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.37 }} style={{ marginBottom: 32 }}>
+                  <button
+                    onClick={() => setTakeawaysSectionOpen(v => !v)}
+                    aria-expanded={takeawaysSectionOpen}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '18px 24px', color: TEXT, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 22, fontWeight: 700 }}>Takeaways</span>
+                      <span style={{ color: MUTED, fontSize: 13 }}>
+                        {takeaways.total} {takeaways.total === 1 ? 'note' : 'notes'} · only you can see these
+                      </span>
+                    </span>
+                    <motion.span aria-hidden animate={{ rotate: takeawaysSectionOpen ? 90 : 0 }} transition={ease(DUR.fast)}
+                      style={{ display: 'inline-flex', color: MUTED }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </motion.span>
+                  </button>
+
+                  <Collapse open={takeawaysSectionOpen}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                      {takeawaySessions.map(s => (
+                        <div key={`${s.kind}:${s.sessionId}`} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '14px 20px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+                            <span style={{ fontWeight: 600, fontSize: 14 }}>{s.sessionLabel}</span>
+                            <span style={{ color: MUTED, fontSize: 12 }}>
+                              {s.kind === 'room' ? 'live session' : s.kind === 'archived' ? 'session no longer on Sip' : '1:1'}
+                              {' · '}
+                              {new Date(s.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          </div>
+                          {s.kind === 'archived' ? (
+                            <ul style={{ margin: 0, paddingLeft: 18, color: TEXT, fontSize: 13, lineHeight: 1.6 }}>
+                              {s.takeaways.flatMap(t => t.bullets).map((b, i) => <li key={i}>{b}</li>)}
+                            </ul>
+                          ) : (
+                            <SessionTakeaways
+                              compact
+                              readOnly={!s.writable}
+                              target={{ kind: s.kind, sessionId: s.sessionId }}
+                              takeaways={s.takeaways}
+                              participants={s.participants}
+                              onSaved={saved => takeaways.applySaved(s.sessionId, saved)}
+                              onDeleted={id => takeaways.applyDeleted(s.sessionId, id)}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </Collapse>
+                </motion.div>
+              )}
+
               {/* SESSION NOTES */}
               {sessionNotes.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.377 }} style={{ marginBottom: 32 }}>
@@ -944,6 +1025,24 @@ export default function Dashboard() {
                             ) : (
                               <div style={{ color: SUCCESS2, fontSize: 12 }}>feedback sent</div>
                             )}
+
+                            {/* Only once the sip has actually happened — the API
+                                decides that, and a session it will not accept a
+                                write for is simply absent from the map. */}
+                            {(() => {
+                              const session = takeaways.bySession.get(r.id);
+                              if (!session) return null;
+                              return (
+                                <SessionTakeaways
+                                  compact
+                                  readOnly={!session.writable}
+                                  target={{ kind: 'request', sessionId: r.id }}
+                                  takeaways={session.takeaways}
+                                  onSaved={saved => takeaways.applySaved(r.id, saved)}
+                                  onDeleted={id => takeaways.applyDeleted(r.id, id)}
+                                />
+                              );
+                            })()}
                           </div>
                         )}
                       </motion.div>
