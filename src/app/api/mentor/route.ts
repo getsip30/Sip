@@ -14,6 +14,43 @@ import { handleApiError } from '@/lib/api-handler';
 import { logSwallowed } from '@/lib/logger';
 import { recordAbuseSignal } from '@/lib/abuse';
 
+/**
+ * Shown whenever the address on the caller's Clerk identity already belongs to
+ * another mentor row.
+ *
+ * The profile is deliberately NOT transferred to the new account. `email` here
+ * comes from `clerkUser.emailAddresses[0]` with no verification check, so
+ * claiming an existing profile by re-registering that address would be account
+ * takeover through a signup form — it would hand over the row's booking links,
+ * contact email, XP, badges and sip history. Linking two accounts is a real
+ * feature, and it needs a verification step of its own rather than arriving as a
+ * side effect of an insert.
+ */
+const EMAIL_TAKEN =
+  "A mentor profile already exists for this email address. If that's you, sign in with the account you originally used. If you think this is a mistake, email hello@getsip.co.";
+
+/**
+ * Whether a thrown error is specifically the mentors-email unique violation.
+ *
+ * The pre-check below is a read followed by a write with nothing holding them
+ * together, so two signups on one address can both pass it and race. This turns
+ * the loser's 23505 into the same 409 the pre-check would have produced, instead
+ * of a 500 nobody can act on.
+ *
+ * Narrowed to the one constraint on purpose: a clerk_id or referral_code
+ * conflict is a different problem and must not inherit wording about email.
+ * Drizzle wraps the driver error, so the fields live down the `cause` chain.
+ */
+function isEmailTaken(err: unknown): boolean {
+  let current: unknown = err;
+  for (let depth = 0; current != null && depth < 4; depth++) {
+    const pg = current as { code?: unknown; constraint?: unknown };
+    if (String(pg?.code) === '23505' && String(pg?.constraint) === 'mentors_email_unique') return true;
+    current = current instanceof Error ? current.cause : undefined;
+  }
+  return false;
+}
+
 async function notifyMatchingSeekers(mentor: typeof mentors.$inferSelect) {
   const mentorTopics = mentor.topics.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
   if (mentorTopics.length === 0) return;
@@ -104,11 +141,36 @@ export async function POST(req: Request) {
   const existing = await db.select().from(mentors).where(eq(mentors.clerkId, userId));
   if (existing[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
 
+  // mentors.email is UNIQUE, and the address is taken from the Clerk identity
+  // rather than the body, so the caller cannot pick a different one to get past
+  // this. Someone holding two Clerk accounts on one address — a second sign-up
+  // through a different provider, or an account deleted and remade — arrives
+  // here with an email another row already owns and, before this check, fell
+  // through to a write that could only fail.
+  //
+  // Compared with `eq` rather than case-insensitively, deliberately: the unique
+  // index is on the raw column, so a case-folded check here would refuse
+  // sign-ups Postgres would have accepted, and a guard that disagrees with its
+  // own constraint is wrong in both directions.
+  //
+  // Covers the update path too. Excluding the caller's own row is what makes it
+  // safe there: a mentor re-saving their profile still matches their own email,
+  // and only a DIFFERENT row holding it is a conflict.
+  const emailHolders = await db.select({ id: mentors.id }).from(mentors).where(eq(mentors.email, email));
+  if (emailHolders.some(m => m.id !== existing[0]?.id)) {
+    return NextResponse.json({ error: EMAIL_TAKEN }, { status: 409 });
+  }
+
   if (existing.length > 0) {
-    const updated = await db.update(mentors)
-      .set({ firstName, lastName, email, role, company, bio: bio || '', topics: topics || '', calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null, defaultNote: safeDefaultNote })      .where(eq(mentors.clerkId, userId))
-      .returning();
-    return NextResponse.json(updated[0]);
+    try {
+      const updated = await db.update(mentors)
+        .set({ firstName, lastName, email, role, company, bio: bio || '', topics: topics || '', calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null, defaultNote: safeDefaultNote })      .where(eq(mentors.clerkId, userId))
+        .returning();
+      return NextResponse.json(updated[0]);
+    } catch (err) {
+      if (isEmailTaken(err)) return NextResponse.json({ error: EMAIL_TAKEN }, { status: 409 });
+      throw err;
+    }
   }
 
   let invitedByClerkId: string | null = null;
@@ -119,13 +181,19 @@ export async function POST(req: Request) {
   }
 
   const referralCode = await generateUniqueReferralCode();
-  const mentor = await db.insert(mentors).values({
-    clerkId: userId, firstName, lastName, email, role, company, bio: bio || '', topics: topics || '',    calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin,
-    avatarData: avatarData || null,
-    defaultNote: safeDefaultNote,
-    referralCode,
-    invitedByClerkId,
-  }).returning();
+  let mentor: (typeof mentors.$inferSelect)[];
+  try {
+    mentor = await db.insert(mentors).values({
+      clerkId: userId, firstName, lastName, email, role, company, bio: bio || '', topics: topics || '',    calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin,
+      avatarData: avatarData || null,
+      defaultNote: safeDefaultNote,
+      referralCode,
+      invitedByClerkId,
+    }).returning();
+  } catch (err) {
+    if (isEmailTaken(err)) return NextResponse.json({ error: EMAIL_TAKEN }, { status: 409 });
+    throw err;
+  }
 
   if (invitedByClerkId) {
     await db.insert(referralEvents).values({
