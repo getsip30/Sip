@@ -19,7 +19,7 @@ import { recordAbuseSignal } from '@/lib/abuse';
  * another mentor row.
  *
  * The profile is deliberately NOT transferred to the new account. `email` here
- * comes from `clerkUser.emailAddresses[0]` with no verification check, so
+ * comes from the caller's primary Clerk address with no verification check, so
  * claiming an existing profile by re-registering that address would be account
  * takeover through a signup form — it would hand over the row's booking links,
  * contact email, XP, badges and sip history. Linking two accounts is a real
@@ -103,7 +103,14 @@ export async function POST(req: Request) {
   // notifications at someone else's inbox (and squatting their unique email).
   const client = await clerkClient();
   const clerkUser = await client.users.getUser(userId);
-  const email = clerkUser.emailAddresses[0]?.emailAddress;
+  // The address Clerk marks primary, not whichever happens to sit at index 0.
+  // emailAddresses comes back in no guaranteed order, so on an account with
+  // several the index was effectively arbitrary — and this value lands in a
+  // UNIQUE column, so it decides which row a person collides with. Falls back
+  // to the old behaviour when primaryEmailAddressId is null, because failing a
+  // signup outright would be a worse regression than the imprecision.
+  const email = clerkUser.primaryEmailAddress?.emailAddress
+    ?? clerkUser.emailAddresses[0]?.emailAddress;
   if (!email) return NextResponse.json({ error: 'No email on your account.' }, { status: 400 });
   if (bio && bio.length > 500) return NextResponse.json({ error: 'Bio is too long' }, { status: 400 });
   if (topics && topics.length > 300) return NextResponse.json({ error: 'Topics field is too long' }, { status: 400 });
