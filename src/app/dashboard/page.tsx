@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useUser, SignOutButton } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,6 +17,7 @@ import PixelAvatar from '@/components/PixelAvatar';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import BadgeCelebration from '@/components/BadgeCelebration';
 import NoShowButton from '@/components/NoShowButton';
+import AccountMenu from '@/components/AccountMenu';
 import SessionTakeaways from '@/components/SessionTakeaways';
 import { useTakeaways } from '@/hooks/useTakeaways';
 import { OwnBadgePill } from '@/components/BadgePill';
@@ -488,9 +489,7 @@ export default function Dashboard() {
             ? <RoleSwitchLink to="/seekers" role="seeker" label="switch to seeker" style={{ color: LINK, textDecoration: 'none', fontSize: 13, border: '1px solid rgba(112,181,249,0.2)', padding: '6px 14px', borderRadius: 20, flexShrink: 0, whiteSpace: 'nowrap' }} />
             : <Link href="/seekers/onboarding" className="desktop-only" style={{ color: MUTED, textDecoration: 'none', fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 20 }}>become a seeker too</Link>)}
             {greetingName && <span className="desktop-only" style={{ color: MUTED, fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap' }}>hey, {greetingName}</span>}
-          <SignOutButton>
-            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} style={{ background: 'transparent', color: MUTED, border: '1px solid rgba(255,255,255,0.1)', padding: '7px 16px', borderRadius: 20, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap' }}>sign out</motion.button>
-          </SignOutButton>
+          <AccountMenu />
         </div>
       </motion.nav>
 

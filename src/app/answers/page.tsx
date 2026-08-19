@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { db } from '@/db';
 import { asks, mentors } from '@/db/schema';
-import { eq, and, desc, isNotNull } from 'drizzle-orm';
+import { eq, and, desc, isNotNull, isNull } from 'drizzle-orm';
 import Logo from '@/components/Logo';
 import Footer from '@/components/Footer';
 import { jsonLdScript } from '@/lib/utils';
@@ -83,6 +83,7 @@ async function getAnswers(): Promise<PublicAsk[]> {
         // broken page to a visitor and a thin one to a crawler.
         isNotNull(asks.answer),
         eq(mentors.banned, false),
+        isNull(mentors.deletedAt),
       ),
     )
     .orderBy(desc(asks.answeredAt))

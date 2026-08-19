@@ -1,6 +1,6 @@
 import { db } from '@/db';
 import { rooms, mentors } from '@/db/schema';
-import { eq, and, gt, asc } from 'drizzle-orm';
+import { eq, and, gt, asc, isNull } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { readLimiter, getIp } from '@/lib/ratelimit';
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
       })
       .from(rooms)
       .innerJoin(mentors, eq(rooms.mentorId, mentors.id))
-      .where(and(eq(rooms.status, 'scheduled'), gt(rooms.scheduledAt, new Date())))
+      .where(and(eq(rooms.status, 'scheduled'), gt(rooms.scheduledAt, new Date()), isNull(mentors.deletedAt)))
       .orderBy(asc(rooms.scheduledAt))
       .limit(100);
 

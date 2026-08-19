@@ -43,13 +43,14 @@ export async function GET(
         role: mentors.role,
         company: mentors.company,
         banned: mentors.banned,
+        deletedAt: mentors.deletedAt,
       })
       .from(mentors)
       .where(eq(mentors.id, mentorId))
       .limit(1);
 
     const mentor = rows[0];
-    if (!mentor || mentor.banned) {
+    if (!mentor || mentor.banned || mentor.deletedAt) {
       return NextResponse.json({ error: 'Certificate not found' }, { status: 404 });
     }
 
