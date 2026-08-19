@@ -2,8 +2,9 @@ import { Webhook } from 'svix';
 import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { mentors, seekers, requests, asks, follows, queueEntries, referralEvents, flags, consents, siteFeedback, sipFeedback, sipNotes } from '@/db/schema';
-import { eq, or, inArray } from 'drizzle-orm';
+import { mentors, seekers } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { anonymizeAccount } from '@/lib/account-deletion';
 import { logInfo, logWarn } from '@/lib/logger';
 import { transporter } from '@/lib/mailer';
 import { verificationCodeEmail } from '@/lib/email-template';
@@ -17,6 +18,24 @@ import { verificationCodeEmail } from '@/lib/email-template';
  * fire today.
  */
 const SELF_SENT_EMAIL_SLUGS = ['verification_code', 'reset_password_code'];
+
+/**
+ * Whether a thrown error is specifically the mentors-email unique violation.
+ * Drizzle wraps the driver error, so the fields live down the `cause` chain.
+ *
+ * A copy of isEmailTaken in POST /api/mentor. Worth extracting to a shared
+ * module the next time a third caller needs it; kept local here so this fix
+ * touches one file.
+ */
+function isMentorEmailTaken(err: unknown): boolean {
+  let current: unknown = err;
+  for (let depth = 0; current != null && depth < 4; depth++) {
+    const pg = current as { code?: unknown; constraint?: unknown };
+    if (String(pg?.code) === '23505' && String(pg?.constraint) === 'mentors_email_unique') return true;
+    current = current instanceof Error ? current.cause : undefined;
+  }
+  return false;
+}
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -108,52 +127,74 @@ export async function POST(req: Request) {
   if (evt.type === 'user.deleted') {
     const { id } = evt.data;
     if (id) {
-      // Rows owned by a mentor row cascade via FK. Everything below stores the
-      // Clerk id (or email) as loose text with no FK, so it has to be cleaned up
-      // by hand or it outlives the account.
-      const [mentorRow, seekerRow] = await Promise.all([
-        db.select({ id: mentors.id, email: mentors.email }).from(mentors).where(eq(mentors.clerkId, id)),
-        db.select({ id: seekers.id, email: seekers.email }).from(seekers).where(eq(seekers.clerkId, id)),
-      ]);
-      const emails = [mentorRow[0]?.email, seekerRow[0]?.email].filter(Boolean) as string[];
-
-      // These target independent tables, so they run concurrently rather than as
-      // a dozen sequential round trips.
-      await Promise.all([
-        db.delete(requests).where(eq(requests.seekerClerkId, id)),
-        db.delete(asks).where(eq(asks.seekerClerkId, id)),
-        db.delete(follows).where(eq(follows.seekerClerkId, id)),
-        db.delete(queueEntries).where(eq(queueEntries.seekerClerkId, id)),
-        db.delete(referralEvents).where(or(eq(referralEvents.referrerClerkId, id), eq(referralEvents.referredClerkId, id))),
-        db.delete(consents).where(eq(consents.clerkId, id)),
-        db.delete(siteFeedback).where(eq(siteFeedback.clerkId, id)),
-        db.delete(sipFeedback).where(eq(sipFeedback.raterClerkId, id)),
-        // Both sides of a flag: reports they filed and reports filed about them.
-        db.delete(flags).where(or(eq(flags.reporterClerkId, id), eq(flags.reportedClerkId, id))),
-      ]);
-
-      // Requests/notes created while logged out are keyed only by email.
-      if (emails.length > 0) {
-        await Promise.all([
-          db.delete(requests).where(inArray(requests.seekerEmail, emails)),
-          db.delete(sipNotes).where(inArray(sipNotes.seekerEmail, emails)),
-        ]);
-      }
-
-      // Last, so the cascade can't remove rows the cleanup above still needs.
-      await Promise.all([
-        db.delete(mentors).where(eq(mentors.clerkId, id)),
-        db.delete(seekers).where(eq(seekers.clerkId, id)),
-      ]);
-      logInfo('webhook.user_deleted', { clerkId: id });
+      // This used to hard-delete the account rows, which cascaded through nine
+      // tables hanging off `mentors.id` and took other people's history with it:
+      // a seeker's bookings, the testimonials they had written, the public Q&A.
+      // It had also drifted out of date — takeaways, session_notes,
+      // session_feedback and no_show_reports were all added afterwards and were
+      // never cleaned up here, so those rows outlived the account with the
+      // person's name and Clerk id still in them.
+      //
+      // Both problems are now handled in one place. `anonymizeAccount` scrubs
+      // rather than deletes, covers every table, and is idempotent — so it does
+      // not matter whether this webhook or DELETE /api/account got here first.
+      const result = await anonymizeAccount(id);
+      logInfo('webhook.user_deleted', { clerkId: id, ...result });
     }
   }
 
   if (evt.type === 'user.updated') {
-    const { id, email_addresses } = evt.data;
-    const email = email_addresses?.[0]?.email_address;
+    const { id, email_addresses, primary_email_address_id } = evt.data;
+
+    // The address Clerk marks primary, not whichever happens to sit at index 0.
+    // POST /api/mentor was changed to do this because the value lands in
+    // mentors.email, which is UNIQUE — but this handler writes the same column,
+    // so leaving it on index 0 meant every user.updated event could overwrite
+    // that choice with an arbitrary one and undo the fix. Falls back to index 0
+    // when no primary is set, matching the signup path rather than dropping the
+    // update entirely.
+    const email =
+      email_addresses?.find(e => e.id === primary_email_address_id)?.email_address
+      ?? email_addresses?.[0]?.email_address;
+
     if (id && email) {
-      await db.update(mentors).set({ email }).where(eq(mentors.clerkId, id));
+      // mentors.email is UNIQUE, and a webhook has nobody to hand a 409 to. An
+      // address that already belongs to a DIFFERENT account cannot be written
+      // here no matter how many times it is attempted, so throwing would turn a
+      // permanent conflict into a 500 that Clerk retries on a schedule forever.
+      // Skipping and recording it leaves the existing row untouched, which is
+      // the same call the signup path makes: it refuses to move a profile
+      // between accounts on the strength of an unverified address.
+      //
+      // Own-row matches are not conflicts — a mentor whose row already holds
+      // this address is the normal case, and the update is then a no-op.
+      const holders = await db
+        .select({ clerkId: mentors.clerkId })
+        .from(mentors)
+        .where(eq(mentors.email, email));
+
+      if (holders.some(m => m.clerkId !== id)) {
+        // No email in the log line: the point is which account was skipped, and
+        // the address is the other party's PII.
+        logWarn('webhook.user_updated_email_conflict', { clerkId: id });
+      } else {
+        try {
+          await db.update(mentors).set({ email }).where(eq(mentors.clerkId, id));
+        } catch (err) {
+          // The check above is a read and a write with nothing holding them
+          // together, so a concurrent signup on the same address can still win
+          // the race. Narrowed to that one constraint — a clerk_id or
+          // referral_code conflict is a different problem and must still fail
+          // loudly so Clerk retries it. Mirrors isEmailTaken in
+          // POST /api/mentor; duplicated rather than shared to keep this change
+          // to one file.
+          if (!isMentorEmailTaken(err)) throw err;
+          logWarn('webhook.user_updated_email_conflict_race', { clerkId: id });
+        }
+      }
+
+      // seekers.email carries no unique constraint, so it has no conflict to
+      // lose and is always safe to write.
       await db.update(seekers).set({ email }).where(eq(seekers.clerkId, id));
     }
   }

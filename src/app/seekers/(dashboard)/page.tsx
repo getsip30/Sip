@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Suspense } from 'react';
 import { safeExternalUrl } from '@/lib/utils';
 import NoShowButton from '@/components/NoShowButton';
+import AccountMenu from '@/components/AccountMenu';
 import SessionTakeaways from '@/components/SessionTakeaways';
 import { useTakeaways } from '@/hooks/useTakeaways';
 
@@ -352,6 +353,7 @@ function SeekersContent() {
             ? <RoleSwitchLink to="/dashboard" role="mentor" label="switch to mentor" style={{ color: LINK, textDecoration: 'none', fontSize: 13, border: '1px solid rgba(112,181,249,0.2)', padding: '6px 14px', borderRadius: 20, flexShrink: 0, whiteSpace: 'nowrap' }} />
             : <Link href="/mentors/signup" style={{ color: MUTED, textDecoration: 'none', fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 20 }}>become a mentor</Link>}
           {rolesLoaded && isSeeker && <Link href="/seekers/onboarding" style={{ color: MUTED, textDecoration: 'none', fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 20 }}>edit profile</Link>}
+          <AccountMenu />
         </div>
       </motion.nav>
 

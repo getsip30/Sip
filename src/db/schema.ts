@@ -70,6 +70,18 @@ export const mentors = pgTable('mentors', {
   invitedByClerkId: text('invited_by_clerk_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   banned: boolean('banned').default(false).notNull(),
+  /**
+   * Set when the person deletes their own account. The row is kept and scrubbed
+   * rather than removed: nine tables cascade off `mentors.id`, and deleting it
+   * would take a seeker's booking history, their testimonials and the public Q&A
+   * with it. See @/lib/account-deletion.
+   *
+   * `clerkId` is replaced with a tombstone at the same time, so every
+   * lookup-by-clerk-id path (requireMentor, hasRoleRow) stops finding this row
+   * on its own. This column is what the remaining public lookups-by-id filter
+   * on, alongside `banned`.
+   */
+  deletedAt: timestamp('deleted_at'),
 });
 
 export const seekers = pgTable('seekers', {
@@ -91,6 +103,8 @@ export const seekers = pgTable('seekers', {
   invitedByClerkId: text('invited_by_clerk_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   banned: boolean('banned').default(false).notNull(),
+  /** Self-deletion tombstone. Same contract as `mentors.deletedAt`. */
+  deletedAt: timestamp('deleted_at'),
 });
 
 /**

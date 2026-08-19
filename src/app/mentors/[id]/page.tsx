@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { db } from '@/db';
 import { mentors, sipNotes } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, isNull } from 'drizzle-orm';
 import { publicMentor } from '@/lib/mentor';
 import { badgesForMentor } from '@/lib/badges';
 import { isUuid } from '@/lib/validate';
@@ -45,7 +45,10 @@ export async function getMentor(id: string) {
   // rather than return no rows, which surfaced as a 500 for what is really a
   // 404. Any crawler following a mangled link was getting a server error.
   if (!isUuid(id)) return null;
-  const rows = await db.select().from(mentors).where(eq(mentors.id, id));
+  // `deletedAt` is filtered in the query rather than checked by the caller so
+  // the layout's metadata and the page cannot disagree about whether the profile
+  // exists — one returning a title for a page the other 404s.
+  const rows = await db.select().from(mentors).where(and(eq(mentors.id, id), isNull(mentors.deletedAt)));
   return rows[0] ?? null;
 }
 

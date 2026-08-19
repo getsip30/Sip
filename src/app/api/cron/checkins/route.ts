@@ -21,7 +21,8 @@ export async function GET(req: Request) {
   const due = await db.select({ id: seekers.id, email: seekers.email }).from(seekers).where(
     and(
       or(isNull(seekers.lastCheckinAt), lte(seekers.lastCheckinAt, twoWeeksAgo)),
-      lte(seekers.createdAt, twoWeeksAgo)
+      lte(seekers.createdAt, twoWeeksAgo),
+      isNull(seekers.deletedAt)
     )
   ).limit(BATCH_LIMIT);
 

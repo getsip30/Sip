@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { rooms, mentors } from '@/db/schema';
-import { eq, and, lt, lte } from 'drizzle-orm';
+import { eq, and, lt, lte, isNull } from 'drizzle-orm';
 import { NextResponse, after } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter, readLimiter, getIp } from '@/lib/ratelimit';
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
       })
       .from(rooms)
       .innerJoin(mentors, eq(rooms.mentorId, mentors.id))
-      .where(eq(rooms.status, 'live'));
+      .where(and(eq(rooms.status, 'live'), isNull(mentors.deletedAt)));
     return NextResponse.json(result);
   } catch (err) {
     return handleApiError(err, 'GET /api/rooms');

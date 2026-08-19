@@ -20,7 +20,7 @@ async function loadMentor(id: string) {
   if (!isUuid(id)) return null;
   const rows = await db.select().from(mentors).where(eq(mentors.id, id));
   const mentor = rows[0];
-  if (!mentor || mentor.banned) return null;
+  if (!mentor || mentor.banned || mentor.deletedAt) return null;
   return mentor;
 }
 
