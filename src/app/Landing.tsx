@@ -9,6 +9,7 @@ import { useRoles } from '@/hooks/useRoles';
 import PixelAvatar from '@/components/PixelAvatar';
 import Logo from '@/components/Logo';
 import Footer from '@/components/Footer';
+import Testimonials from '@/components/Testimonials';
 import { BG, SURFACE, TEXT, MUTED, ACCENT, LINK, SUCCESS2 } from '@/lib/theme';
 
 type Mentor = {
@@ -847,6 +848,7 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           matches={matches}
           matchError={matchError}
         />
+        <Testimonials />
         <Steps />
         <MentorGrid mentors={mentors} />
         <Proof notes={notes} mentorCount={mentors.length} />
