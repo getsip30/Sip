@@ -9,6 +9,7 @@ import {
   SITE_NAME,
 } from '@/lib/site';
 import Landing from './Landing';
+import TrackEvent from '@/components/TrackEvent';
 
 export const metadata: Metadata = {
   title: 'Sip: talk to someone who already did the thing',
@@ -147,6 +148,11 @@ export default function Page() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
       <Landing faq={HOME_FAQ} />
+      {/*
+        Top of the funnel. Client-side so this page stays statically rendered —
+        see TrackEvent for why that matters here specifically.
+      */}
+      <TrackEvent type="landing_view" />
     </>
   );
 }

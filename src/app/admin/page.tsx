@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { BADGE_META, type BadgeType } from '@/lib/badge-meta';
+import AdminDashboard from '@/components/AdminDashboard';
 
 type Flag = {
   id: string; roomId: string; reporterClerkId: string; reporterRole: string;
@@ -52,7 +53,7 @@ type Overview = {
   asks: Ask[]; notes: Note[]; referrals: Referral[]; follows: Follow[]; consents: Consent[];
 };
 
-const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Follows', 'Consents', 'Flags', 'No-shows', 'Feedback', 'Session Feedback'] as const;
+const TABS = ['Overview', 'Dashboard', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Follows', 'Consents', 'Flags', 'No-shows', 'Feedback', 'Session Feedback'] as const;
 type Tab = typeof TABS[number];
 
 const card: React.CSSProperties = { background: '#121923', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20 };
@@ -146,6 +147,8 @@ export default function AdminPage() {
             </button>
           ))}
         </div>
+
+        {tab === 'Dashboard' && <AdminDashboard />}
 
         {tab === 'Overview' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>

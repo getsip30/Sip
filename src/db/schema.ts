@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, text, timestamp, boolean, uuid, integer, index, uniqueIndex, check } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, text, timestamp, boolean, uuid, integer, jsonb, index, uniqueIndex, check } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const referralEvents = pgTable('referral_events', {
@@ -71,6 +71,18 @@ export const mentors = pgTable('mentors', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   banned: boolean('banned').default(false).notNull(),
   /**
+   * Last authenticated request from this person, maintained by the Clerk
+   * middleware. Nullable with no default: null means "not seen since this column
+   * was added", which is the truth for every existing row and is not the same
+   * claim as "active at the moment of the migration".
+   *
+   * Written at most once every ACTIVITY_THROTTLE_MS (see @/lib/activity) rather
+   * than on every request. The only reader counts weekly-active users, so
+   * fifteen-minute granularity costs the metric nothing and keeps a write off
+   * the hot path of every page load and poll.
+   */
+  lastActiveAt: timestamp('last_active_at'),
+  /**
    * Set when the person deletes their own account. The row is kept and scrubbed
    * rather than removed: nine tables cascade off `mentors.id`, and deleting it
    * would take a seeker's booking history, their testimonials and the public Q&A
@@ -103,6 +115,18 @@ export const seekers = pgTable('seekers', {
   invitedByClerkId: text('invited_by_clerk_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   banned: boolean('banned').default(false).notNull(),
+  /**
+   * Last authenticated request from this person, maintained by the Clerk
+   * middleware. Nullable with no default: null means "not seen since this column
+   * was added", which is the truth for every existing row and is not the same
+   * claim as "active at the moment of the migration".
+   *
+   * Written at most once every ACTIVITY_THROTTLE_MS (see @/lib/activity) rather
+   * than on every request. The only reader counts weekly-active users, so
+   * fifteen-minute granularity costs the metric nothing and keeps a write off
+   * the hot path of every page load and poll.
+   */
+  lastActiveAt: timestamp('last_active_at'),
   /** Self-deletion tombstone. Same contract as `mentors.deletedAt`. */
   deletedAt: timestamp('deleted_at'),
 });
@@ -548,4 +572,90 @@ export const flags = pgTable('flags', {
 }, (t) => [
   index('flags_reported_clerk_id_idx').on(t.reportedClerkId),
   index('flags_room_id_idx').on(t.roomId),
+]);
+/**
+ * Product analytics events, written from the app and read only by the admin
+ * dashboard's funnel.
+ *
+ * The person is identified by a bare Clerk id with no foreign key, and by the
+ * role they were acting as. That is the shape `requests.seekerClerkId`,
+ * `follows.seekerClerkId`, `consents.clerkId` and `flags.reporterClerkId`
+ * already use, and it is forced here rather than chosen: there is no `users`
+ * table to point at. A person is a row in `mentors`, a row in `seekers`, or
+ * both, and the funnel spans the moment before either row exists — a
+ * `landing_view` has no account behind it at all, and `signup_complete` fires
+ * for someone who is mid-onboarding.
+ *
+ * `clerkId` is therefore NULLABLE and means "signed out, or not identified".
+ * Those rows still count toward the funnel's first step; they just cannot be
+ * counted as distinct people beyond the row itself, which is why the funnel
+ * counts distinct ids and falls back to row count for the anonymous step.
+ *
+ * Nothing here is load-bearing for a user-facing flow. Every write goes through
+ * `logEvent` in @/lib/events, which swallows its own failures: analytics must
+ * never be the reason a signup or a sip request fails.
+ */
+export const events = pgTable('events', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  /** Clerk id, or null for a signed-out visitor. No FK; see the note above. */
+  clerkId: text('clerk_id'),
+  /** Which hat they were wearing: 'mentor' | 'seeker' | null when unknown. */
+  userRole: text('user_role'),
+  /**
+   * One of EVENT_TYPES in @/lib/events: landing_view, signup_complete,
+   * profile_setup_complete, browse_sips, sip_requested, sip_accepted.
+   *
+   * Plain text rather than a pgEnum, matching `requests.status` and
+   * `requests.sessionStatus`. The funnel is expected to grow steps, and
+   * `ALTER TYPE ... ADD VALUE` cannot be rolled back — the wrong trade for a
+   * list still being worked out. The values are constrained in @/lib/events.
+   */
+  eventType: text('event_type').notNull(),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  // The funnel groups by type over a date window; this is the only read shape.
+  index('events_type_created_idx').on(t.eventType, t.createdAt),
+  index('events_clerk_id_idx').on(t.clerkId),
+]);
+
+/**
+ * One row per email Sip attempted to send, successful or not.
+ *
+ * Written by the admin broadcast route today. The rest of the app's ~17 send
+ * sites still send without logging, so this table is NOT a complete record of
+ * mail sent — the Notification Center is honest about showing broadcasts plus
+ * whatever else has been wired up. `emailType` is already wide enough to take
+ * the others as they are migrated onto `sendAndLog`.
+ *
+ * Failures are rows too, with status 'failed' and the reason in `errorMessage`.
+ * A broadcast that reports "3 sent, 1 failed" is useless if the one failure
+ * leaves nothing behind to look at.
+ */
+export const emailLogs = pgTable('email_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  /** Resend's message id. Null when the send failed before Resend accepted it. */
+  resendId: text('resend_id'),
+  recipientEmail: text('recipient_email').notNull(),
+  /** Clerk id when the recipient is a known account. No FK; see `events`. */
+  recipientClerkId: text('recipient_clerk_id'),
+  recipientRole: text('recipient_role'),
+  /**
+   * Who this send was aimed at: 'all_seekers' | 'all_mentors' | 'everyone' |
+   * 'specific'. Null for transactional mail, which has an audience of one by
+   * definition and nothing to group by.
+   */
+  audience: text('audience'),
+  /** One of EMAIL_TYPES in @/lib/email-log. */
+  emailType: text('email_type').notNull(),
+  subject: text('subject').notNull(),
+  /** sent | delivered | bounced | failed. Only 'sent'/'failed' are written
+   *  today; the other two need a Resend webhook, which does not exist yet. */
+  status: text('status').default('sent').notNull(),
+  /** Why a 'failed' row failed. Null on success. */
+  errorMessage: text('error_message'),
+  sentAt: timestamp('sent_at').defaultNow().notNull(),
+}, (t) => [
+  // The Notification Center reads the newest 20, and nothing else reads this.
+  index('email_logs_sent_at_idx').on(t.sentAt),
 ]);

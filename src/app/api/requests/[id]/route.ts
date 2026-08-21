@@ -10,6 +10,7 @@ import { recordAbuseSignal } from '@/lib/abuse';
 import { escapeHtml } from '@/lib/utils';
 import { resolveBookingOption, bookingOptions } from '@/lib/booking';
 import { recordFirstSipBooked, sendAcceptedEmail } from '@/lib/accept';
+import { logEvent } from '@/lib/events';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { isUuid } from '@/lib/validate';
 
@@ -85,6 +86,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (status === 'accepted') {
       await recordFirstSipBooked(r.seekerEmail);
       sendAcceptedEmail({ mentor, request: r, option: resolveBookingOption(mentor, contactMethod) });
+      // Attributed to the seeker, not the accepting mentor: the funnel follows
+      // one person from landing page to booked sip, and this is that person's
+      // conversion. r.seekerClerkId is nullable for email-only seekers.
+      void logEvent('sip_accepted', {
+        clerkId: r.seekerClerkId,
+        userRole: 'seeker',
+        metadata: { mentorId: mentor.id, requestId: r.id, path: 'mentor' },
+      });
     }
 
     if (status === 'declined') {

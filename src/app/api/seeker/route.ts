@@ -9,6 +9,7 @@ import { mutationLimiter, limitKey } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
 import { recordAbuseSignal } from '@/lib/abuse';
 import { safeExternalUrl } from '@/lib/utils';
+import { logEvent } from '@/lib/events';
 
 export async function GET() {
   try {
@@ -96,6 +97,9 @@ export async function POST(req: Request) {
   }
 
   void recordAbuseSignal('signup', limitKey(req, userId), { role: 'seeker' });
+  // Below the insert and inside the create branch only: the update branch above
+  // returns early, so editing a profile later cannot re-fire this step.
+  void logEvent('profile_setup_complete', { clerkId: userId, userRole: 'seeker' });
   return NextResponse.json(created[0]);
   } catch (err) {
     return handleApiError(err, 'POST /api/seeker');
