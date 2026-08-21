@@ -11,6 +11,7 @@ import { resolveBookingOption, bookingEmailBlock, connectCooldownUntil } from '@
 import { mentorNoteEmailBlock } from '@/lib/accept';
 import { isUuid } from '@/lib/validate';
 import { mutationLimiter } from '@/lib/ratelimit';
+import { logEvent } from '@/lib/events';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -117,6 +118,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       mentorNote: noteToSend,
       mentorConsentToShow: true,
     }).returning();
+
+    // A mentor-initiated 1:1 out of a live room. Logged as 'sip_accepted' only
+    // when it lands accepted, i.e. the direct-link mode; 'review' mode creates a
+    // pending row that still has to go through PATCH /api/requests/[id].
+    //
+    // No matching 'sip_requested' is logged: the seeker never asked for this
+    // one, the mentor offered it. That means sip_accepted can exceed
+    // sip_requested for a period, which the funnel's own comment calls out.
+    if (mode === 'link') {
+      void logEvent('sip_accepted', {
+        clerkId: seekerClerkId,
+        userRole: 'seeker',
+        metadata: { mentorId: mentor.id, requestId: created[0].id, roomId, path: 'room' },
+      });
+    }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const mentorName = `${escapeHtml(mentor.firstName)} ${escapeHtml(mentor.lastName)}`;

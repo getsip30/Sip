@@ -8,6 +8,7 @@ import { anonymizeAccount } from '@/lib/account-deletion';
 import { logInfo, logWarn } from '@/lib/logger';
 import { transporter } from '@/lib/mailer';
 import { verificationCodeEmail } from '@/lib/email-template';
+import { logEvent } from '@/lib/events';
 
 /**
  * Clerk email templates Sip would render and send itself. Anything not listed
@@ -121,6 +122,25 @@ export async function POST(req: Request) {
       return new Response('Email send failed', { status: 500 });
     }
 
+    return new Response('OK', { status: 200 });
+  }
+
+  /**
+   * Signup completion, for the admin dashboard's funnel.
+   *
+   * The webhook rather than any page in the app, because "finished signing up"
+   * is a Clerk fact and this is the only place Sip is told it. /choose-role is
+   * the first screen after signup, but it is also reachable any time afterwards,
+   * so logging there would count returning visits as signups.
+   *
+   * Requires `user.created` to be subscribed on the Clerk webhook endpoint. If
+   * it is not, nothing breaks — this step of the funnel just stays at zero.
+   *
+   * No role yet: the account exists but has onboarded into nothing, which is
+   * exactly what distinguishes this step from profile_setup_complete.
+   */
+  if (evt.type === 'user.created') {
+    await logEvent('signup_complete', { clerkId: evt.data.id });
     return new Response('OK', { status: 200 });
   }
 

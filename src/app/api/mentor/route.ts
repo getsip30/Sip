@@ -13,6 +13,7 @@ import { mutationLimiter, limitKey } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
 import { logSwallowed } from '@/lib/logger';
 import { recordAbuseSignal } from '@/lib/abuse';
+import { logEvent } from '@/lib/events';
 
 /**
  * Shown whenever the address on the caller's Clerk identity already belongs to
@@ -212,6 +213,9 @@ export async function POST(req: Request) {
   }
 
   void recordAbuseSignal('signup', limitKey(req, userId), { role: 'mentor' });
+  // Create branch only, matching POST /api/seeker: the update path returns
+  // earlier, so editing a profile does not re-fire this funnel step.
+  void logEvent('profile_setup_complete', { clerkId: userId, userRole: 'mentor' });
   after(() => notifyMatchingSeekers(mentor[0]).catch(err => logSwallowed('email.new_mentor_match_failed', err, { mentorId: mentor[0].id })));
 
   return NextResponse.json(mentor[0]);
