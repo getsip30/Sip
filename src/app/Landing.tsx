@@ -156,15 +156,7 @@ function Nav({ isMentor, isSeeker, signedIn }: { isMentor: boolean; isSeeker: bo
   );
 }
 
-function Hero({
-  mentors,
-  signedIn,
-  onStartQuiz,
-}: {
-  mentors: Mentor[];
-  signedIn: boolean;
-  onStartQuiz: () => void;
-}) {
+function Hero({ mentors }: { mentors: Mentor[] }) {
   const reduced = useReducedMotion();
   const openCount = mentors.length;
 
@@ -218,36 +210,6 @@ function Hero({
             Sip puts students in front of people working the jobs they want. Say what you&apos;re
             stuck on, see who can actually help, and have the conversation this week.
           </motion.p>
-
-          {/*
-            Replaces the free-text "what do you want to figure out?" field and
-            its keyword match. That flow asked a stranger to write a sentence
-            before it would show them anything, and answered a fair share of
-            them with "no strong match for that yet" — a dead end on the one
-            screen that has to convert. The quiz asks a question with twenty
-            possible answers instead, and every one of them ends on a real
-            mentor's face.
-
-            A signed-in visitor gets the directory rather than the quiz: the
-            quiz ends in a signup gate they are already past, and it is a link
-            rather than a button because it is a navigation.
-          */}
-          <motion.div {...rise(0.22)} style={{ marginTop: 36 }}>
-            {signedIn ? (
-              <Link href="/seekers" className="hero-cta" style={{ textDecoration: 'none' }}>
-                Find a match
-                <ArrowRight size={16} />
-              </Link>
-            ) : (
-              <button type="button" onClick={onStartQuiz} className="hero-cta">
-                Find a match
-                <ArrowRight size={16} />
-              </button>
-            )}
-            <p style={{ ...mono, fontSize: 10, color: MUTED, marginTop: 14 }}>
-              Four questions · about twenty seconds
-            </p>
-          </motion.div>
         </div>
 
         <motion.aside
@@ -347,6 +309,80 @@ const STEPS = [
     body: 'Join a live room and take your place in the queue, or book a time that suits you both. Most first sips happen within the week.',
   },
 ];
+
+/**
+ * The landing page's primary conversion path: a full-width section, at the same
+ * visual weight as "How it works", whose only job is to open the quiz.
+ *
+ * It replaced a small button sitting under the hero paragraph, which read as a
+ * secondary action on a page whose whole purpose is that one action.
+ *
+ * The blur here is decorative and scoped to this box — two soft colour washes
+ * behind the card's own content. It is deliberately not the page-wide backdrop
+ * blur: that treatment belongs to the quiz modal, and using it in two places
+ * would stop it meaning "something is on top of the page".
+ */
+function QuizPrompt({ signedIn, onStartQuiz }: { signedIn: boolean; onStartQuiz: () => void }) {
+  return (
+    <section style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}>
+      <Reveal>
+        <div className="quiz-prompt">
+          {/*
+            Decorative only, and hidden from assistive tech: these are two
+            blurred colour fields with no content behind them. `overflow:hidden`
+            on the parent is what keeps the blur inside the box's border rather
+            than bleeding onto the page.
+          */}
+          <div className="quiz-prompt-glow" aria-hidden="true">
+            <span className="quiz-prompt-blob quiz-prompt-blob-a" />
+            <span className="quiz-prompt-blob quiz-prompt-blob-b" />
+          </div>
+
+          <div style={{ position: 'relative', textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
+            <Eyebrow color={LINK}>Mentor match</Eyebrow>
+            <h2
+              style={{
+                fontSize: 'clamp(28px, 4.2vw, 46px)',
+                lineHeight: 1.08,
+                letterSpacing: '-0.03em',
+                fontWeight: 700,
+                margin: '0 0 18px',
+              }}
+            >
+              Not sure who to talk to?
+              <br />
+              <span style={{ color: LINK }}>We&apos;ll find your mentor.</span>
+            </h2>
+            <p style={{ fontSize: 'clamp(15px, 1.8vw, 18px)', lineHeight: 1.6, color: MUTED, margin: '0 0 32px' }}>
+              Just 4 questions and you&apos;ll be all set.
+            </p>
+
+            {/*
+              A signed-in visitor gets the directory rather than the quiz: it
+              ends in a signup gate they are already past. A link rather than a
+              button, because it is a navigation.
+            */}
+            {signedIn ? (
+              <Link href="/seekers" className="hero-cta" style={{ textDecoration: 'none' }}>
+                Find a match
+                <ArrowRight size={16} />
+              </Link>
+            ) : (
+              <button type="button" onClick={onStartQuiz} className="hero-cta">
+                Find a match
+                <ArrowRight size={16} />
+              </button>
+            )}
+
+            <p style={{ ...mono, fontSize: 10, color: MUTED, marginTop: 18 }}>
+              Four questions · about twenty seconds
+            </p>
+          </div>
+        </div>
+      </Reveal>
+    </section>
+  );
+}
 
 function Steps() {
   return (
@@ -719,7 +755,8 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
       <Nav isMentor={isMentor} isSeeker={isSeeker} signedIn={!!user} />
 
       <main id="main-content">
-        <Hero mentors={mentors} signedIn={!!user} onStartQuiz={() => setQuizOpen(true)} />
+        <Hero mentors={mentors} />
+        <QuizPrompt signedIn={!!user} onStartQuiz={() => setQuizOpen(true)} />
         <Testimonials />
         <Steps />
         <MentorGrid mentors={mentors} />
@@ -744,6 +781,48 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           grid-template-columns: minmax(0, 1fr);
           gap: clamp(48px, 7vw, 72px);
           align-items: start;
+        }
+        .quiz-prompt {
+          position: relative;
+          overflow: hidden;
+          isolation: isolate;
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 24px;
+          background: ${SURFACE};
+          padding: clamp(48px, 8vw, 88px) clamp(24px, 5vw, 64px);
+        }
+        .quiz-prompt-glow {
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          pointer-events: none;
+        }
+        .quiz-prompt-blob {
+          position: absolute;
+          display: block;
+          border-radius: 50%;
+          filter: blur(72px);
+          opacity: 0.5;
+        }
+        .quiz-prompt-blob-a {
+          width: 46%;
+          padding-bottom: 46%;
+          top: -18%;
+          left: -8%;
+          background: rgba(112,181,249,0.45);
+        }
+        .quiz-prompt-blob-b {
+          width: 40%;
+          padding-bottom: 40%;
+          bottom: -22%;
+          right: -6%;
+          background: rgba(10,102,194,0.42);
+        }
+        /* A 72px blur over a large area is a real compositing cost on low-end
+           phones, and the blobs are decoration. Below the breakpoint they are
+           dropped rather than shrunk. */
+        @media (max-width: 640px) {
+          .quiz-prompt-glow { display: none; }
         }
         .hero-cta {
           display: inline-flex;

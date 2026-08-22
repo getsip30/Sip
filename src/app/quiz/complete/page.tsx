@@ -37,6 +37,10 @@ function QuizCompleteInner() {
     if (!isLoaded || ran.current) return;
     ran.current = true;
 
+    // No mentorId means the quiz ended on its fallback path: the chosen
+    // interest had nobody open and they declined the alternative. There is no
+    // profile to send them to, so they go to the seeker side like any other
+    // signup. (/seekers routes a brand-new account into onboarding on its own.)
     const mentorId = params.get('mentorId');
     const destination = mentorId && isUuid(mentorId) ? `/mentors/${mentorId}?from=quiz` : '/seekers';
 
@@ -48,6 +52,11 @@ function QuizCompleteInner() {
       return;
     }
 
+    // Claimed on both paths, including the one with no mentor. It is what makes
+    // "we'll keep you posted as new mentors join" a real promise rather than a
+    // line of copy: POST /api/mentor already emails seekers whose `interests`
+    // overlap a newly-opened mentor's topics, and this is the only place that
+    // column gets the tag they picked before they had an account.
     const interest = getQuizAnswer('interest');
 
     const finish = async () => {

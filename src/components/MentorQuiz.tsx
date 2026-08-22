@@ -9,12 +9,19 @@ import { QUIZ_INTERESTS } from '@/lib/quiz';
 import { getOrCreateSessionId, saveQuizAnswer, trackQuizEvent } from '@/lib/quiz-session';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK } from '@/lib/theme';
 
-type Suggestion = {
+type Mentor = {
   mentorId: string;
   name: string;
   shortBio: string;
   avatarData: string | null;
 };
+
+/** A category that does have open mentors, offered when the chosen one has none. */
+type Alternate = { interest: string; openMentors: number };
+
+type SuggestResponse =
+  | { matched: true; mentor: Mentor }
+  | { matched: false; suggestion: Alternate | null };
 
 /**
  * The landing-page mentor-match quiz.
@@ -30,7 +37,18 @@ type Suggestion = {
  * point of them, and nothing here should ever try to read or interpret them.
  */
 
-type Step = 'intro' | 'interest' | 'about' | 'dream' | 'searching' | 'reveal' | 'auth';
+type Step =
+  | 'intro'
+  | 'interest'
+  | 'about'
+  | 'dream'
+  | 'searching'
+  /** Chosen interest has nobody open; offer a category that does. */
+  | 'nomatch'
+  /** They declined the alternative, or there was none. Signup with no mentor. */
+  | 'nomentor'
+  | 'reveal'
+  | 'auth';
 
 /** Steps that carry a progress indicator. The tail past 'dream' is not a quiz. */
 const PROGRESS_STEPS: Step[] = ['intro', 'interest', 'about', 'dream'];
@@ -56,7 +74,8 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
   const [interest, setInterest] = useState<string | null>(null);
   const [vibes, setVibes] = useState<string[]>([]);
   const [dream, setDream] = useState('');
-  const [mentor, setMentor] = useState<Suggestion | null>(null);
+  const [mentor, setMentor] = useState<Mentor | null>(null);
+  const [alternate, setAlternate] = useState<Alternate | null>(null);
   const [error, setError] = useState('');
   /**
    * Retry counter, not decoration. A failed lookup leaves `step` on 'searching'
@@ -72,6 +91,7 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
     setVibes([]);
     setDream('');
     setMentor(null);
+    setAlternate(null);
     setError('');
     setAttempt(0);
   }, []);
@@ -90,8 +110,10 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
     return () => window.removeEventListener('keydown', onKey);
   }, [open, close]);
 
-  // Mint the anonymous session as soon as the quiz is opened, so the funnel
-  // events fired later all carry the same id.
+  // Mint the anonymous session as soon as the quiz is opened, so the interest
+  // saved a step later lands in a cookie that already exists rather than one
+  // created mid-flow. The funnel events do not carry it — POST /api/events
+  // takes identity from the Clerk session and nothing else.
   useEffect(() => {
     if (open) getOrCreateSessionId();
   }, [open]);
@@ -114,11 +136,28 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
         await new Promise(r => setTimeout(r, wait));
         if (cancelled) return;
 
-        if (!res.ok || !data?.mentorId) {
+        if (!res.ok) {
           setError(data?.error || 'Could not find a mentor just now. Try again in a moment.');
           return;
         }
-        setMentor(data as Suggestion);
+
+        const payload = data as SuggestResponse;
+
+        // Nobody open under this tag. Hand off to the fallback step rather than
+        // restarting the quiz or substituting an off-topic mentor: they have
+        // already answered four questions and neither of those respects that.
+        if (!payload.matched) {
+          setAlternate(payload.suggestion);
+          // No alternative to offer means the whole directory is empty, so
+          // there is no question worth asking — go straight to the honest
+          // version of the answer.
+          setStep(payload.suggestion ? 'nomatch' : 'nomentor');
+          return;
+        }
+
+        setMentor(payload.mentor);
+        // Fires on the reveal, not on the request: this step means "was shown a
+        // mentor", and the fallback paths below never show one.
         trackQuizEvent('quiz_completed');
         setStep('reveal');
       } catch {
@@ -136,7 +175,28 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
   if (!open || !isLoaded || isSignedIn) return null;
 
   const progressIndex = PROGRESS_STEPS.indexOf(step);
-  const redirectUrl = mentor ? `/quiz/complete?mentorId=${encodeURIComponent(mentor.mentorId)}` : '/quiz/complete';
+  /**
+   * Where Clerk sends them after signup. /quiz/complete claims the interest
+   * either way and then forwards: to the matched mentor with ?from=quiz, or to
+   * the seeker dashboard when there is no mentor to forward to.
+   */
+  const redirectUrl = mentor
+    ? `/quiz/complete?mentorId=${encodeURIComponent(mentor.mentorId)}`
+    : '/quiz/complete';
+
+  /**
+   * Take the offered category: overwrite the persisted interest and re-run the
+   * lookup. Overwrite rather than remember both — the interest is what gets
+   * attached to their account, and the tag they are about to be shown a mentor
+   * from is the truer answer to "what are you into" than the one that had
+   * nobody in it.
+   */
+  function acceptAlternate(next: string) {
+    saveQuizAnswer('interest', next);
+    setInterest(next);
+    setAlternate(null);
+    setStep('searching');
+  }
 
   function submitInterest(tag: string) {
     setInterest(tag);
@@ -298,6 +358,41 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
           </div>
         );
 
+      case 'nomatch':
+        if (!alternate) return null;
+        return (
+          <>
+            <h3 style={{ fontSize: 21, fontWeight: 700, marginBottom: 10 }}>
+              No {interest} mentors are open right now.
+            </h3>
+            <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+              But we&apos;ve got people in{' '}
+              <span style={{ color: TEXT, fontWeight: 600 }}>{alternate.interest}</span> —{' '}
+              {alternate.openMentors} open right now.
+            </p>
+            <button style={primaryButton} onClick={() => acceptAlternate(alternate.interest)}>
+              Yes, show me {alternate.interest}
+            </button>
+            <button
+              onClick={() => setStep('nomentor')}
+              style={{ ...primaryButton, background: 'transparent', border: `1px solid ${BORDER}`, color: MUTED, marginTop: 10 }}
+            >
+              No thanks
+            </button>
+          </>
+        );
+
+      case 'nomentor':
+        return (
+          <>
+            <h3 style={{ fontSize: 21, fontWeight: 700, marginBottom: 10 }}>No worries.</h3>
+            <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+              Sign up and we&apos;ll keep you posted as new mentors join.
+            </p>
+            <button style={primaryButton} onClick={() => setStep('auth')}>Sign me up →</button>
+          </>
+        );
+
       case 'reveal':
         if (!mentor) return null;
         return (
@@ -319,9 +414,18 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
           <>
             <h3 style={{ fontSize: 21, fontWeight: 700, marginBottom: 8 }}>You&apos;re not signed in. Let&apos;s fix that.</h3>
             <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 22 }}>
-              Make an account and we&apos;ll take you straight to{' '}
-              <span style={{ color: TEXT, fontWeight: 600 }}>{mentor?.name ?? 'your match'}</span>. It&apos;s free, and it
-              takes a minute.
+              {mentor ? (
+                <>
+                  Make an account and we&apos;ll take you straight to{' '}
+                  <span style={{ color: TEXT, fontWeight: 600 }}>{mentor.name}</span>. It&apos;s free, and it takes a
+                  minute.
+                </>
+              ) : (
+                <>
+                  Make an account and we&apos;ll email you the moment someone who fits comes along. It&apos;s free, and
+                  it takes a minute.
+                </>
+              )}
             </p>
             {/*
               Clerk's own modal rather than an embedded <SignUp>. The embed needs
