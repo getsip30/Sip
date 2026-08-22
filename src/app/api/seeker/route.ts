@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { getClerkUser } from '@/lib/clerk';
 import { db } from '@/db';
-import { seekers, mentors, referralEvents, flags } from '@/db/schema';
+import { seekers, mentors, referralEvents, flags, quizResponses } from '@/db/schema';
 import { eq, ne, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { generateUniqueReferralCode } from '@/lib/referral';
@@ -10,6 +10,7 @@ import { handleApiError } from '@/lib/api-handler';
 import { recordAbuseSignal } from '@/lib/abuse';
 import { safeExternalUrl } from '@/lib/utils';
 import { logEvent } from '@/lib/events';
+import { mergeInterest } from '@/lib/quiz';
 
 export async function GET() {
   try {
@@ -73,6 +74,17 @@ export async function POST(req: Request) {
     invitedByClerkId = referrerSeeker[0]?.clerkId || referrerMentor[0]?.clerkId || null;
   }
 
+  // Someone who came in through the landing-page quiz picked an interest before
+  // they had an account, so there was no seekers row to write it to at the time.
+  // This is where that row first exists. Deliberately on the INSERT path only:
+  // re-running it on the update path would keep re-adding a tag the person had
+  // since deliberately removed from their profile.
+  const quizRow = await db.select({ interest: quizResponses.interest })
+    .from(quizResponses).where(eq(quizResponses.clerkId, userId)).limit(1);
+  const seededInterests = quizRow[0]
+    ? mergeInterest(interests, quizRow[0].interest) ?? interests
+    : interests;
+
   const referralCode = await generateUniqueReferralCode();
   const created = await db.insert(seekers).values({
     clerkId: userId,
@@ -81,7 +93,7 @@ export async function POST(req: Request) {
     email,
     age,
     linkedin: safeLinkedin,
-    interests,
+    interests: seededInterests,
     avatarData: avatarData || null,
     referralCode,
     invitedByClerkId,

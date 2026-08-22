@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
@@ -10,6 +9,7 @@ import PixelAvatar from '@/components/PixelAvatar';
 import Logo from '@/components/Logo';
 import Footer from '@/components/Footer';
 import Testimonials from '@/components/Testimonials';
+import MentorQuiz from '@/components/MentorQuiz';
 import { BG, SURFACE, TEXT, MUTED, ACCENT, LINK, SUCCESS2 } from '@/lib/theme';
 
 type Mentor = {
@@ -22,15 +22,6 @@ type Mentor = {
   bio: string;
   isOpen: boolean;
   avatarData?: string | null;
-};
-
-type Match = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  company: string;
-  reason: string;
 };
 
 type FeaturedNote = {
@@ -167,18 +158,13 @@ function Nav({ isMentor, isSeeker, signedIn }: { isMentor: boolean; isSeeker: bo
 
 function Hero({
   mentors,
-  onMatch,
-  matching,
-  matches,
-  matchError,
+  signedIn,
+  onStartQuiz,
 }: {
   mentors: Mentor[];
-  onMatch: (q: string) => void;
-  matching: boolean;
-  matches: Match[] | null;
-  matchError: string;
+  signedIn: boolean;
+  onStartQuiz: () => void;
 }) {
-  const [query, setQuery] = useState('');
   const reduced = useReducedMotion();
   const openCount = mentors.length;
 
@@ -233,106 +219,35 @@ function Hero({
             stuck on, see who can actually help, and have the conversation this week.
           </motion.p>
 
-          <motion.form
-            {...rise(0.22)}
-            onSubmit={(e) => {
-              e.preventDefault();
-              onMatch(query);
-            }}
-            style={{ marginTop: 36, maxWidth: 500 }}
-          >
-            <label htmlFor="matchQuery" style={{ ...mono, fontSize: 10, color: MUTED, display: 'block', marginBottom: 10 }}>
-              What do you want to figure out?
-            </label>
-            <div className="hero-field">
-              <input
-                id="matchQuery"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                maxLength={500}
-                placeholder="Breaking into product design without a portfolio"
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: TEXT,
-                  fontSize: 15,
-                  padding: '15px 4px 15px 18px',
-                  fontFamily: 'inherit',
-                }}
-              />
-              <button
-                type="submit"
-                disabled={matching || !query.trim()}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 9,
-                  background: query.trim() ? ACCENT : 'rgba(255,255,255,0.07)',
-                  color: query.trim() ? '#fff' : MUTED,
-                  border: 'none',
-                  padding: '12px 20px',
-                  margin: 5,
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  fontFamily: 'inherit',
-                  cursor: matching || !query.trim() ? 'not-allowed' : 'pointer',
-                  transition: 'background 200ms ease, color 200ms ease',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {matching ? 'Matching' : 'Find a match'}
-                {!matching && <ArrowRight size={15} />}
-              </button>
-            </div>
-            {matchError && (
-              <p style={{ marginTop: 12, fontSize: 13, color: '#f87171' }}>{matchError}</p>
-            )}
-          </motion.form>
+          {/*
+            Replaces the free-text "what do you want to figure out?" field and
+            its keyword match. That flow asked a stranger to write a sentence
+            before it would show them anything, and answered a fair share of
+            them with "no strong match for that yet" — a dead end on the one
+            screen that has to convert. The quiz asks a question with twenty
+            possible answers instead, and every one of them ends on a real
+            mentor's face.
 
-          {matches && (
-            <motion.div
-              initial={reduced ? false : { opacity: 0, y: 10 }}
-              animate={reduced ? undefined : { opacity: 1, y: 0 }}
-              transition={{ duration: 0.45 }}
-              style={{ marginTop: 26, maxWidth: 500 }}
-            >
-              {matches.length === 0 ? (
-                <p style={{ fontSize: 14, color: MUTED }}>
-                  No strong match for that yet.{' '}
-                  <Link href="/seekers" style={{ color: LINK }}>
-                    Browse everyone
-                  </Link>{' '}
-                  instead.
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <div style={{ ...mono, fontSize: 10, color: MUTED, marginBottom: 10 }}>
-                    {matches.length} match{matches.length > 1 ? 'es' : ''}
-                  </div>
-                  {matches.slice(0, 3).map((m) => (
-                    <Link
-                      key={m.id}
-                      href={`/mentors/${m.id}`}
-                      className="match-row"
-                      style={{ textDecoration: 'none', color: 'inherit' }}
-                    >
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 15, fontWeight: 600 }}>
-                          {m.firstName} {m.lastName}
-                        </div>
-                        <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>{m.reason}</div>
-                      </div>
-                      <ArrowRight size={15} color={LINK} />
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
+            A signed-in visitor gets the directory rather than the quiz: the
+            quiz ends in a signup gate they are already past, and it is a link
+            rather than a button because it is a navigation.
+          */}
+          <motion.div {...rise(0.22)} style={{ marginTop: 36 }}>
+            {signedIn ? (
+              <Link href="/seekers" className="hero-cta" style={{ textDecoration: 'none' }}>
+                Find a match
+                <ArrowRight size={16} />
+              </Link>
+            ) : (
+              <button type="button" onClick={onStartQuiz} className="hero-cta">
+                Find a match
+                <ArrowRight size={16} />
+              </button>
+            )}
+            <p style={{ ...mono, fontSize: 10, color: MUTED, marginTop: 14 }}>
+              Four questions · about twenty seconds
+            </p>
+          </motion.div>
         </div>
 
         <motion.aside
@@ -772,13 +687,10 @@ function Faq({ items }: { items: { q: string; a: string }[] }) {
 export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[] }) {
   const { user, isLoaded } = useUser();
   const { isMentor, isSeeker } = useRoles();
-  const router = useRouter();
 
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [notes, setNotes] = useState<FeaturedNote[]>([]);
-  const [matches, setMatches] = useState<Match[] | null>(null);
-  const [matching, setMatching] = useState(false);
-  const [matchError, setMatchError] = useState('');
+  const [quizOpen, setQuizOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -802,52 +714,12 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
     };
   }, []);
 
-  const handleMatch = useCallback(
-    async (query: string) => {
-      const q = query.trim();
-      if (!q) return;
-      if (isLoaded && !user) {
-        router.push('/sign-up');
-        return;
-      }
-      setMatching(true);
-      setMatchError('');
-      try {
-        const res = await fetch('/api/match', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: q }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setMatchError(data.error || 'Could not run the match. Try again in a moment.');
-          setMatches(null);
-        } else {
-          setMatches(data.matches ?? []);
-        }
-      } catch (err) {
-        console.error('landing: match failed', err);
-        setMatchError('Could not run the match. Try again in a moment.');
-        setMatches(null);
-      } finally {
-        setMatching(false);
-      }
-    },
-    [isLoaded, user, router]
-  );
-
   return (
     <div style={{ background: BG, color: TEXT, minHeight: '100vh' }}>
       <Nav isMentor={isMentor} isSeeker={isSeeker} signedIn={!!user} />
 
       <main id="main-content">
-        <Hero
-          mentors={mentors}
-          onMatch={handleMatch}
-          matching={matching}
-          matches={matches}
-          matchError={matchError}
-        />
+        <Hero mentors={mentors} signedIn={!!user} onStartQuiz={() => setQuizOpen(true)} />
         <Testimonials />
         <Steps />
         <MentorGrid mentors={mentors} />
@@ -858,6 +730,14 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
 
       <Footer />
 
+      {/*
+        Signed-out visitors only. MentorQuiz enforces this itself as well; the
+        guard is repeated here so the component is never even mounted for a
+        signed-in user, and `isLoaded` keeps it from flashing open during the
+        moment before Clerk has resolved the session.
+      */}
+      {isLoaded && !user && <MentorQuiz open={quizOpen} onClose={() => setQuizOpen(false)} />}
+
       <style>{`
         .hero-grid {
           display: grid;
@@ -865,15 +745,25 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           gap: clamp(48px, 7vw, 72px);
           align-items: start;
         }
-        .hero-field {
-          display: flex;
+        .hero-cta {
+          display: inline-flex;
           align-items: center;
-          background: ${SURFACE};
-          border: 1px solid rgba(255,255,255,0.12);
-          border-radius: 14px;
-          transition: border-color 200ms ease;
+          gap: 10px;
+          background: ${ACCENT};
+          color: #fff;
+          border: none;
+          padding: 16px 28px;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 600;
+          font-family: inherit;
+          cursor: pointer;
+          transition: background 200ms ease, transform 200ms ease;
         }
-        .hero-field:focus-within { border-color: rgba(112,181,249,0.55); }
+        .hero-cta:hover { background: #1d4fd8; transform: translateY(-2px); }
+        @media (prefers-reduced-motion: reduce) {
+          .hero-cta:hover { transform: none; }
+        }
         .hero-rail {
           border: 1px solid rgba(255,255,255,0.09);
           border-radius: 16px;
@@ -888,16 +778,6 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           transition: opacity 180ms ease;
         }
         .rail-row:hover { opacity: 0.62; }
-        .match-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          padding: 14px 0;
-          border-bottom: 1px solid rgba(255,255,255,0.08);
-          transition: opacity 180ms ease;
-        }
-        .match-row:hover { opacity: 0.65; }
         .section-head {
           display: flex;
           align-items: flex-end;
