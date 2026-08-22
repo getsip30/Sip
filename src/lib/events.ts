@@ -9,6 +9,8 @@ import { logSwallowed } from '@/lib/logger';
  */
 export const FUNNEL_STEPS = [
   'landing_view',
+  'quiz_started',
+  'quiz_completed',
   'signup_complete',
   'profile_setup_complete',
   'browse_sips',
@@ -21,6 +23,8 @@ export type EventType = typeof FUNNEL_STEPS[number];
 /** Human labels for the dashboard. Kept beside the list so they cannot drift. */
 export const EVENT_LABELS: Record<EventType, string> = {
   landing_view: 'Landing view',
+  quiz_started: 'Quiz started',
+  quiz_completed: 'Quiz completed',
   signup_complete: 'Signed up',
   profile_setup_complete: 'Profile set up',
   browse_sips: 'Browsed sips',
@@ -40,8 +44,23 @@ export function isEventType(value: unknown): value is EventType {
  * steps that carry meaning. `sip_accepted` written from a browser would be a
  * fabricated conversion; those events are only ever written server-side, at the
  * point the thing actually happened.
+ *
+ * The two quiz steps are on this list for the same reason as the two view
+ * steps, not as an exception to the rule. They happen entirely inside a modal
+ * on the landing page, to a visitor with no account, and there is no server
+ * moment that corresponds to either: `quiz_started` is a chip being clicked,
+ * and `quiz_completed` is a card finishing its render. GET /api/mentors/suggest
+ * is the nearest server-side hook for the second one and it is the wrong one —
+ * it fires before the reveal is on screen and would count people who closed the
+ * modal while it was still loading.
+ *
+ * What makes that acceptable is what a forged one would buy: these sit above
+ * `signup_complete`, so inflating them can only make the funnel's conversion
+ * rate look worse. Nothing downstream reads them.
  */
-export const CLIENT_LOGGABLE: readonly EventType[] = ['landing_view', 'browse_sips'];
+export const CLIENT_LOGGABLE: readonly EventType[] = [
+  'landing_view', 'quiz_started', 'quiz_completed', 'browse_sips',
+];
 
 /**
  * Record one analytics event.

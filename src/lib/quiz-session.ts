@@ -1,6 +1,7 @@
 'use client';
 
 import Cookies from 'js-cookie';
+import type { EventType } from '@/lib/events';
 
 /**
  * The anonymous session behind the landing-page quiz.
@@ -113,7 +114,7 @@ export function clearQuizSession(): void {
  * the request outlive the navigation when the event is logged immediately
  * before a redirect.
  */
-export function trackQuizEvent(eventType: 'quiz_started' | 'quiz_completed'): void {
+export function trackQuizEvent(eventType: Extract<EventType, 'quiz_started' | 'quiz_completed'>): void {
   try {
     void fetch('/api/events', {
       method: 'POST',
