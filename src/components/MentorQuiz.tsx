@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import PixelAvatar from '@/components/PixelAvatar';
 import { INTEREST_TAGS } from '@/lib/interests';
@@ -93,6 +94,20 @@ const CLERK_BACKDROP = '.cl-modalBackdrop';
 /** How long to wait for Clerk's modal before assuming it will not open. */
 const CLERK_OPEN_TIMEOUT_MS = 4000;
 
+/**
+ * Keys the browser scrolls the document with when nothing has focus.
+ *
+ * `overflow: hidden` below is what actually stops the page moving; this list
+ * exists for the second half of the problem, which is that these keys still
+ * *reach* the page — Space activating a focused button behind the overlay, an
+ * arrow key moving a background carousel. Both are the same bug to someone
+ * using the quiz.
+ */
+const SCROLL_KEYS = new Set([
+  ' ', 'Spacebar', 'PageUp', 'PageDown', 'End', 'Home',
+  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+]);
+
 export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { isSignedIn, isLoaded } = useUser();
   const { openSignUp, openSignIn } = useClerk();
@@ -118,6 +133,16 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
    * "Try again" actually try again.
    */
   const [attempt, setAttempt] = useState(0);
+
+  /** The overlay layer. Used to tell "inside the flow" from "the page behind". */
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * Whether any part of this flow is on screen. The lock below keys off this
+   * rather than off `open` alone, because `open` can be true while Clerk has
+   * not resolved the session yet and nothing is rendered.
+   */
+  const mounted = open && isLoaded && !isSignedIn;
 
   const reset = useCallback(() => {
     setStep('intro');
@@ -157,6 +182,89 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
   useEffect(() => {
     if (open) getOrCreateSessionId();
   }, [open]);
+
+  /**
+   * Freeze the page behind the flow.
+   *
+   * Keyed on `mounted`, so the lock is held for the whole flow — the quiz
+   * steps, the auth step, and the time Clerk's own modal is up — rather than
+   * being taken and released around one part of it. Clerk applies a lock of its
+   * own on top; because ours is applied first, what Clerk captures and restores
+   * is already `hidden`, so its close does not unlock the page underneath us.
+   *
+   * `overflow: hidden` on BOTH html and body: which of the two is the scrolling
+   * element varies, and locking only body leaves the page scrollable in the
+   * common case where html is the scroller.
+   *
+   * Not the `position: fixed` technique, which locks just as well but throws the
+   * scroll position away and jumps the visitor to the top of the page when the
+   * modal closes. The padding compensates for the scrollbar the lock removes,
+   * so the landing page does not shift sideways underneath the overlay.
+   */
+  useEffect(() => {
+    if (!mounted) return;
+
+    const html = document.documentElement;
+    const { body } = document;
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPaddingRight: body.style.paddingRight,
+    };
+
+    const scrollbar = window.innerWidth - html.clientWidth;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    if (scrollbar > 0) body.style.paddingRight = `${scrollbar}px`;
+
+    return () => {
+      html.style.overflow = prev.htmlOverflow;
+      body.style.overflow = prev.bodyOverflow;
+      body.style.paddingRight = prev.bodyPaddingRight;
+    };
+  }, [mounted]);
+
+  /**
+   * Stop scroll keys reaching the page behind the flow.
+   *
+   * The overflow lock already prevents the document scrolling, so this is about
+   * the rest of it: Space activating whatever button happened to have focus
+   * when the modal opened, arrows moving something in the background.
+   *
+   * Capture phase, so it runs before anything behind the overlay sees the
+   * event. The guard is where the event came from, not what key it was —
+   * anything inside our overlay keeps its keys (Space on our buttons, arrows in
+   * our text fields), and so does anything inside Clerk's modal, which is
+   * portalled to <body> and therefore outside our overlay entirely. Without
+   * that second clause this would break typing in Clerk's own form.
+   */
+  useEffect(() => {
+    if (!mounted) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!SCROLL_KEYS.has(e.key)) return;
+      const target = e.target as Node | null;
+      if (target && overlayRef.current?.contains(target)) return;
+      if (target instanceof Element && target.closest(CLERK_BACKDROP)) return;
+      e.preventDefault();
+    };
+
+    window.addEventListener('keydown', onKeyDown, { capture: true, passive: false });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [mounted]);
+
+  /**
+   * Move focus into the card when it opens.
+   *
+   * Without this, focus stays on the "Find a match" button in the page behind,
+   * which is both the thing that makes Space reach the background at all and an
+   * accessibility problem in its own right — a screen reader user is not moved
+   * to the dialog they just opened.
+   */
+  useEffect(() => {
+    if (!mounted || authOpen) return;
+    overlayRef.current?.focus({ preventScroll: true });
+  }, [mounted, authOpen, step]);
 
   /**
    * Bring this card back when Clerk's modal goes away.
@@ -357,15 +465,6 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
     background: 'rgba(255,255,255,0.07)',
     color: MUTED,
     cursor: 'not-allowed',
-  };
-
-  const ghostButton: React.CSSProperties = {
-    background: 'none',
-    border: 'none',
-    color: MUTED,
-    fontSize: 12.5,
-    cursor: 'pointer',
-    fontFamily: 'inherit',
   };
 
   const textField: React.CSSProperties = {
@@ -609,24 +708,45 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
           </div>
         );
 
+      /*
+       * Deliberately built from the same parts as every other step: the 21/700
+       * heading, the 14/1.6 muted paragraph, the full-width primary button, and
+       * the transparent-with-border secondary the 'nomatch' step already uses.
+       *
+       * It previously ended on an inline underlined text link, which was the
+       * only control of its kind in the flow and was what made this screen read
+       * as a different, less finished one. The mentor strip is the same inset
+       * panel <AppTour> uses for its step label — BG on SURFACE, 1px border,
+       * radius 14 — and carries the reveal's avatar forward so the step does
+       * not look like it belongs to some other product.
+       */
       case 'auth':
         return (
           <>
             <h3 style={{ fontSize: 21, fontWeight: 700, marginBottom: 8 }}>You&apos;re not signed in. Let&apos;s fix that.</h3>
-            <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 22 }}>
-              {mentor ? (
-                <>
-                  Make an account and we&apos;ll take you straight to{' '}
-                  <span style={{ color: TEXT, fontWeight: 600 }}>{mentor.name}</span>. It&apos;s free, and it takes a
-                  minute.
-                </>
-              ) : (
-                <>
-                  Make an account and we&apos;ll email you the moment someone who fits comes along. It&apos;s free, and
-                  it takes a minute.
-                </>
-              )}
+            <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
+              {mentor
+                ? 'Make an account and we’ll take you straight to your match. It’s free, and it takes a minute.'
+                : 'Make an account and we’ll email you the moment someone who fits comes along. It’s free, and it takes a minute.'}
             </p>
+
+            {mentor && (
+              <div
+                style={{
+                  background: BG, border: `1px solid ${BORDER}`, borderRadius: 14,
+                  padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 13, marginBottom: 20,
+                }}
+              >
+                <PixelAvatar data={mentor.avatarData} size={40} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: ACCENT, textTransform: 'uppercase', marginBottom: 3 }}>
+                    Your match
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>{mentor.name}</div>
+                </div>
+              </div>
+            )}
+
             {/*
               Clerk's own modal rather than an embedded <SignUp>. The embed needs
               path or hash routing, and hash routing on the landing page would
@@ -638,14 +758,14 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
             <button style={primaryButton} onClick={() => startAuth('signUp')}>
               Create my account
             </button>
-            <p style={{ marginTop: 16, fontSize: 13, color: MUTED, textAlign: 'center' }}>
-              Already have one?{' '}
-              <button
-                onClick={() => startAuth('signIn')}
-                style={{ ...ghostButton, color: LINK, fontSize: 13, textDecoration: 'underline' }}
-              >
-                Sign in
-              </button>
+            <button
+              onClick={() => startAuth('signIn')}
+              style={{ ...primaryButton, background: 'transparent', border: `1px solid ${BORDER}`, color: MUTED, marginTop: 10 }}
+            >
+              I already have one
+            </button>
+            <p style={{ color: MUTED, fontSize: 12, lineHeight: 1.5, textAlign: 'center', marginTop: 16 }}>
+              Free, and no cold outreach — ever.
             </p>
           </>
         );
@@ -655,6 +775,10 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
   return (
     <AnimatePresence>
       <motion.div
+        ref={overlayRef}
+        // Focusable so the card can take focus on open without putting a tab
+        // stop in anyone's way; -1 keeps it out of the tab order.
+        tabIndex={-1}
         initial={{ opacity: 0 }}
         animate={{ opacity: authOpen ? 0 : 1 }}
         exit={{ opacity: 0 }}
@@ -664,6 +788,11 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
           position: 'fixed', inset: 0, background: 'rgba(4,7,13,0.72)',
           backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
           zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+          // A card taller than the viewport scrolls inside the overlay. The
+          // page behind is locked, so without this there would be no way to
+          // reach the bottom of the interest step on a short screen.
+          overflowY: 'auto',
+          outline: 'none',
           // The whole layer steps aside for Clerk's modal, backdrop included.
           // Hiding only the card would leave this blur stacked under Clerk's
           // own, which is half of what made the two look disjointed.
@@ -683,6 +812,25 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
             padding: 28, width: '100%', maxWidth: step === 'reveal' ? 480 : 460,
           }}
         >
+          {/*
+            Same close control the feedback widget uses — lucide <X> at 16,
+            no chrome, muted until hovered — rather than a new one. It sits in
+            its own row instead of floating over the card's corner, so it
+            cannot land on top of the progress bar below it.
+
+            Escape still works; this is the pointer equivalent, not a
+            replacement for it.
+          */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <button
+              onClick={close}
+              aria-label="Close"
+              style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', padding: 2, display: 'flex' }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+
           {progressIndex >= 0 && (
             <div style={{ display: 'flex', gap: 5, marginBottom: 24 }} aria-hidden="true">
               {PROGRESS_STEPS.map((_, n) => (

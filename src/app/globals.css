@@ -169,6 +169,24 @@ button:disabled {
   border-radius: 4px;
 }
 
+/*
+ * One exception, and only for a container.
+ *
+ * Clerk gives its modal wrapper tabindex="0" (it is the scroll container) and
+ * focuses it programmatically the instant the modal opens. Chrome treats that
+ * as :focus-visible, so the rule above drew a 2px accent ring — plus a 4px
+ * corner — around the entire sign-up dialog before the visitor had touched a
+ * key, which is most of what made it look bolted onto the page.
+ *
+ * Scoped to the wrapper itself. Every control inside it — inputs, buttons, the
+ * social buttons, the footer links — still gets the ring, so nothing about
+ * keyboard navigation changes.
+ */
+.cl-modalContent:focus-visible {
+  outline: none !important;
+  border-radius: 0 !important;
+}
+
 .skip-link {
   position: absolute;
   top: -100px;
