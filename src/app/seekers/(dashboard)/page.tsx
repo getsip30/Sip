@@ -92,7 +92,7 @@ function SeekersContent() {
   const refreshTakeaways = takeaways.refresh;
   const [takeawaysSectionOpen, setTakeawaysSectionOpen] = useState(false);
   const [seekerId, setSeekerId] = useState<string | null>(null);
-  const [seekerProfile, setSeekerProfile] = useState<{ age?: number | null; linkedin?: string | null; interests?: string | null; avatarData?: string | null } | null>(null);
+  const [seekerProfile, setSeekerProfile] = useState<{ firstName?: string | null; age?: number | null; linkedin?: string | null; interests?: string | null; avatarData?: string | null } | null>(null);
   const [copied, setCopied] = useState(false);
   const [togglingConsent, setTogglingConsent] = useState<string | null>(null);
   const [scheduleDrafts, setScheduleDrafts] = useState<Record<string, string>>({});
@@ -364,6 +364,12 @@ function SeekersContent() {
         {(() => {
           if (!seekerProfile) return null;
           const checklist = [
+            // firstName is nullable in practice: POST /api/seeker falls back to
+            // the Clerk first name and then to '', so an OAuth signup with no
+            // name on the provider profile lands here with a blank one and
+            // nothing ever asks again. It is the field other people see first,
+            // so it leads the list.
+            { label: 'Add your name', done: !!seekerProfile.firstName?.trim() },
             { label: 'Add your age', done: !!seekerProfile.age },
             { label: 'Add your LinkedIn', done: !!seekerProfile.linkedin },
             { label: "Tell us what you're into", done: !!seekerProfile.interests },

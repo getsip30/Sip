@@ -70,6 +70,12 @@ function QuizCompleteInner() {
               mentorId: mentorId && isUuid(mentorId) ? mentorId : null,
               sessionId: getOrCreateSessionId(),
             }),
+            // This page exists only to redirect, so the request is racing a
+            // navigation by design — its own, plus anything the visitor does
+            // while it is on screen. Without keepalive the browser cancels it
+            // in flight and the interest is silently lost, which is exactly the
+            // failure this page exists to prevent.
+            keepalive: true,
           });
         } catch (err) {
           // The interest is a nice-to-have on the profile; the match is the
@@ -93,7 +99,16 @@ function QuizCompleteInner() {
       background: BG, color: TEXT, minHeight: '100vh', display: 'flex',
       flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24,
     }}>
-      <Logo />
+      {/*
+        Measured before changing: this was rendering at the component default of
+        68px, against 44px in the landing header — already the larger of the two,
+        so "match the header" would have shrunk it. What makes it read small is
+        the context, not the number: the header logo sits in a 68px bar beside
+        nav links, while this one is alone on an otherwise empty full-height
+        screen, where 68px reads as an afterthought. 96px gives it the same
+        visual weight here that 44px has there.
+      */}
+      <Logo size={96} />
       <p style={{ color: MUTED, fontSize: 14 }}>{message}</p>
     </div>
   );

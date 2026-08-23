@@ -86,7 +86,17 @@ function Rule() {
   return <div style={{ height: 1, background: 'rgba(255,255,255,0.09)' }} />;
 }
 
-function Nav({ isMentor, isSeeker, signedIn }: { isMentor: boolean; isSeeker: boolean; signedIn: boolean }) {
+function Nav({
+  isMentor,
+  isSeeker,
+  rolesLoaded,
+  signedIn,
+}: {
+  isMentor: boolean;
+  isSeeker: boolean;
+  rolesLoaded: boolean;
+  signedIn: boolean;
+}) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -96,7 +106,29 @@ function Nav({ isMentor, isSeeker, signedIn }: { isMentor: boolean; isSeeker: bo
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const dest = isMentor ? '/dashboard' : isSeeker ? '/seekers' : '/seekers';
+  /**
+   * Where "Open Sip" goes.
+   *
+   * useRoles() resolves over two fetches, and until it does both flags are
+   * false — which the old expression read as "seeker", sending everyone to
+   * /seekers. That route's layout gates on requireOnboarded('seeker'), so a
+   * signed-in MENTOR who clicked before the roles landed was redirected into
+   * seeker onboarding: a form for an account type they do not have and did not
+   * ask for. Someone holding neither role got the same treatment.
+   *
+   * /choose-role is the honest destination for both of those cases. It is the
+   * one screen that resolves this server-truthfully — it forwards a
+   * single-role user straight through to their own side and only stops to ask
+   * when there is a real choice — so an unresolved or ambiguous state costs a
+   * redirect rather than landing someone in the wrong product.
+   */
+  const dest = !rolesLoaded
+    ? '/choose-role'
+    : isMentor && !isSeeker
+      ? '/dashboard'
+      : isSeeker && !isMentor
+        ? '/seekers'
+        : '/choose-role';
 
   return (
     <header
@@ -322,7 +354,15 @@ const STEPS = [
  * blur: that treatment belongs to the quiz modal, and using it in two places
  * would stop it meaning "something is on top of the page".
  */
-function QuizPrompt({ signedIn, onStartQuiz }: { signedIn: boolean; onStartQuiz: () => void }) {
+function QuizPrompt({
+  signedIn,
+  authResolved,
+  onStartQuiz,
+}: {
+  signedIn: boolean;
+  authResolved: boolean;
+  onStartQuiz: () => void;
+}) {
   return (
     <section style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}>
       <Reveal>
@@ -361,8 +401,19 @@ function QuizPrompt({ signedIn, onStartQuiz }: { signedIn: boolean; onStartQuiz:
               A signed-in visitor gets the directory rather than the quiz: it
               ends in a signup gate they are already past. A link rather than a
               button, because it is a navigation.
+
+              `!authResolved` takes the same branch as `signedIn`, and that is
+              the fix rather than a nicety. Clerk resolves asynchronously, so
+              for the first moments of every page load `user` is undefined and
+              the old `signedIn={!!user}` was false — meaning a signed-in
+              visitor was shown the quiz trigger, and clicking it did nothing at
+              all, because <MentorQuiz> correctly refused to open for them. A
+              button that silently ignores clicks is worse than either outcome.
+              Treating "not yet known" as signed-in makes the fallback a working
+              link for everyone, and only turns into the quiz once we know the
+              visitor is actually signed out.
             */}
-            {signedIn ? (
+            {signedIn || !authResolved ? (
               <Link href="/seekers" className="hero-cta" style={{ textDecoration: 'none' }}>
                 Find a match
                 <ArrowRight size={16} />
@@ -722,11 +773,23 @@ function Faq({ items }: { items: { q: string; a: string }[] }) {
 
 export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[] }) {
   const { user, isLoaded } = useUser();
-  const { isMentor, isSeeker } = useRoles();
+  const { isMentor, isSeeker, loaded: rolesLoaded } = useRoles();
 
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [notes, setNotes] = useState<FeaturedNote[]>([]);
-  const [quizOpen, setQuizOpen] = useState(false);
+  const [quizRequested, setQuizRequested] = useState(false);
+
+  /**
+   * Signed-out only, derived rather than stored.
+   *
+   * Whether the quiz may be on screen is a function of the live Clerk session,
+   * not a flag set once when a button was clicked. Deriving it means a session
+   * appearing at any point — another tab, Clerk's modal completing without the
+   * redirect firing — closes the quiz on the very next render, with no effect
+   * to run and no stale boolean left behind to reopen it later.
+   */
+  const canQuiz = isLoaded && !user;
+  const quizOpen = quizRequested && canQuiz;
 
   useEffect(() => {
     let cancelled = false;
@@ -752,11 +815,11 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
 
   return (
     <div style={{ background: BG, color: TEXT, minHeight: '100vh' }}>
-      <Nav isMentor={isMentor} isSeeker={isSeeker} signedIn={!!user} />
+      <Nav isMentor={isMentor} isSeeker={isSeeker} rolesLoaded={rolesLoaded} signedIn={!!user} />
 
       <main id="main-content">
         <Hero mentors={mentors} />
-        <QuizPrompt signedIn={!!user} onStartQuiz={() => setQuizOpen(true)} />
+        <QuizPrompt signedIn={!!user} authResolved={isLoaded} onStartQuiz={() => setQuizRequested(canQuiz)} />
         <Testimonials />
         <Steps />
         <MentorGrid mentors={mentors} />
@@ -773,7 +836,7 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
         signed-in user, and `isLoaded` keeps it from flashing open during the
         moment before Clerk has resolved the session.
       */}
-      {isLoaded && !user && <MentorQuiz open={quizOpen} onClose={() => setQuizOpen(false)} />}
+      {canQuiz && <MentorQuiz open={quizOpen} onClose={() => setQuizRequested(false)} />}
 
       <style>{`
         .hero-grid {

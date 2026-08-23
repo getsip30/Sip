@@ -4,10 +4,44 @@ import { quizResponses, seekers, mentors } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
-import { mutationLimiter } from '@/lib/ratelimit';
+import { mutationLimiter, privateReadLimiter, limitKey, tooManyRequests } from '@/lib/ratelimit';
 import { isUuid, cleanText } from '@/lib/validate';
 import { mergeInterest } from '@/lib/quiz';
 import { parseInterest } from '@/lib/interests';
+
+/**
+ * The interest this account claimed from the quiz, if any.
+ *
+ * Seeker onboarding asks "what are you into?" as one of its steps, and someone
+ * who arrived through the quiz answered exactly that question a minute earlier.
+ * Reading it back here is what lets that screen show their answer already
+ * selected instead of asking a second time.
+ *
+ * Separate from GET /api/seeker on purpose: the people who most need this have
+ * no seekers row yet — that row is created by the very form being prefilled —
+ * so the answer cannot ride along on a profile that does not exist. It stays
+ * useful afterwards too, since the onboarding screen doubles as edit-profile.
+ */
+export async function GET(req: Request) {
+  try {
+    const { userId } = await auth();
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { success, reset } = await privateReadLimiter.limit(limitKey(req, userId));
+    if (!success) return tooManyRequests(reset);
+
+    const row = await db.select({ interest: quizResponses.interest })
+      .from(quizResponses).where(eq(quizResponses.clerkId, userId)).limit(1);
+
+    // Re-narrowed on the way out rather than trusted. The column is plain text
+    // and the tag list can change between the quiz being taken and this being
+    // read, so a value the vocabulary no longer contains resolves to null here
+    // instead of arriving as a chip the form cannot render.
+    return NextResponse.json({ interest: row[0] ? parseInterest(row[0].interest) : null });
+  } catch (err) {
+    return handleApiError(err, 'GET /api/quiz/claim');
+  }
+}
 
 /**
  * Attaches a finished quiz to the account that just signed up.

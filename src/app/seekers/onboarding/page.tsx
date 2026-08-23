@@ -23,13 +23,37 @@ export default function SeekerOnboarding() {
   const [matches, setMatches] = useState<Match[]>([]);
 
   useEffect(() => {
-    fetch('/api/seeker').then(r => r.ok ? r.json() : null).then(data => {
+    /*
+     * Two sources, in priority order: the saved profile if there is one, and
+     * otherwise whatever the landing quiz already learned about this person.
+     *
+     * Someone who came through the quiz answered "what are you into?" a minute
+     * ago and then hit a screen asking the same question with nothing selected,
+     * which reads as the product having forgotten. The quiz answer is only used
+     * to seed an EMPTY selection — a saved profile always wins, so this can
+     * never re-add a tag that was deliberately removed on a later edit.
+     */
+    Promise.all([
+      fetch('/api/seeker').then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch('/api/quiz/claim').then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([data, quiz]) => {
+      const quizInterest: string | null = quiz?.interest ?? null;
       if (data) {
-        setForm({ name: data.firstName || '', age: data.age ? String(data.age) : '', linkedin: data.linkedin || '', interests: data.interests ? data.interests.split(',').filter(Boolean) : [] });
+        const saved: string[] = data.interests ? data.interests.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
+        setForm({
+          name: data.firstName || '',
+          age: data.age ? String(data.age) : '',
+          linkedin: data.linkedin || '',
+          interests: saved.length > 0 || !quizInterest ? saved : [quizInterest],
+        });
         if (data.avatarData) setAvatarData(data.avatarData);
         setIsFirstTime(false);
       } else {
-        if (user?.firstName) setForm(f => ({ ...f, name: user.firstName || '' }));
+        setForm(f => ({
+          ...f,
+          name: user?.firstName || f.name,
+          interests: quizInterest ? [quizInterest] : f.interests,
+        }));
         setIsFirstTime(true);
       }
     }).catch(err => console.error('fetch seeker failed:', err));
