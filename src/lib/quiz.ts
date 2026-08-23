@@ -1,41 +1,12 @@
 /**
- * Shared vocabulary for the landing-page mentor-match quiz.
+ * Quiz-specific helpers.
  *
- * Server-safe on purpose — no browser APIs are touched here, so route handlers
- * can import the allowlist. The cookie half lives in @/lib/quiz-session.
- */
-
-/**
- * The single-select tag list shown in the quiz's interest step.
+ * The tag vocabulary itself lives in @/lib/interests, which every screen that
+ * shows these tags now imports. Nothing here redefines it.
  *
- * Deliberately the same twenty tags the seeker onboarding screen and the seeker
- * dashboard filter already use, in the same order. They are duplicated rather
- * than imported because those two are page-local `const`s and hoisting them
- * would mean editing screens this feature has no business touching — but if
- * they ever diverge, this list is the one that decides what the API accepts.
+ * Server-safe on purpose — no browser APIs are touched, so route handlers can
+ * import this. The cookie half lives in @/lib/quiz-session.
  */
-export const QUIZ_INTERESTS = [
-  'tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research',
-  'engineering', 'computer science', 'data science', 'marketing', 'consulting',
-  'law', 'medicine', 'entrepreneurship', 'business', 'psychology', 'co-op',
-  'grad school',
-] as const;
-
-export type QuizInterest = typeof QUIZ_INTERESTS[number];
-
-/**
- * Narrow an untrusted value to a known tag.
- *
- * Case-insensitive because the tag makes a round trip through a cookie and a
- * query string before it gets here, but it always resolves to the canonical
- * casing from the list above ('AI/ML', not 'ai/ml') — the value is compared
- * against mentors.topics, which stores the canonical form.
- */
-export function parseInterest(v: unknown): QuizInterest | null {
-  if (typeof v !== 'string') return null;
-  const needle = v.trim().toLowerCase();
-  return QUIZ_INTERESTS.find(t => t.toLowerCase() === needle) ?? null;
-}
 
 /**
  * Merge one quiz tag into a seeker's existing comma-separated interests.

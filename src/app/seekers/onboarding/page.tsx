@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import Logo from '@/components/Logo';
 import PixelAvatarPicker from '@/components/PixelAvatarPicker';
+import { INTEREST_TAGS } from '@/lib/interests';
 
 type Match = { id: string; firstName: string; lastName: string; role: string; company: string; reason: string };
 
@@ -34,7 +35,8 @@ export default function SeekerOnboarding() {
     }).catch(err => console.error('fetch seeker failed:', err));
   }, [user]);
 
-  const TOPICS = ['tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'engineering', 'computer science', 'data science', 'marketing', 'consulting', 'law', 'medicine', 'entrepreneurship', 'business', 'psychology', 'co-op', 'grad school'];
+  // Was a duplicate literal of the same twenty tags. See @/lib/interests.
+  const TOPICS = INTEREST_TAGS;
   const toggle = (t: string) => setForm(f => ({ ...f, interests: f.interests.includes(t) ? f.interests.filter(x => x !== t) : [...f.interests, t] }));
 
   useEffect(() => {

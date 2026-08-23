@@ -6,7 +6,8 @@ import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { isUuid, cleanText } from '@/lib/validate';
-import { parseInterest, mergeInterest } from '@/lib/quiz';
+import { mergeInterest } from '@/lib/quiz';
+import { parseInterest } from '@/lib/interests';
 
 /**
  * Attaches a finished quiz to the account that just signed up.

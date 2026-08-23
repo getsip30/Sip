@@ -678,7 +678,7 @@ export const emailLogs = pgTable('email_logs', {
 export const quizResponses = pgTable('quiz_responses', {
   id: uuid('id').defaultRandom().primaryKey(),
   clerkId: text('clerk_id').notNull().unique(),
-  /** One of QUIZ_INTERESTS in @/lib/quiz — the only quiz answer ever persisted. */
+  /** One of INTEREST_TAGS in @/lib/interests — the only quiz answer persisted. */
   interest: text('interest').notNull(),
   mentorId: uuid('mentor_id').references(() => mentors.id, { onDelete: 'set null' }),
   /** The anonymous cookie session, for joining back to the events log. */

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser, useClerk } from '@clerk/nextjs';
 import PixelAvatar from '@/components/PixelAvatar';
-import { QUIZ_INTERESTS } from '@/lib/quiz';
+import { INTEREST_TAGS } from '@/lib/interests';
 import { getOrCreateSessionId, saveQuizAnswer, trackQuizEvent } from '@/lib/quiz-session';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK } from '@/lib/theme';
 
@@ -35,6 +35,11 @@ type SuggestResponse =
  * Only the interest step is ever persisted. The two questions after it are
  * component state and are gone the moment this unmounts — that is the whole
  * point of them, and nothing here should ever try to read or interpret them.
+ *
+ * There is no "maybe later" control on any step. The only way out is Escape,
+ * kept because a dialog a keyboard user cannot dismiss is an accessibility
+ * defect rather than a persuasion tactic. Clicking the backdrop does nothing:
+ * it was the easiest way to lose four answers by accident.
  */
 
 type Step =
@@ -53,11 +58,23 @@ type Step =
 /** Steps that carry a progress indicator. The tail past 'dream' is not a quiz. */
 const PROGRESS_STEPS: Step[] = ['intro', 'interest', 'about', 'dream'];
 
-/** Throwaway chips for the "tell us about yourself" step. Never saved. */
+/** Starting chips for "tell us about yourself". Never saved; own words welcome. */
 const VIBE_CHIPS = [
   'curious', 'hardworking', 'artistic', 'funny', 'competitive', 'quiet',
   'ambitious', 'chaotic', 'organised', 'stubborn',
 ];
+
+/**
+ * Ceiling on the about-yourself step, presets and typed-in words together.
+ *
+ * Five, because the answer is discarded the moment the quiz ends and the step
+ * exists to be quick. Without a cap the chip field grows until it pushes the
+ * Next button off a phone screen.
+ */
+const MAX_VIBES = 5;
+
+/** Enough for a word or two. Anything longer stops looking like a chip. */
+const MAX_VIBE_LENGTH = 24;
 
 /**
  * Long enough for the step to register as a search rather than a flicker, short
@@ -66,6 +83,16 @@ const VIBE_CHIPS = [
  */
 const SEARCH_MS = 1500;
 
+/**
+ * Clerk's modal backdrop. `modalBackdrop` is a published appearance element
+ * key, so this class is part of Clerk's public surface rather than an internal
+ * detail — see ElementsConfig in @clerk/shared.
+ */
+const CLERK_BACKDROP = '.cl-modalBackdrop';
+
+/** How long to wait for Clerk's modal before assuming it will not open. */
+const CLERK_OPEN_TIMEOUT_MS = 4000;
+
 export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { isSignedIn, isLoaded } = useUser();
   const { openSignUp, openSignIn } = useClerk();
@@ -73,10 +100,17 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
   const [step, setStep] = useState<Step>('intro');
   const [interest, setInterest] = useState<string | null>(null);
   const [vibes, setVibes] = useState<string[]>([]);
+  const [vibeDraft, setVibeDraft] = useState('');
   const [dream, setDream] = useState('');
   const [mentor, setMentor] = useState<Mentor | null>(null);
   const [alternate, setAlternate] = useState<Alternate | null>(null);
   const [error, setError] = useState('');
+  /**
+   * Clerk's own modal is on screen. While it is, this card is hidden outright
+   * rather than dimmed — two translucent cards stacked on one backdrop read as
+   * a rendering fault, and only one of them can be interacted with anyway.
+   */
+  const [authOpen, setAuthOpen] = useState(false);
   /**
    * Retry counter, not decoration. A failed lookup leaves `step` on 'searching'
    * while the error is displayed, so setting it to 'searching' again changes
@@ -89,10 +123,12 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
     setStep('intro');
     setInterest(null);
     setVibes([]);
+    setVibeDraft('');
     setDream('');
     setMentor(null);
     setAlternate(null);
     setError('');
+    setAuthOpen(false);
     setAttempt(0);
   }, []);
 
@@ -101,14 +137,18 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
     onClose();
   }, [reset, onClose]);
 
-  // Escape closes, matching every other overlay on the site. Bound only while
-  // open so the landing page is not carrying a key listener it never uses.
+  /**
+   * Escape closes — the one exit, and only while this card is the thing on
+   * screen. Clerk's modal handles its own Escape, and without the `authOpen`
+   * guard a single press would dismiss both, dropping someone out of the quiz
+   * entirely when they meant to back out of the signup form.
+   */
   useEffect(() => {
-    if (!open) return;
+    if (!open || authOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, close]);
+  }, [open, authOpen, close]);
 
   // Mint the anonymous session as soon as the quiz is opened, so the interest
   // saved a step later lands in a cookie that already exists rather than one
@@ -117,6 +157,60 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
   useEffect(() => {
     if (open) getOrCreateSessionId();
   }, [open]);
+
+  /**
+   * Bring this card back when Clerk's modal goes away.
+   *
+   * Clerk gives no "modal closed" callback, so the DOM is the signal. Two
+   * phases on purpose: the backdrop does not exist in the same tick as the
+   * `openSignUp()` call, and reacting to its absence straight away would
+   * un-hide the card before Clerk had mounted anything. Nothing happens until
+   * the backdrop has been seen at least once.
+   *
+   * The timeout is the failure branch. If Clerk never opens — blocked script,
+   * failed load — the card comes back rather than leaving someone looking at an
+   * empty blurred screen with no way forward.
+   */
+  useEffect(() => {
+    if (!authOpen) return;
+
+    let seen = false;
+    let settled = false;
+    let confirming: ReturnType<typeof setTimeout> | null = null;
+
+    const present = () => !!document.querySelector(CLERK_BACKDROP);
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      setAuthOpen(false);
+    };
+
+    const check = () => {
+      if (present()) {
+        seen = true;
+        // Clerk swaps sign-up for sign-in in place, and a swap that tears the
+        // backdrop down and puts it straight back would otherwise read as a
+        // close. Any reappearance cancels a pending close.
+        if (confirming) { clearTimeout(confirming); confirming = null; }
+        return;
+      }
+      if (!seen || confirming) return;
+      confirming = setTimeout(() => { if (!present()) finish(); }, 150);
+    };
+
+    const observer = new MutationObserver(check);
+    observer.observe(document.body, { childList: true, subtree: true });
+    check();
+
+    const timer = setTimeout(() => { if (!seen) finish(); }, CLERK_OPEN_TIMEOUT_MS);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+      if (confirming) clearTimeout(confirming);
+    };
+  }, [authOpen]);
 
   /**
    * The mentor lookup. The minimum-duration floor and the request race each
@@ -184,6 +278,44 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
     ? `/quiz/complete?mentorId=${encodeURIComponent(mentor.mentorId)}`
     : '/quiz/complete';
 
+  const atVibeCap = vibes.length >= MAX_VIBES;
+  /** Typed-in words, in the order they were added, rendered after the presets. */
+  const customVibes = vibes.filter(v => !VIBE_CHIPS.includes(v));
+
+  function startAuth(mode: 'signUp' | 'signIn') {
+    // Hidden before the call, not after: Clerk mounts on a later frame, and
+    // hiding afterwards would show both cards for that frame.
+    setAuthOpen(true);
+    if (mode === 'signUp') openSignUp({ forceRedirectUrl: redirectUrl });
+    else openSignIn({ forceRedirectUrl: redirectUrl });
+  }
+
+  function toggleVibe(v: string) {
+    setVibes(cur => {
+      if (cur.includes(v)) return cur.filter(x => x !== v);
+      if (cur.length >= MAX_VIBES) return cur;
+      return [...cur, v];
+    });
+  }
+
+  /**
+   * Turn the typed word into a chip. Deliberately unvalidated beyond a length
+   * cap and a duplicate check — the answer is thrown away, so garbage is fine
+   * and there is nothing here that tries to interpret it.
+   */
+  function commitVibeDraft() {
+    const word = vibeDraft.trim().slice(0, MAX_VIBE_LENGTH);
+    if (!word || atVibeCap) return;
+    // Case-insensitive, so typing "Curious" next to the "curious" preset does
+    // not produce two chips that look like a bug.
+    if (vibes.some(v => v.toLowerCase() === word.toLowerCase())) {
+      setVibeDraft('');
+      return;
+    }
+    setVibes(cur => [...cur, word]);
+    setVibeDraft('');
+  }
+
   /**
    * Take the offered category: overwrite the persisted interest and re-run the
    * lookup. Overwrite rather than remember both — the interest is what gets
@@ -219,6 +351,14 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
     fontFamily: 'inherit',
   };
 
+  /** Same button, visibly inert. Used wherever a step still needs an answer. */
+  const disabledButton: React.CSSProperties = {
+    ...primaryButton,
+    background: 'rgba(255,255,255,0.07)',
+    color: MUTED,
+    cursor: 'not-allowed',
+  };
+
   const ghostButton: React.CSSProperties = {
     background: 'none',
     border: 'none',
@@ -241,7 +381,7 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
     boxSizing: 'border-box',
   };
 
-  const chip = (selected: boolean): React.CSSProperties => ({
+  const chip = (selected: boolean, muted = false): React.CSSProperties => ({
     padding: '7px 15px',
     borderRadius: 20,
     border: '1px solid',
@@ -249,8 +389,9 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
     background: selected ? 'rgba(10,102,194,0.2)' : 'transparent',
     color: selected ? LINK : MUTED,
     fontSize: 13,
-    cursor: 'pointer',
     fontFamily: 'inherit',
+    cursor: muted ? 'not-allowed' : 'pointer',
+    opacity: muted ? 0.4 : 1,
   });
 
   function body() {
@@ -286,13 +427,15 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
           </>
         );
 
+      // No Next button, by design: choosing a chip is both the answer and the
+      // advance, so this step cannot be passed without one.
       case 'interest':
         return (
           <>
             <h3 style={{ fontSize: 21, fontWeight: 700, marginBottom: 8 }}>What are you into?</h3>
             <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>Pick the one that fits best.</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {QUIZ_INTERESTS.map(tag => (
+              {INTEREST_TAGS.map(tag => (
                 <button key={tag} onClick={() => submitInterest(tag)} style={chip(interest === tag)}>{tag}</button>
               ))}
             </div>
@@ -303,21 +446,70 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
         return (
           <>
             <h3 style={{ fontSize: 21, fontWeight: 700, marginBottom: 8 }}>Tell us about yourself.</h3>
-            <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
-              Pick as many as you like. No wrong answers, and nobody is grading this.
+            <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 18 }}>
+              Pick a few, or type your own. No wrong answers, and nobody is grading this.
             </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 22 }}>
-              {VIBE_CHIPS.map(v => (
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {VIBE_CHIPS.map(v => {
+                const selected = vibes.includes(v);
+                // At the cap the unselected presets go inert rather than
+                // disappearing — the list staying put is what makes the cap
+                // legible instead of looking like the chips broke.
+                const blocked = atVibeCap && !selected;
+                return (
+                  <button
+                    key={v}
+                    onClick={() => toggleVibe(v)}
+                    disabled={blocked}
+                    style={chip(selected, blocked)}
+                  >
+                    {v}
+                  </button>
+                );
+              })}
+              {customVibes.map(v => (
                 <button
                   key={v}
-                  onClick={() => setVibes(cur => cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v])}
-                  style={chip(vibes.includes(v))}
+                  onClick={() => toggleVibe(v)}
+                  style={chip(true)}
+                  aria-label={`Remove ${v}`}
+                  title="Remove"
                 >
-                  {v}
+                  {v} ×
                 </button>
               ))}
             </div>
-            <button style={primaryButton} onClick={() => setStep('dream')}>Next →</button>
+
+            <input
+              value={vibeDraft}
+              onChange={e => setVibeDraft(e.target.value)}
+              onKeyDown={e => {
+                if (e.key !== 'Enter') return;
+                // There is no form around this card, but Enter in a text field
+                // is still a submit gesture to most people. Take it, and make
+                // it mean "add the chip".
+                e.preventDefault();
+                commitVibeDraft();
+              }}
+              maxLength={MAX_VIBE_LENGTH}
+              disabled={atVibeCap}
+              placeholder={atVibeCap ? `That's ${MAX_VIBES} — remove one to add another` : 'Or type your own, then press Enter'}
+              aria-label="Add your own word"
+              style={{ ...textField, marginBottom: 12, opacity: atVibeCap ? 0.5 : 1 }}
+            />
+
+            <p style={{ color: MUTED, fontSize: 12, marginBottom: 18 }}>
+              {vibes.length} of {MAX_VIBES}
+            </p>
+
+            <button
+              style={vibes.length > 0 ? primaryButton : disabledButton}
+              disabled={vibes.length === 0}
+              onClick={() => setStep('dream')}
+            >
+              Next →
+            </button>
           </>
         );
 
@@ -334,10 +526,18 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
               maxLength={140}
               placeholder="Run design at a company people have heard of"
               style={{ ...textField, marginBottom: 22 }}
-              onKeyDown={e => { if (e.key === 'Enter') setStep('searching'); }}
+              onKeyDown={e => {
+                // Enter advances only when there is something to advance with,
+                // so it cannot be used to skip what the button will not.
+                if (e.key === 'Enter' && dream.trim()) setStep('searching');
+              }}
             />
-            <button style={primaryButton} onClick={() => setStep('searching')}>
-              {dream.trim() ? 'Find my mentor →' : 'Skip, find my mentor →'}
+            <button
+              style={dream.trim() ? primaryButton : disabledButton}
+              disabled={!dream.trim()}
+              onClick={() => setStep('searching')}
+            >
+              Find my mentor →
             </button>
           </>
         );
@@ -433,14 +633,15 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
               rewrite the URL fragment out from under the in-page anchors
               (#how-it-works and the skip link). forceRedirectUrl outranks every
               other redirect source, so the mentor id survives the round trip.
+              This card hides itself while that modal is up — see `authOpen`.
             */}
-            <button style={primaryButton} onClick={() => openSignUp({ forceRedirectUrl: redirectUrl })}>
+            <button style={primaryButton} onClick={() => startAuth('signUp')}>
               Create my account
             </button>
             <p style={{ marginTop: 16, fontSize: 13, color: MUTED, textAlign: 'center' }}>
               Already have one?{' '}
               <button
-                onClick={() => openSignIn({ forceRedirectUrl: redirectUrl })}
+                onClick={() => startAuth('signIn')}
                 style={{ ...ghostButton, color: LINK, fontSize: 13, textDecoration: 'underline' }}
               >
                 Sign in
@@ -455,13 +656,18 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        animate={{ opacity: authOpen ? 0 : 1 }}
         exit={{ opacity: 0 }}
-        onClick={e => { if (e.target === e.currentTarget) close(); }}
+        transition={{ duration: 0.18 }}
+        aria-hidden={authOpen}
         style={{
           position: 'fixed', inset: 0, background: 'rgba(4,7,13,0.72)',
           backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
           zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+          // The whole layer steps aside for Clerk's modal, backdrop included.
+          // Hiding only the card would leave this blur stacked under Clerk's
+          // own, which is half of what made the two look disjointed.
+          pointerEvents: authOpen ? 'none' : 'auto',
         }}
       >
         <motion.div
@@ -486,12 +692,6 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
           )}
 
           {body()}
-
-          {step !== 'searching' && (
-            <button onClick={close} style={{ ...ghostButton, display: 'block', margin: '18px auto 0' }}>
-              Maybe later
-            </button>
-          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
