@@ -346,6 +346,15 @@ const STEPS = [
  * The landing page's primary conversion path: a full-width section, at the same
  * visual weight as "How it works", whose only job is to open the quiz.
  *
+ * SIGNED-OUT VISITORS ONLY. This component takes no auth state and has no
+ * signed-in branch — the caller decides whether it exists at all. That is the
+ * point: the previous version rendered the section unconditionally and swapped
+ * only the button inside it for a link, so every signed-in visitor still read
+ * "Not sure who to talk to? We'll find your mentor. Just 4 questions and you'll
+ * be all set" on a page where the quiz is unreachable. A conditional on the
+ * control cannot hide the pitch wrapped around it; the conditional has to be on
+ * the section.
+ *
  * It replaced a small button sitting under the hero paragraph, which read as a
  * secondary action on a page whose whole purpose is that one action.
  *
@@ -354,15 +363,7 @@ const STEPS = [
  * blur: that treatment belongs to the quiz modal, and using it in two places
  * would stop it meaning "something is on top of the page".
  */
-function QuizPrompt({
-  signedIn,
-  authResolved,
-  onStartQuiz,
-}: {
-  signedIn: boolean;
-  authResolved: boolean;
-  onStartQuiz: () => void;
-}) {
+function QuizPrompt({ onStartQuiz }: { onStartQuiz: () => void }) {
   return (
     <section style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}>
       <Reveal>
@@ -397,33 +398,10 @@ function QuizPrompt({
               Just 4 questions and you&apos;ll be all set.
             </p>
 
-            {/*
-              A signed-in visitor gets the directory rather than the quiz: it
-              ends in a signup gate they are already past. A link rather than a
-              button, because it is a navigation.
-
-              `!authResolved` takes the same branch as `signedIn`, and that is
-              the fix rather than a nicety. Clerk resolves asynchronously, so
-              for the first moments of every page load `user` is undefined and
-              the old `signedIn={!!user}` was false — meaning a signed-in
-              visitor was shown the quiz trigger, and clicking it did nothing at
-              all, because <MentorQuiz> correctly refused to open for them. A
-              button that silently ignores clicks is worse than either outcome.
-              Treating "not yet known" as signed-in makes the fallback a working
-              link for everyone, and only turns into the quiz once we know the
-              visitor is actually signed out.
-            */}
-            {signedIn || !authResolved ? (
-              <Link href="/seekers" className="hero-cta" style={{ textDecoration: 'none' }}>
-                Find a match
-                <ArrowRight size={16} />
-              </Link>
-            ) : (
-              <button type="button" onClick={onStartQuiz} className="hero-cta">
-                Find a match
-                <ArrowRight size={16} />
-              </button>
-            )}
+            <button type="button" onClick={onStartQuiz} className="hero-cta">
+              Find a match
+              <ArrowRight size={16} />
+            </button>
 
             <p style={{ ...mono, fontSize: 10, color: MUTED, marginTop: 18 }}>
               Four questions · about twenty seconds
@@ -674,7 +652,16 @@ function Proof({ notes, mentorCount }: { notes: FeaturedNote[]; mentorCount: num
   );
 }
 
-function FinalCta({ signedIn }: { signedIn: boolean }) {
+/**
+ * `authResolved` here for the same reason the quiz section takes no auth state
+ * at all: an unresolved session must not be read as signed-out. This one cannot
+ * simply be withheld — it is the page's closing call to action and should be in
+ * the static HTML — so it defaults to the signed-in wording instead. /seekers is
+ * a working destination for everyone, whereas /sign-up in front of someone who
+ * is already signed in is a dead end.
+ */
+function FinalCta({ signedIn, authResolved }: { signedIn: boolean; authResolved: boolean }) {
+  const treatAsSignedIn = signedIn || !authResolved;
   const ref = useRef<HTMLElement | null>(null);
   const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
@@ -705,8 +692,8 @@ function FinalCta({ signedIn }: { signedIn: boolean }) {
 
         <Reveal delay={0.1}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 44, alignItems: 'center' }}>
-            <Link href={signedIn ? '/seekers' : '/sign-up'} className="cta-primary">
-              {signedIn ? 'Find a mentor' : 'Start for free'}
+            <Link href={treatAsSignedIn ? '/seekers' : '/sign-up'} className="cta-primary">
+              {treatAsSignedIn ? 'Find a mentor' : 'Start for free'}
               <ArrowRight size={16} color="#fff" />
             </Link>
             <Link href="/mentors/signup" className="cta-secondary">
@@ -819,13 +806,22 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
 
       <main id="main-content">
         <Hero mentors={mentors} />
-        <QuizPrompt signedIn={!!user} authResolved={isLoaded} onStartQuiz={() => setQuizRequested(canQuiz)} />
+        {/*
+          `canQuiz` is `isLoaded && !user`, so the section is absent both while
+          Clerk is resolving and for anyone signed in. Rendering nothing until
+          the session is known is deliberate: the alternative is to guess, and
+          guessing "signed out" is what put quiz copy in front of signed-in
+          users on every hard refresh. The cost is that signed-out visitors get
+          this block a beat after first paint; the benefit is that signed-in
+          visitors never get it at all, not even for a frame.
+        */}
+        {canQuiz && <QuizPrompt onStartQuiz={() => setQuizRequested(true)} />}
         <Testimonials />
         <Steps />
         <MentorGrid mentors={mentors} />
         <Proof notes={notes} mentorCount={mentors.length} />
         <Faq items={faq} />
-        <FinalCta signedIn={!!user} />
+        <FinalCta signedIn={!!user} authResolved={isLoaded} />
       </main>
 
       <Footer />

@@ -89,6 +89,25 @@ export async function POST(req: Request) {
   const clerkUser = await getClerkUser(userId);
   const email = clerkUser?.emailAddresses?.[0]?.emailAddress || '';
 
+  /*
+   * A name is required to CREATE a seeker, and this is where that becomes true
+   * of the data rather than only of the form.
+   *
+   * The insert below falls back to the Clerk first name and then to '', so a
+   * provider profile carrying no given name produced a row with a blank one.
+   * The form has always refused to submit without a name, so nothing legitimate
+   * reaches here without one; what the fallback actually did was let an
+   * incomplete row exist that requireOnboarded then had to catch forever after.
+   *
+   * Create path only. The update branch above returns early and already keeps
+   * the stored name when the field is blank, so editing another field cannot
+   * wipe it.
+   */
+  const createName = (firstName || clerkUser?.firstName || '').trim();
+  if (!createName) {
+    return NextResponse.json({ error: 'Please enter your name.' }, { status: 400 });
+  }
+
   let invitedByClerkId: string | null = null;
   if (ref) {
     const referrerSeeker = await db.select().from(seekers).where(eq(seekers.referralCode, ref));
@@ -123,7 +142,7 @@ export async function POST(req: Request) {
   const referralCode = await generateUniqueReferralCode();
   const created = await db.insert(seekers).values({
     clerkId: userId,
-    firstName: firstName || clerkUser?.firstName || '',
+    firstName: createName,
     lastName: clerkUser?.lastName || '',
     email,
     age,
