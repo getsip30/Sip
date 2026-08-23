@@ -177,33 +177,40 @@ export default function Dashboard() {
   try {
     const [mRes, rRes, liveRes, aRes, refRes, schedRes] = await Promise.all([fetch('/api/mentor'), fetch('/api/requests'), fetch('/api/rooms'), fetch('/api/asks'), fetch('/api/referrals/me'), fetch('/api/rooms/schedule')]);
     if (refRes.ok) setReferrals(await refRes.json());
+    // `if (m)` as well as `if (mRes.ok)`: GET /api/mentor now answers "you have
+    // no mentor profile" with 200 and a null body rather than a 404, so an ok
+    // response is no longer proof there is a mentor to read `m.id` off. Without
+    // this guard a seeker landing on /dashboard would throw on the first
+    // property access instead of rendering the empty state.
     if (mRes.ok) {
       const m = await mRes.json();
       setMentor(m);
-      if (liveRes.ok) {
-        const liveRooms = await liveRes.json();
-        const mine = liveRooms.find((r: { id: string; mentorId: string }) => r.mentorId === m.id);
-        setIsLive(!!mine);
-        setLiveRoomId(mine?.id || null);
-      }
-      if (schedRes.ok) setScheduledRoom(await schedRes.json());
-      const notesRes = await fetch(`/api/sip-notes?mentorId=${m.id}&mine=true`);
-      if (notesRes.ok) setPendingNotes(await notesRes.json());
-      // Owner scope, so un-featured notes stay listed and can be put back up.
-      const liveNotesRes = await fetch(`/api/sip-notes?mentorId=${m.id}&mine=approved`);
-      if (liveNotesRes.ok) setLiveNotes(await liveNotesRes.json());
-      const sessionNotesRes = await fetch('/api/session-notes');
-      if (sessionNotesRes.ok) setSessionNotes(await sessionNotesRes.json());
-      const badgesRes = await fetch('/api/badges');
-      if (badgesRes.ok) {
-        const earned: EarnedBadge[] = await badgesRes.json();
-        setBadges(earned);
-        // Badges are awarded by the nightly sip-completion job, not by anything
-        // this tab did, so the only way a mentor finds out is by being told on
-        // the next load. Highest-prestige unseen one first — if a single run
-        // pushed them past two milestones, celebrate the bigger one.
-        const unseen = earned.find(b => !b.seen && !dismissedBadges.current.has(b.badgeType));
-        if (unseen) setCelebrating(unseen.badgeType);
+      if (m) {
+        if (liveRes.ok) {
+          const liveRooms = await liveRes.json();
+          const mine = liveRooms.find((r: { id: string; mentorId: string }) => r.mentorId === m.id);
+          setIsLive(!!mine);
+          setLiveRoomId(mine?.id || null);
+        }
+        if (schedRes.ok) setScheduledRoom(await schedRes.json());
+        const notesRes = await fetch(`/api/sip-notes?mentorId=${m.id}&mine=true`);
+        if (notesRes.ok) setPendingNotes(await notesRes.json());
+        // Owner scope, so un-featured notes stay listed and can be put back up.
+        const liveNotesRes = await fetch(`/api/sip-notes?mentorId=${m.id}&mine=approved`);
+        if (liveNotesRes.ok) setLiveNotes(await liveNotesRes.json());
+        const sessionNotesRes = await fetch('/api/session-notes');
+        if (sessionNotesRes.ok) setSessionNotes(await sessionNotesRes.json());
+        const badgesRes = await fetch('/api/badges');
+        if (badgesRes.ok) {
+          const earned: EarnedBadge[] = await badgesRes.json();
+          setBadges(earned);
+          // Badges are awarded by the nightly sip-completion job, not by anything
+          // this tab did, so the only way a mentor finds out is by being told on
+          // the next load. Highest-prestige unseen one first — if a single run
+          // pushed them past two milestones, celebrate the bigger one.
+          const unseen = earned.find(b => !b.seen && !dismissedBadges.current.has(b.badgeType));
+          if (unseen) setCelebrating(unseen.badgeType);
+        }
       }
     }
     if (rRes.ok) setRequests(await rRes.json());

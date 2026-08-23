@@ -659,3 +659,32 @@ export const emailLogs = pgTable('email_logs', {
   // The Notification Center reads the newest 20, and nothing else reads this.
   index('email_logs_sent_at_idx').on(t.sentAt),
 ]);
+
+/**
+ * One row per visitor who finished the landing-page mentor-match quiz AND then
+ * signed up. Nothing is written here while the visitor is anonymous: the chosen
+ * interest lives in a first-party cookie until the account exists, which is what
+ * keeps this table off any unauthenticated write path.
+ *
+ * `clerkId` is unique so the post-signup claim is idempotent — the handoff page
+ * can be reloaded, or the claim retried after a network failure, without ever
+ * producing a second row or overwriting the first quiz someone took.
+ *
+ * `mentorId` is SET NULL rather than CASCADE on purpose: the fact that a person
+ * arrived through the quiz with a given interest is still true after the mentor
+ * they were shown deletes their account, and losing the row would silently
+ * shrink the funnel's tail.
+ */
+export const quizResponses = pgTable('quiz_responses', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  clerkId: text('clerk_id').notNull().unique(),
+  /** One of INTEREST_TAGS in @/lib/interests — the only quiz answer persisted. */
+  interest: text('interest').notNull(),
+  mentorId: uuid('mentor_id').references(() => mentors.id, { onDelete: 'set null' }),
+  /** The anonymous cookie session, for joining back to the events log. */
+  sessionId: text('session_id'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('quiz_responses_session_id_idx').on(t.sessionId),
+  index('quiz_responses_created_at_idx').on(t.createdAt),
+]);

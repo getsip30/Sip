@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
@@ -10,6 +9,7 @@ import PixelAvatar from '@/components/PixelAvatar';
 import Logo from '@/components/Logo';
 import Footer from '@/components/Footer';
 import Testimonials from '@/components/Testimonials';
+import MentorQuiz from '@/components/MentorQuiz';
 import { BG, SURFACE, TEXT, MUTED, ACCENT, LINK, SUCCESS2 } from '@/lib/theme';
 
 type Mentor = {
@@ -22,15 +22,6 @@ type Mentor = {
   bio: string;
   isOpen: boolean;
   avatarData?: string | null;
-};
-
-type Match = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  company: string;
-  reason: string;
 };
 
 type FeaturedNote = {
@@ -95,7 +86,17 @@ function Rule() {
   return <div style={{ height: 1, background: 'rgba(255,255,255,0.09)' }} />;
 }
 
-function Nav({ isMentor, isSeeker, signedIn }: { isMentor: boolean; isSeeker: boolean; signedIn: boolean }) {
+function Nav({
+  isMentor,
+  isSeeker,
+  rolesLoaded,
+  signedIn,
+}: {
+  isMentor: boolean;
+  isSeeker: boolean;
+  rolesLoaded: boolean;
+  signedIn: boolean;
+}) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -105,7 +106,29 @@ function Nav({ isMentor, isSeeker, signedIn }: { isMentor: boolean; isSeeker: bo
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const dest = isMentor ? '/dashboard' : isSeeker ? '/seekers' : '/seekers';
+  /**
+   * Where "Open Sip" goes.
+   *
+   * useRoles() resolves over two fetches, and until it does both flags are
+   * false — which the old expression read as "seeker", sending everyone to
+   * /seekers. That route's layout gates on requireOnboarded('seeker'), so a
+   * signed-in MENTOR who clicked before the roles landed was redirected into
+   * seeker onboarding: a form for an account type they do not have and did not
+   * ask for. Someone holding neither role got the same treatment.
+   *
+   * /choose-role is the honest destination for both of those cases. It is the
+   * one screen that resolves this server-truthfully — it forwards a
+   * single-role user straight through to their own side and only stops to ask
+   * when there is a real choice — so an unresolved or ambiguous state costs a
+   * redirect rather than landing someone in the wrong product.
+   */
+  const dest = !rolesLoaded
+    ? '/choose-role'
+    : isMentor && !isSeeker
+      ? '/dashboard'
+      : isSeeker && !isMentor
+        ? '/seekers'
+        : '/choose-role';
 
   return (
     <header
@@ -165,20 +188,7 @@ function Nav({ isMentor, isSeeker, signedIn }: { isMentor: boolean; isSeeker: bo
   );
 }
 
-function Hero({
-  mentors,
-  onMatch,
-  matching,
-  matches,
-  matchError,
-}: {
-  mentors: Mentor[];
-  onMatch: (q: string) => void;
-  matching: boolean;
-  matches: Match[] | null;
-  matchError: string;
-}) {
-  const [query, setQuery] = useState('');
+function Hero({ mentors }: { mentors: Mentor[] }) {
   const reduced = useReducedMotion();
   const openCount = mentors.length;
 
@@ -232,107 +242,6 @@ function Hero({
             Sip puts students in front of people working the jobs they want. Say what you&apos;re
             stuck on, see who can actually help, and have the conversation this week.
           </motion.p>
-
-          <motion.form
-            {...rise(0.22)}
-            onSubmit={(e) => {
-              e.preventDefault();
-              onMatch(query);
-            }}
-            style={{ marginTop: 36, maxWidth: 500 }}
-          >
-            <label htmlFor="matchQuery" style={{ ...mono, fontSize: 10, color: MUTED, display: 'block', marginBottom: 10 }}>
-              What do you want to figure out?
-            </label>
-            <div className="hero-field">
-              <input
-                id="matchQuery"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                maxLength={500}
-                placeholder="Breaking into product design without a portfolio"
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: TEXT,
-                  fontSize: 15,
-                  padding: '15px 4px 15px 18px',
-                  fontFamily: 'inherit',
-                }}
-              />
-              <button
-                type="submit"
-                disabled={matching || !query.trim()}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 9,
-                  background: query.trim() ? ACCENT : 'rgba(255,255,255,0.07)',
-                  color: query.trim() ? '#fff' : MUTED,
-                  border: 'none',
-                  padding: '12px 20px',
-                  margin: 5,
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  fontFamily: 'inherit',
-                  cursor: matching || !query.trim() ? 'not-allowed' : 'pointer',
-                  transition: 'background 200ms ease, color 200ms ease',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {matching ? 'Matching' : 'Find a match'}
-                {!matching && <ArrowRight size={15} />}
-              </button>
-            </div>
-            {matchError && (
-              <p style={{ marginTop: 12, fontSize: 13, color: '#f87171' }}>{matchError}</p>
-            )}
-          </motion.form>
-
-          {matches && (
-            <motion.div
-              initial={reduced ? false : { opacity: 0, y: 10 }}
-              animate={reduced ? undefined : { opacity: 1, y: 0 }}
-              transition={{ duration: 0.45 }}
-              style={{ marginTop: 26, maxWidth: 500 }}
-            >
-              {matches.length === 0 ? (
-                <p style={{ fontSize: 14, color: MUTED }}>
-                  No strong match for that yet.{' '}
-                  <Link href="/seekers" style={{ color: LINK }}>
-                    Browse everyone
-                  </Link>{' '}
-                  instead.
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <div style={{ ...mono, fontSize: 10, color: MUTED, marginBottom: 10 }}>
-                    {matches.length} match{matches.length > 1 ? 'es' : ''}
-                  </div>
-                  {matches.slice(0, 3).map((m) => (
-                    <Link
-                      key={m.id}
-                      href={`/mentors/${m.id}`}
-                      className="match-row"
-                      style={{ textDecoration: 'none', color: 'inherit' }}
-                    >
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 15, fontWeight: 600 }}>
-                          {m.firstName} {m.lastName}
-                        </div>
-                        <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>{m.reason}</div>
-                      </div>
-                      <ArrowRight size={15} color={LINK} />
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
         </div>
 
         <motion.aside
@@ -432,6 +341,77 @@ const STEPS = [
     body: 'Join a live room and take your place in the queue, or book a time that suits you both. Most first sips happen within the week.',
   },
 ];
+
+/**
+ * The landing page's primary conversion path: a full-width section, at the same
+ * visual weight as "How it works", whose only job is to open the quiz.
+ *
+ * SIGNED-OUT VISITORS ONLY. This component takes no auth state and has no
+ * signed-in branch — the caller decides whether it exists at all. That is the
+ * point: the previous version rendered the section unconditionally and swapped
+ * only the button inside it for a link, so every signed-in visitor still read
+ * "Not sure who to talk to? We'll find your mentor. Just 4 questions and you'll
+ * be all set" on a page where the quiz is unreachable. A conditional on the
+ * control cannot hide the pitch wrapped around it; the conditional has to be on
+ * the section.
+ *
+ * It replaced a small button sitting under the hero paragraph, which read as a
+ * secondary action on a page whose whole purpose is that one action.
+ *
+ * The blur here is decorative and scoped to this box — two soft colour washes
+ * behind the card's own content. It is deliberately not the page-wide backdrop
+ * blur: that treatment belongs to the quiz modal, and using it in two places
+ * would stop it meaning "something is on top of the page".
+ */
+function QuizPrompt({ onStartQuiz }: { onStartQuiz: () => void }) {
+  return (
+    <section style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}>
+      <Reveal>
+        <div className="quiz-prompt">
+          {/*
+            Decorative only, and hidden from assistive tech: these are two
+            blurred colour fields with no content behind them. `overflow:hidden`
+            on the parent is what keeps the blur inside the box's border rather
+            than bleeding onto the page.
+          */}
+          <div className="quiz-prompt-glow" aria-hidden="true">
+            <span className="quiz-prompt-blob quiz-prompt-blob-a" />
+            <span className="quiz-prompt-blob quiz-prompt-blob-b" />
+          </div>
+
+          <div style={{ position: 'relative', textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
+            <Eyebrow color={LINK}>Mentor match</Eyebrow>
+            <h2
+              style={{
+                fontSize: 'clamp(28px, 4.2vw, 46px)',
+                lineHeight: 1.08,
+                letterSpacing: '-0.03em',
+                fontWeight: 700,
+                margin: '0 0 18px',
+              }}
+            >
+              Not sure who to talk to?
+              <br />
+              <span style={{ color: LINK }}>We&apos;ll find your mentor.</span>
+            </h2>
+            <p style={{ fontSize: 'clamp(15px, 1.8vw, 18px)', lineHeight: 1.6, color: MUTED, margin: '0 0 32px' }}>
+              Just 4 questions and you&apos;ll be all set.
+            </p>
+
+            <button type="button" onClick={onStartQuiz} className="hero-cta">
+              Find a match
+              <ArrowRight size={16} />
+            </button>
+
+            <p style={{ ...mono, fontSize: 10, color: MUTED, marginTop: 18 }}>
+              Four questions · about twenty seconds
+            </p>
+          </div>
+        </div>
+      </Reveal>
+    </section>
+  );
+}
 
 function Steps() {
   return (
@@ -672,7 +652,16 @@ function Proof({ notes, mentorCount }: { notes: FeaturedNote[]; mentorCount: num
   );
 }
 
-function FinalCta({ signedIn }: { signedIn: boolean }) {
+/**
+ * `authResolved` here for the same reason the quiz section takes no auth state
+ * at all: an unresolved session must not be read as signed-out. This one cannot
+ * simply be withheld — it is the page's closing call to action and should be in
+ * the static HTML — so it defaults to the signed-in wording instead. /seekers is
+ * a working destination for everyone, whereas /sign-up in front of someone who
+ * is already signed in is a dead end.
+ */
+function FinalCta({ signedIn, authResolved }: { signedIn: boolean; authResolved: boolean }) {
+  const treatAsSignedIn = signedIn || !authResolved;
   const ref = useRef<HTMLElement | null>(null);
   const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
@@ -703,8 +692,8 @@ function FinalCta({ signedIn }: { signedIn: boolean }) {
 
         <Reveal delay={0.1}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 44, alignItems: 'center' }}>
-            <Link href={signedIn ? '/seekers' : '/sign-up'} className="cta-primary">
-              {signedIn ? 'Find a mentor' : 'Start for free'}
+            <Link href={treatAsSignedIn ? '/seekers' : '/sign-up'} className="cta-primary">
+              {treatAsSignedIn ? 'Find a mentor' : 'Start for free'}
               <ArrowRight size={16} color="#fff" />
             </Link>
             <Link href="/mentors/signup" className="cta-secondary">
@@ -771,14 +760,23 @@ function Faq({ items }: { items: { q: string; a: string }[] }) {
 
 export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[] }) {
   const { user, isLoaded } = useUser();
-  const { isMentor, isSeeker } = useRoles();
-  const router = useRouter();
+  const { isMentor, isSeeker, loaded: rolesLoaded } = useRoles();
 
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [notes, setNotes] = useState<FeaturedNote[]>([]);
-  const [matches, setMatches] = useState<Match[] | null>(null);
-  const [matching, setMatching] = useState(false);
-  const [matchError, setMatchError] = useState('');
+  const [quizRequested, setQuizRequested] = useState(false);
+
+  /**
+   * Signed-out only, derived rather than stored.
+   *
+   * Whether the quiz may be on screen is a function of the live Clerk session,
+   * not a flag set once when a button was clicked. Deriving it means a session
+   * appearing at any point — another tab, Clerk's modal completing without the
+   * redirect firing — closes the quiz on the very next render, with no effect
+   * to run and no stale boolean left behind to reopen it later.
+   */
+  const canQuiz = isLoaded && !user;
+  const quizOpen = quizRequested && canQuiz;
 
   useEffect(() => {
     let cancelled = false;
@@ -802,61 +800,39 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
     };
   }, []);
 
-  const handleMatch = useCallback(
-    async (query: string) => {
-      const q = query.trim();
-      if (!q) return;
-      if (isLoaded && !user) {
-        router.push('/sign-up');
-        return;
-      }
-      setMatching(true);
-      setMatchError('');
-      try {
-        const res = await fetch('/api/match', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: q }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setMatchError(data.error || 'Could not run the match. Try again in a moment.');
-          setMatches(null);
-        } else {
-          setMatches(data.matches ?? []);
-        }
-      } catch (err) {
-        console.error('landing: match failed', err);
-        setMatchError('Could not run the match. Try again in a moment.');
-        setMatches(null);
-      } finally {
-        setMatching(false);
-      }
-    },
-    [isLoaded, user, router]
-  );
-
   return (
     <div style={{ background: BG, color: TEXT, minHeight: '100vh' }}>
-      <Nav isMentor={isMentor} isSeeker={isSeeker} signedIn={!!user} />
+      <Nav isMentor={isMentor} isSeeker={isSeeker} rolesLoaded={rolesLoaded} signedIn={!!user} />
 
       <main id="main-content">
-        <Hero
-          mentors={mentors}
-          onMatch={handleMatch}
-          matching={matching}
-          matches={matches}
-          matchError={matchError}
-        />
+        <Hero mentors={mentors} />
+        {/*
+          `canQuiz` is `isLoaded && !user`, so the section is absent both while
+          Clerk is resolving and for anyone signed in. Rendering nothing until
+          the session is known is deliberate: the alternative is to guess, and
+          guessing "signed out" is what put quiz copy in front of signed-in
+          users on every hard refresh. The cost is that signed-out visitors get
+          this block a beat after first paint; the benefit is that signed-in
+          visitors never get it at all, not even for a frame.
+        */}
+        {canQuiz && <QuizPrompt onStartQuiz={() => setQuizRequested(true)} />}
         <Testimonials />
         <Steps />
         <MentorGrid mentors={mentors} />
         <Proof notes={notes} mentorCount={mentors.length} />
         <Faq items={faq} />
-        <FinalCta signedIn={!!user} />
+        <FinalCta signedIn={!!user} authResolved={isLoaded} />
       </main>
 
       <Footer />
+
+      {/*
+        Signed-out visitors only. MentorQuiz enforces this itself as well; the
+        guard is repeated here so the component is never even mounted for a
+        signed-in user, and `isLoaded` keeps it from flashing open during the
+        moment before Clerk has resolved the session.
+      */}
+      {canQuiz && <MentorQuiz open={quizOpen} onClose={() => setQuizRequested(false)} />}
 
       <style>{`
         .hero-grid {
@@ -865,15 +841,67 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           gap: clamp(48px, 7vw, 72px);
           align-items: start;
         }
-        .hero-field {
-          display: flex;
-          align-items: center;
-          background: ${SURFACE};
+        .quiz-prompt {
+          position: relative;
+          overflow: hidden;
+          isolation: isolate;
           border: 1px solid rgba(255,255,255,0.12);
-          border-radius: 14px;
-          transition: border-color 200ms ease;
+          border-radius: 24px;
+          background: ${SURFACE};
+          padding: clamp(48px, 8vw, 88px) clamp(24px, 5vw, 64px);
         }
-        .hero-field:focus-within { border-color: rgba(112,181,249,0.55); }
+        .quiz-prompt-glow {
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          pointer-events: none;
+        }
+        .quiz-prompt-blob {
+          position: absolute;
+          display: block;
+          border-radius: 50%;
+          filter: blur(72px);
+          opacity: 0.5;
+        }
+        .quiz-prompt-blob-a {
+          width: 46%;
+          padding-bottom: 46%;
+          top: -18%;
+          left: -8%;
+          background: rgba(112,181,249,0.45);
+        }
+        .quiz-prompt-blob-b {
+          width: 40%;
+          padding-bottom: 40%;
+          bottom: -22%;
+          right: -6%;
+          background: rgba(10,102,194,0.42);
+        }
+        /* A 72px blur over a large area is a real compositing cost on low-end
+           phones, and the blobs are decoration. Below the breakpoint they are
+           dropped rather than shrunk. */
+        @media (max-width: 640px) {
+          .quiz-prompt-glow { display: none; }
+        }
+        .hero-cta {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          background: ${ACCENT};
+          color: #fff;
+          border: none;
+          padding: 16px 28px;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 600;
+          font-family: inherit;
+          cursor: pointer;
+          transition: background 200ms ease, transform 200ms ease;
+        }
+        .hero-cta:hover { background: #1d4fd8; transform: translateY(-2px); }
+        @media (prefers-reduced-motion: reduce) {
+          .hero-cta:hover { transform: none; }
+        }
         .hero-rail {
           border: 1px solid rgba(255,255,255,0.09);
           border-radius: 16px;
@@ -888,16 +916,6 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           transition: opacity 180ms ease;
         }
         .rail-row:hover { opacity: 0.62; }
-        .match-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          padding: 14px 0;
-          border-bottom: 1px solid rgba(255,255,255,0.08);
-          transition: opacity 180ms ease;
-        }
-        .match-row:hover { opacity: 0.65; }
         .section-head {
           display: flex;
           align-items: flex-end;

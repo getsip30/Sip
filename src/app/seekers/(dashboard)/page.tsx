@@ -19,6 +19,7 @@ import { Suspense } from 'react';
 import { safeExternalUrl } from '@/lib/utils';
 import NoShowButton from '@/components/NoShowButton';
 import AccountMenu from '@/components/AccountMenu';
+import { INTEREST_TAGS } from '@/lib/interests';
 import SessionTakeaways from '@/components/SessionTakeaways';
 import { useTakeaways } from '@/hooks/useTakeaways';
 
@@ -41,7 +42,8 @@ type SipRequest = {
 
 const AVATARS = [ACCENT, CLAY, '#059669', '#DC2626', '#D97706', '#0891B2'];
 const INITIALS = (m: Mentor) => `${m.firstName[0]}${m.lastName[0]}`;
-const ALL_FILTERS = ['all', 'tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'engineering', 'computer science', 'data science', 'marketing', 'consulting', 'law', 'medicine', 'entrepreneurship', 'business', 'psychology', 'co-op', 'grad school'];
+// 'all' is this screen's own pseudo-filter; the rest is the shared vocabulary.
+const ALL_FILTERS = ['all', ...INTEREST_TAGS];
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; label: string }> = {
   pending:  { bg: 'rgba(245,158,11,0.1)',  color: '#F59E0B', border: 'rgba(245,158,11,0.3)',  label: 'pending' },
   accepted: { bg: 'rgba(91,219,138,0.1)',  color: '#5BDB8A', border: 'rgba(91,219,138,0.3)',  label: 'accepted' },
@@ -90,7 +92,7 @@ function SeekersContent() {
   const refreshTakeaways = takeaways.refresh;
   const [takeawaysSectionOpen, setTakeawaysSectionOpen] = useState(false);
   const [seekerId, setSeekerId] = useState<string | null>(null);
-  const [seekerProfile, setSeekerProfile] = useState<{ age?: number | null; linkedin?: string | null; interests?: string | null; avatarData?: string | null } | null>(null);
+  const [seekerProfile, setSeekerProfile] = useState<{ firstName?: string | null; age?: number | null; linkedin?: string | null; interests?: string | null; avatarData?: string | null } | null>(null);
   const [copied, setCopied] = useState(false);
   const [togglingConsent, setTogglingConsent] = useState<string | null>(null);
   const [scheduleDrafts, setScheduleDrafts] = useState<Record<string, string>>({});
@@ -362,6 +364,12 @@ function SeekersContent() {
         {(() => {
           if (!seekerProfile) return null;
           const checklist = [
+            // firstName is nullable in practice: POST /api/seeker falls back to
+            // the Clerk first name and then to '', so an OAuth signup with no
+            // name on the provider profile lands here with a blank one and
+            // nothing ever asks again. It is the field other people see first,
+            // so it leads the list.
+            { label: 'Add your name', done: !!seekerProfile.firstName?.trim() },
             { label: 'Add your age', done: !!seekerProfile.age },
             { label: 'Add your LinkedIn', done: !!seekerProfile.linkedin },
             { label: "Tell us what you're into", done: !!seekerProfile.interests },

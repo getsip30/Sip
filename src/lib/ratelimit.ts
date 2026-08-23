@@ -81,3 +81,16 @@ export function tooManyRequests(reset?: number, actor?: string) {
     { status: 429, headers: { 'Retry-After': String(seconds) } }
   );
 }
+
+/**
+ * The landing-page quiz's mentor lookup. Public, unauthenticated, and it runs
+ * ORDER BY random() over the mentor table, so it is both the cheapest endpoint
+ * to abuse and the most expensive to serve. Ten a minute is several times what
+ * finishing the quiz needs and well under what enumerating the directory would.
+ */
+export const quizSuggestLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, '1 m'),
+  prefix: 'sip-quiz-suggest',
+  analytics: true,
+});
