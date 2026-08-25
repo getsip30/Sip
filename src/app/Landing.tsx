@@ -209,7 +209,7 @@ function Hero({ mentors }: { mentors: Mentor[] }) {
       <div className="hero-grid">
         <div style={{ minWidth: 0 }}>
           <motion.div {...rise(0)}>
-            <Eyebrow color={LINK}>Live mentorship</Eyebrow>
+            <Eyebrow color={LINK}>Live calls</Eyebrow>
           </motion.div>
 
           <motion.h1

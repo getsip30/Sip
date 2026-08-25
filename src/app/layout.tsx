@@ -61,11 +61,10 @@ export const metadata: Metadata = {
   // in exactly one place.
   alternates: canonical('/'),
   keywords: [
-    'mentorship platform',
-    'live mentorship',
-    'find a mentor',
-    'career mentorship for students',
+    'quick career calls',
+    'live career calls',
     'talk to a professional',
+    'career advice for students',
     'informational interview',
     'student career advice',
   ],

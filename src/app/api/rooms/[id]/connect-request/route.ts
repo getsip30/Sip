@@ -108,7 +108,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       seekerName,
       seekerEmail: seeker.email,
       seekerLinkedin: seeker.linkedin || null,
-      message: `${mentor.firstName} wants to continue as a 1:1 after your sip.`,
+      message: `${mentor.firstName} wants to talk again after your sip.`,
       // A direct send has already been decided, so it lands accepted rather than
       // sitting in a pending state neither side is waiting on.
       status: mode === 'link' ? 'accepted' : 'pending',
@@ -139,12 +139,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const email = option
       ? {
-          subject: `${subjectSafe(mentor.firstName)} wants to do a 1:1 with you`,
+          subject: `${subjectSafe(mentor.firstName)} wants to talk again`,
           html: `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;">
           <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>
           <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">Book a time with ${escapeHtml(mentor.firstName)}</h2>
-          <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;"><strong>${mentorName}</strong> enjoyed your sip and wants to do a 1:1 with you.</p>
+          <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;"><strong>${mentorName}</strong> enjoyed your sip and wants to talk again.</p>
           ${bookingEmailBlock(option)}
           ${mentorNoteEmailBlock(mentor.firstName, noteToSend)}
           <p style="color:#8B949E;font-size:13px;margin-top:24px;">No need to wait on a reply, the time is yours to pick.</p>
@@ -152,12 +152,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       `,
         }
       : {
-          subject: `${subjectSafe(mentor.firstName)} wants to continue as a 1:1`,
+          subject: `${subjectSafe(mentor.firstName)} wants to talk again`,
           html: `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;">
           <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>
-          <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">Your mentor wants to keep talking</h2>
-          <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;"><strong>${mentorName}</strong> enjoyed your conversation and would like to schedule a proper 1:1.</p>
+          <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">${mentorName} wants to talk again</h2>
+          <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;"><strong>${mentorName}</strong> enjoyed your sip and wants to set up another call.</p>
           <a href="${appUrl}/dashboard" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">View in Dashboard →</a>
         </div>
       `,
