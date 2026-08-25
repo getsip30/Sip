@@ -9,7 +9,7 @@ import { canonical, absoluteUrl, graph, breadcrumbJsonLd, ORGANIZATION_ID, WEBSI
 export const metadata: Metadata = {
   title: 'About Sip: why cold outreach does not work',
   description:
-    'Why Sip exists, who it is for, and how live mentorship conversations work. Built so students can talk to people doing the job instead of sending messages that never get answered.',
+    "Why Sip exists, who it's for, and how live calls work. Built so students can talk to people doing the job instead of sending messages that never get answered.",
   alternates: canonical('/about'),
   openGraph: {
     title: 'About Sip',
@@ -39,7 +39,7 @@ export default function About() {
       '@id': `${absoluteUrl('/about')}#webpage`,
       url: absoluteUrl('/about'),
       name: 'About Sip',
-      description: 'Why Sip exists, who it is for, and how live mentorship conversations work.',
+      description: "Why Sip exists, who it's for, and how live calls work.",
       isPartOf: { '@id': WEBSITE_ID },
       about: { '@id': ORGANIZATION_ID },
       inLanguage: 'en',
@@ -98,7 +98,7 @@ export default function About() {
 
         <h2 style={h2}>What we care about</h2>
         <p style={para}>
-          A mentorship platform is only as good as how safe it feels to show up on it. Sessions are
+          A platform like this is only as good as how safe it feels to show up on it. Sessions are
           governed by a <Link href="/conduct" style={{ color: LINK }}>code of conduct</Link> that
           every account agrees to, reports are reviewed rather than filed away, and contact details
           are never released to the other side until someone chooses to share them. What we collect
