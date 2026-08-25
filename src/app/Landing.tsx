@@ -350,7 +350,7 @@ const STEPS = [
  * signed-in branch — the caller decides whether it exists at all. That is the
  * point: the previous version rendered the section unconditionally and swapped
  * only the button inside it for a link, so every signed-in visitor still read
- * "Not sure who to talk to? We'll find your mentor. Just 4 questions and you'll
+ * "Not sure who to talk to? We'll find the right person. Just 4 questions and you'll
  * be all set" on a page where the quiz is unreachable. A conditional on the
  * control cannot hide the pitch wrapped around it; the conditional has to be on
  * the section.
@@ -392,7 +392,7 @@ function QuizPrompt({ onStartQuiz }: { onStartQuiz: () => void }) {
             >
               Not sure who to talk to?
               <br />
-              <span style={{ color: LINK }}>We&apos;ll find your mentor.</span>
+              <span style={{ color: LINK }}>We&apos;ll find the right person.</span>
             </h2>
             <p style={{ fontSize: 'clamp(15px, 1.8vw, 18px)', lineHeight: 1.6, color: MUTED, margin: '0 0 32px' }}>
               Just 4 questions and you&apos;ll be all set.
