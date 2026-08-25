@@ -166,8 +166,8 @@ export default async function MentorProfileLayout({
     {
       '@type': 'Service',
       '@id': `${url}#service`,
-      serviceType: 'Career mentorship conversation',
-      name: `Live mentorship conversation with ${name}`,
+      serviceType: 'Career clarity call',
+      name: `Live call with ${name}`,
       description: `A short, live one-to-one conversation with ${name}, ${mentor.role} at ${mentor.company}, about ${topics.slice(0, 3).join(', ') || 'their career'}.`,
       provider: { '@id': `${url}#person` },
       brand: { '@id': ORGANIZATION_ID },

@@ -30,7 +30,7 @@ export const SITE_NAME = 'Sip';
 export const SITE_TAGLINE = 'Real conversations with people who already did it';
 
 export const SITE_DESCRIPTION =
-  'Sip connects students with working professionals for short, live mentorship conversations. Say what you are stuck on, see who can help, and talk this week. No cold outreach, no scheduling limbo.';
+  "Sip connects students with working professionals for short, honest calls. Say what you're stuck on, see who can help, and talk this week. No cold outreach, no scheduling limbo.";
 
 /** Absolute URL for a site-relative path. Always used for canonicals and JSON-LD. */
 export function absoluteUrl(path = '/'): string {
@@ -62,7 +62,7 @@ export function organizationJsonLd() {
     '@type': 'Organization',
     '@id': ORGANIZATION_ID,
     name: SITE_NAME,
-    alternateName: 'Sip Mentorship',
+    alternateName: 'Sip Career Calls',
     url: SITE_URL,
     logo: {
       '@type': 'ImageObject',
@@ -83,7 +83,7 @@ export function organizationJsonLd() {
     },
     areaServed: 'Worldwide',
     knowsAbout: [
-      'career mentorship',
+      'career clarity calls',
       'student career advice',
       'informational interviews',
       'breaking into tech',

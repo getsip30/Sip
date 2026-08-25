@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 export const HOME_FAQ: { q: string; a: string }[] = [
   {
     q: 'What is Sip?',
-    a: 'Sip is a free mentorship platform that connects students and early-career people with professionals for short, live conversations. You describe what you are stuck on, Sip shows you who can help, and you talk — usually within the week.',
+    a: "Sip is a free platform that connects students and early-career people with professionals for short, honest calls. You describe what you're stuck on, Sip shows you who can help, and you talk, usually within the week.",
   },
   {
     q: 'How much does Sip cost?',
@@ -87,8 +87,8 @@ export default function Page() {
     {
       '@type': 'Service',
       '@id': `${absoluteUrl('/')}#service`,
-      serviceType: 'Career mentorship',
-      name: `${SITE_NAME} live mentorship`,
+      serviceType: 'Career clarity call',
+      name: `${SITE_NAME} live call`,
       description:
         'Short, live one-to-one conversations between students and working professionals, matched by what the student is trying to figure out.',
       provider: { '@id': ORGANIZATION_ID },

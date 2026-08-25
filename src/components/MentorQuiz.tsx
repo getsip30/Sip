@@ -517,7 +517,7 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
         return (
           <>
             <h3 style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>
-              Hey, I see you&apos;re here to look for a mentor. I gotchu.
+              Hey, I see you&apos;re looking for someone to talk to. I gotchu.
             </h3>
             <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
               Four quick questions, then I&apos;ll put someone in front of you. Takes about twenty seconds.
@@ -636,7 +636,7 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
               disabled={!dream.trim()}
               onClick={() => setStep('searching')}
             >
-              Find my mentor →
+              Find someone →
             </button>
           </>
         );
@@ -652,7 +652,7 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
                 border: `3px solid ${BORDER}`, borderTopColor: ACCENT,
               }}
             />
-            <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Searching for a mentor for you</h3>
+            <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Finding the right person</h3>
             <p style={{ color: MUTED, fontSize: 14 }}>Reading the room for {interest}…</p>
           </div>
         );
@@ -700,7 +700,7 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
               <PixelAvatar data={mentor.avatarData} size={104} />
             </div>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: ACCENT, textTransform: 'uppercase', marginBottom: 10 }}>
-              Your match
+              Your pick
             </div>
             <h3 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 12 }}>{mentor.name}</h3>
             <p style={{ color: MUTED, fontSize: 14.5, lineHeight: 1.65, marginBottom: 26 }}>{mentor.shortBio}</p>
@@ -726,7 +726,7 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
             <h3 style={{ fontSize: 21, fontWeight: 700, marginBottom: 8 }}>You&apos;re not signed in. Let&apos;s fix that.</h3>
             <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
               {mentor
-                ? 'Make an account and we’ll take you straight to your match. It’s free, and it takes a minute.'
+                ? 'Make an account and we’ll take you straight to them. It’s free, and it takes a minute.'
                 : 'Make an account and we’ll email you the moment someone who fits comes along. It’s free, and it takes a minute.'}
             </p>
 
@@ -740,7 +740,7 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
                 <PixelAvatar data={mentor.avatarData} size={40} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: ACCENT, textTransform: 'uppercase', marginBottom: 3 }}>
-                    Your match
+                    Your pick
                   </div>
                   <div style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>{mentor.name}</div>
                 </div>
@@ -806,7 +806,7 @@ export default function MentorQuiz({ open, onClose }: { open: boolean; onClose: 
           exit={{ scale: 0.94, opacity: 0 }}
           role="dialog"
           aria-modal="true"
-          aria-label="Find a mentor"
+          aria-label="Find someone to talk to"
           style={{
             background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 20,
             padding: 28, width: '100%', maxWidth: step === 'reveal' ? 480 : 460,

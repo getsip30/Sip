@@ -117,7 +117,7 @@ export default function SeekerOnboarding() {
   if (screen === 'matching') {
     return (
       <div style={{ background: BG, minHeight: '100vh', color: TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: MUTED, fontSize: 15 }}>finding your mentors...</div>
+        <div style={{ color: MUTED, fontSize: 15 }}>finding your people...</div>
       </div>
     );
   }
@@ -129,7 +129,7 @@ export default function SeekerOnboarding() {
           <Logo />
         </nav>
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '90px 16px 60px' }}>
-          <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1.5, marginBottom: 12 }}>Mentors picked for you</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1.5, marginBottom: 12 }}>People picked for you</h1>
           <p style={{ color: MUTED, fontSize: 15, marginBottom: 28 }}>Based on what you're into.</p>
 
           {matches.map(m => (
