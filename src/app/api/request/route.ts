@@ -15,6 +15,7 @@ import { flags } from '@/db/schema';
 import { ne, and } from 'drizzle-orm';
 import { resolveBookingOption } from '@/lib/booking';
 import { recordFirstSipBooked, sendAcceptedEmail } from '@/lib/accept';
+import { logEvent } from '@/lib/events';
 
 // No \s here: newlines/tabs must not reach the outbound Subject header.
 const NAME_REGEX = /^[A-Za-z\u00C0-\u024F\u0400-\u04FF\u0900-\u097F\u4E00-\u9FFF '.-]+$/;
@@ -109,9 +110,25 @@ export async function POST(req: Request) {
       mentorNote: autoAccepting ? (mentor.defaultNote || null) : null,
     }).returning();
 
+    // The funnel's fifth step. Logged for every request this route creates,
+    // auto-accepted or not: from the seeker's side both are the same act.
+    void logEvent('sip_requested', {
+      clerkId: userId,
+      userRole: 'seeker',
+      metadata: { mentorId, requestId: created[0].id, autoAccepted: autoAccepting },
+    });
+
     if (autoAccepting) {
       await recordFirstSipBooked(seekerEmail);
       sendAcceptedEmail({ mentor, request: created[0], option: autoOption, auto: true });
+      // Sixth step. Auto-accept reaches 'accepted' without ever passing through
+      // PATCH /api/requests/[id], so it has to be logged here too or every
+      // instant-booking mentor's sips would vanish from the conversion rate.
+      void logEvent('sip_accepted', {
+        clerkId: userId,
+        userRole: 'seeker',
+        metadata: { mentorId, requestId: created[0].id, path: 'auto' },
+      });
     }
 
     const mentorSubject = autoAccepting

@@ -9,10 +9,11 @@ import { publicMentor } from '@/lib/mentor';
 import { badgesForMentors } from '@/lib/badges';
 import { bookingOptions } from '@/lib/booking';
 import { escapeHtml, safeExternalUrl } from '@/lib/utils';
-import { mutationLimiter, limitKey } from '@/lib/ratelimit';
+import { mutationLimiter, publicReadLimiter, privateReadLimiter, limitKey, tooManyRequests } from '@/lib/ratelimit';
 import { handleApiError } from '@/lib/api-handler';
 import { logSwallowed } from '@/lib/logger';
 import { recordAbuseSignal } from '@/lib/abuse';
+import { logEvent } from '@/lib/events';
 
 /**
  * Shown whenever the address on the caller's Clerk identity already belongs to
@@ -212,6 +213,9 @@ export async function POST(req: Request) {
   }
 
   void recordAbuseSignal('signup', limitKey(req, userId), { role: 'mentor' });
+  // Create branch only, matching POST /api/seeker: the update path returns
+  // earlier, so editing a profile does not re-fire this funnel step.
+  void logEvent('profile_setup_complete', { clerkId: userId, userRole: 'mentor' });
   after(() => notifyMatchingSeekers(mentor[0]).catch(err => logSwallowed('email.new_mentor_match_failed', err, { mentorId: mentor[0].id })));
 
   return NextResponse.json(mentor[0]);
@@ -221,9 +225,21 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
+  try {
   const url = new URL(req.url);
   const all = url.searchParams.get('all');
   const leaderboard = url.searchParams.get('leaderboard');
+
+  // Both list branches below are unauthenticated and return the whole open
+  // directory, which made this the cheapest endpoint on the site to scrape and
+  // the only public read with no limiter on it at all. Keyed by IP for a
+  // signed-out caller, by user id for a signed-in one, so a shared campus
+  // network does not throttle itself.
+  if (leaderboard === 'true' || all === 'true') {
+    const { userId: viewerId } = await auth();
+    const { success, reset } = await publicReadLimiter.limit(limitKey(req, viewerId));
+    if (!success) return tooManyRequests(reset);
+  }
 
   if (leaderboard === 'true') {
     const result = await db.select().from(mentors)
@@ -249,9 +265,16 @@ export async function GET(req: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const { success, reset } = await privateReadLimiter.limit(limitKey(req, userId));
+  if (!success) return tooManyRequests(reset);
+
   const result = await db.select().from(mentors).where(eq(mentors.clerkId, userId));
   const m = result[0];
-  if (!m) return NextResponse.json(null, { status: 404 });
+  // 200 with a null body, not 404 — see the note on GET /api/seeker. Every
+  // seeker-only account is legitimately in this state, and useRoles() asks on
+  // every page load, so 404 here meant a console full of failed requests for
+  // users who had done nothing wrong.
+  if (!m) return NextResponse.json(null);
 
   let referrerName: string | null = null;
   if (m.invitedByClerkId) {
@@ -260,6 +283,9 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({ ...m, referrerName }, { status: 200 });
+  } catch (err) {
+    return handleApiError(err, 'GET /api/mentor');
+  }
 }
 
 /**

@@ -12,6 +12,7 @@ import {
   ORGANIZATION_ID,
   WEBSITE_ID,
 } from '@/lib/site';
+import TrackEvent from '@/components/TrackEvent';
 
 /**
  * Seeker-side gate. This sits in a route group so it wraps /seekers alone:
@@ -118,6 +119,13 @@ export default async function SeekerDashboardLayout({ children }: { children: Re
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
       {children}
+      {/*
+        The 'browse_sips' funnel step. In the layout rather than the page so it
+        fires once for the route, and so it covers the signed-out directory too:
+        browsing before signing up is a real path through this funnel, and those
+        rows simply carry no Clerk id.
+      */}
+      <TrackEvent type="browse_sips" />
       <MentorIndex mentors={listItems} />
     </>
   );

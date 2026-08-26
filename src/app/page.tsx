@@ -9,6 +9,7 @@ import {
   SITE_NAME,
 } from '@/lib/site';
 import Landing from './Landing';
+import TrackEvent from '@/components/TrackEvent';
 
 export const metadata: Metadata = {
   title: 'Sip: talk to someone who already did the thing',
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
 export const HOME_FAQ: { q: string; a: string }[] = [
   {
     q: 'What is Sip?',
-    a: 'Sip is a free mentorship platform that connects students and early-career people with professionals for short, live conversations. You describe what you are stuck on, Sip shows you who can help, and you talk — usually within the week.',
+    a: "Sip is a free platform that connects students and early-career people with professionals for short, honest calls. You describe what you're stuck on, Sip shows you who can help, and you talk, usually within the week.",
   },
   {
     q: 'How much does Sip cost?',
@@ -86,8 +87,8 @@ export default function Page() {
     {
       '@type': 'Service',
       '@id': `${absoluteUrl('/')}#service`,
-      serviceType: 'Career mentorship',
-      name: `${SITE_NAME} live mentorship`,
+      serviceType: 'Career clarity call',
+      name: `${SITE_NAME} live call`,
       description:
         'Short, live one-to-one conversations between students and working professionals, matched by what the student is trying to figure out.',
       provider: { '@id': ORGANIZATION_ID },
@@ -147,6 +148,11 @@ export default function Page() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
       <Landing faq={HOME_FAQ} />
+      {/*
+        Top of the funnel. Client-side so this page stays statically rendered —
+        see TrackEvent for why that matters here specifically.
+      */}
+      <TrackEvent type="landing_view" />
     </>
   );
 }
