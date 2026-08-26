@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { getUserEmail } from '@/lib/clerk';
 import { db } from '@/db';
-import { requests, mentors, sipFeedback } from '@/db/schema';
+import { requests, mentors, sipFeedback, reflections } from '@/db/schema';
 import { eq, and, or, getTableColumns, desc } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { privateReadLimiter, limitKey, tooManyRequests } from '@/lib/ratelimit';
@@ -29,10 +29,19 @@ export async function GET(req: Request) {
         mentorGoogleCalendarLink: mentors.googleCalendarLink,
         mentorContactEmail: mentors.contactEmail,
         seekerFeedbackGiven: sipFeedback.id,
+        reflectionDidDifferently: reflections.didDifferently,
+        reflectionCounterfactual: reflections.counterfactual,
+        reflectionShareable: reflections.shareable,
+        reflectionId: reflections.id,
       })
       .from(requests)
       .leftJoin(mentors, eq(requests.mentorId, mentors.id))
       .leftJoin(sipFeedback, and(eq(sipFeedback.requestId, requests.id), eq(sipFeedback.role, 'seeker')))
+      // The caller's OWN reflection only. Pinning the join to userId is what
+      // stops one seeker's answers reaching another's dashboard on a request
+      // matched by email, and it is why this is a join rather than a second
+      // fetch: the card needs the answers back to show what was already sent.
+      .leftJoin(reflections, and(eq(reflections.requestId, requests.id), eq(reflections.seekerClerkId, userId)))
       .where(or(eq(requests.seekerClerkId, userId), eq(requests.seekerEmail, email)))
       .orderBy(desc(requests.createdAt))
       .limit(300);
@@ -51,13 +60,18 @@ export async function GET(req: Request) {
     // GET /api/requests: it is a bearer secret for the confirm link, and it
     // arrives here only because getTableColumns takes every column.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const enriched = rows.map(({ mentorCalendarLink, mentorGoogleCalendarLink, mentorContactEmail, confirmToken: _confirmToken, ...r }) => {
+    const enriched = rows.map(({ mentorCalendarLink, mentorGoogleCalendarLink, mentorContactEmail, confirmToken: _confirmToken, reflectionId, reflectionDidDifferently, reflectionCounterfactual, reflectionShareable, ...r }) => {
       const released = r.status === 'accepted';
       const chosen = r.sharedContactMethod;
       const releases = (method: string) => released && (chosen == null || chosen === method);
       return {
         ...r,
         seekerFeedbackGiven: r.seekerFeedbackGiven !== null,
+        reflection: reflectionId ? {
+          didDifferently: reflectionDidDifferently,
+          counterfactual: reflectionCounterfactual,
+          shareable: reflectionShareable,
+        } : null,
         mentor: r.mentorFirstName ? {
           firstName: r.mentorFirstName, lastName: r.mentorLastName,
           role: r.mentorRole, company: r.mentorCompany,
