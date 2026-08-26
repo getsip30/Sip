@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 import { escapeHtml } from '@/lib/utils';
 
 /**
- * Timed reminders for a scheduled 1:1, at roughly T-24h, T-1h and T-10m.
+ * Timed reminders for a scheduled 1:1, at roughly T-24h, T-1h, T-10m and T+1h.
  *
  * These live apart from @/lib/nudges on purpose. Nudges chase an outstanding
  * action on a daily cadence and are driven by `NUDGE_QUERIES`, which the daily
@@ -14,9 +14,16 @@ import { escapeHtml } from '@/lib/utils';
  * (request_id, kind) is exactly the exactly-once guarantee this needs.
  */
 
-export type ReminderKind = 'session_24h' | 'session_1h' | 'session_10m';
+export type ReminderKind = 'session_24h' | 'session_1h' | 'session_10m' | 'session_reflection';
 
-export const REMINDER_KINDS: ReminderKind[] = ['session_24h', 'session_1h', 'session_10m'];
+/**
+ * `session_reflection` is the odd one out: it fires an hour AFTER the start
+ * time, not before it. It lives here rather than in @/lib/nudges for the same
+ * reason the other three do — it needs the five-minute poller, not the daily
+ * cron — and it is last in the list so the pre-session reminders are attempted
+ * first when a run is doing several kinds at once.
+ */
+export const REMINDER_KINDS: ReminderKind[] = ['session_24h', 'session_1h', 'session_10m', 'session_reflection'];
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://getsip.co';
 
@@ -67,8 +74,10 @@ export async function claimReminder(requestId: string, kind: ReminderKind) {
  * minutes will silently start dropping that one. See the route for the recommended
  * schedule.
  *
- * Common conditions: accepted, still scheduled, not already started, and not
- * already resolved as cancelled or a no-show.
+ * Common conditions: accepted, still scheduled, and not already resolved as
+ * cancelled or a no-show. "Not already started" is a property of the pre-session
+ * windows themselves, not of COMMON — session_reflection deliberately looks the
+ * other way, at sips that are already behind us.
  */
 const DUE_SELECT = sql`
   SELECT r.id, r.seeker_email, r.seeker_name, r.scheduled_at, r.confirm_token,
@@ -105,6 +114,27 @@ export const REMINDER_QUERIES: Record<ReminderKind, ReturnType<typeof sql>> = {
       AND r.scheduled_at > now()
       AND r.scheduled_at <= now() + interval '10 minutes'
       AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'session_10m')
+    LIMIT 200`,
+
+  /**
+   * An hour after the start time, pointing the seeker back at the dashboard to
+   * answer the two reflection questions.
+   *
+   * Bounded on both sides like the rest, so the first run after deploy nudges
+   * about sips from the last half hour rather than every sip ever held. The
+   * offset matches REFLECTION_OPENS_AFTER_MS in @/lib/reflections: the email
+   * must not arrive before the card it points at has flipped.
+   *
+   * Skipped once the seeker has already answered — they beat us to it, and an
+   * email asking for something already sent reads as if nobody was listening.
+   */
+  session_reflection: sql`
+    ${DUE_SELECT}
+    WHERE ${COMMON}
+      AND r.scheduled_at <= now() - interval '1 hour'
+      AND r.scheduled_at > now() - interval '1 hour 30 minutes'
+      AND NOT EXISTS (SELECT 1 FROM reflections f WHERE f.request_id = r.id)
+      AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'session_reflection')
     LIMIT 200`,
 };
 
@@ -193,6 +223,25 @@ export function reminderEmails(kind: ReminderKind, row: ReminderRow): Mail[] {
           to: row.mentor_email,
           subject: `Your sip with ${row.seeker_name} starts in 10 minutes`,
           html: shell('Starting in 10 minutes', `Your sip with <strong>${seekerName}</strong> starts at ${at}.`),
+        },
+      ];
+
+    // Seeker only. The two questions are about what changed for the person who
+    // asked, and the mentor has nothing to answer here.
+    //
+    // Both linked and named, for the reason spelled out on the acceptance email
+    // in @/lib/accept: ?tab=mine opens My Sips directly, and the sentence says
+    // where that is anyway, so the instruction survives a mangled link.
+    case 'session_reflection':
+      return [
+        {
+          to: row.seeker_email,
+          subject: `How was your sip with ${row.mentor_first_name}?`,
+          html: shell(
+            'Two quick questions',
+            `Your sip with <strong>${mentorName}</strong> should be done. Two questions, a sentence each — what you're doing differently, and what this week would have looked like without it.<br><br>You'll find them under <strong>My Sips</strong> on your dashboard, on the card for this sip.`,
+            { href: `${APP_URL}/seekers?tab=mine`, label: 'Go to My Sips' }
+          ),
         },
       ];
   }

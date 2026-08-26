@@ -1,7 +1,10 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { touchLastActive } from '@/lib/activity';
 
-const isProtectedRoute = createRouteMatcher(['/dashboard(.*)', '/admin(.*)']);
+// /unbooked is reached from a link in the mentor's email, and both its buttons
+// are mentor-only writes. Protecting it sends a signed-out mentor to sign-in
+// rather than to a page whose buttons would answer 401.
+const isProtectedRoute = createRouteMatcher(['/dashboard(.*)', '/admin(.*)', '/unbooked(.*)']);
 
 export default clerkMiddleware(async (auth, req, event) => {
   // Without an explicit destination, protect() answers a signed-out visitor with

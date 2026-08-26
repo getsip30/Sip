@@ -6,6 +6,8 @@ import { escapeHtml, subjectSafe } from '@/lib/utils';
 import { bookingEmailBlock, type BookingOption } from '@/lib/booking';
 import { logSwallowed } from '@/lib/logger';
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://getsip.co';
+
 /**
  * Everything that happens once a request reaches 'accepted', regardless of which
  * path got it there.
@@ -85,6 +87,27 @@ export function sendAcceptedEmail({
     ? `<p style="color:#8B949E;font-size:13px;line-height:1.7;margin-bottom:20px;">${escapeHtml(mentor.firstName)} has instant booking switched on, so there was nothing to wait for. Pick a time that works and you're set.</p>`
     : '';
 
+  /**
+   * The ask to log the chosen time back on Sip.
+   *
+   * A sip is booked wherever the mentor sent them — Calendly, Google, plain
+   * email — and Sip never hears about it. Without the time in `scheduledAt`
+   * there are no reminders for either side, no way to tell a sip that happened
+   * from one that quietly died, and no reflection prompt afterwards.
+   *
+   * Worded as a favour with a reason, not a rule with a consequence. Nothing
+   * breaks if they skip it and the email must not imply otherwise: a warning
+   * here would be both untrue and a poor way to greet someone who has just been
+   * told yes.
+   *
+   * The destination is both linked and named. ?tab=mine opens My Sips directly,
+   * and the sentence says where that is anyway — an email is forwarded, pasted
+   * and read on a phone that mangles links, so the instruction has to survive
+   * the button not working. One of the two is redundant on any given read, and
+   * which one is redundant is not ours to know.
+   */
+  const logTimeBlock = `<div style="background:#161B22;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px 18px;margin-top:20px;"><p style="color:#E6EDF3;font-size:14px;line-height:1.7;margin:0;">One small favour: once you've picked a time — even if you booked it on Calendly, over email, or anywhere else — could you add it to your sip on Sip? It's how ${escapeHtml(mentor.firstName)} gets a reminder before the call, and how we know the sip actually happened.</p><p style="color:#8B949E;font-size:13px;line-height:1.7;margin:10px 0 0;">You'll find it under <strong style="color:#E6EDF3;">My Sips</strong> on your dashboard — open this sip, pick the date and time, and hit save.</p><p style="margin:14px 0 0;"><a href="${APP_URL}/seekers?tab=mine" style="display:inline-block;background:#0A66C2;color:white;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;">Go to My Sips</a></p></div>`;
+
   return transporter.sendMail({
     from: `Sip <${process.env.GMAIL_USER}>`,
     to: request.seekerEmail,
@@ -99,6 +122,7 @@ export function sendAcceptedEmail({
         ${autoBlock}
         ${contactBlock}
         ${noteBlock}
+        ${logTimeBlock}
         <p style="color:#8B949E;font-size:13px;margin-top:24px;">Show up curious. That's all they ask.</p>
       </div>
     `,

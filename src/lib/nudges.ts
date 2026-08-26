@@ -7,7 +7,8 @@ export type NudgeKind =
   | 'seeker_book_48h'
   | 'seeker_book_5d'
   | 'mentor_respond_48h'
-  | 'mentor_connect_24h';
+  | 'mentor_connect_24h'
+  | 'mentor_no_time_48h';
 
 export type NudgeRow = {
   id: string;
@@ -37,13 +38,25 @@ export async function claimNudge(requestId: string, kind: NudgeKind) {
   return claimed.length > 0;
 }
 
-function shell(heading: string, body: string, cta: { href: string; label: string }) {
+type Cta = { href: string; label: string; secondary?: boolean };
+
+/**
+ * Takes one CTA or several. The second and later ones render quieter, because
+ * an email offering two equally loud buttons makes the reader choose before
+ * they have read why.
+ */
+function shell(heading: string, body: string, cta: Cta | Cta[]) {
+  const ctas = Array.isArray(cta) ? cta : [cta];
+  const buttons = ctas.map(c => c.secondary
+    ? `<a href="${c.href}" style="display:inline-block;background:transparent;color:#8B949E;padding:14px 24px;border:1px solid rgba(255,255,255,0.15);border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;">${c.label}</a>`
+    : `<a href="${c.href}" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">${c.label}</a>`
+  ).join('<span style="display:inline-block;width:10px;"></span>');
   return `
     <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#0D1117;color:#E6EDF3;padding:40px;border-radius:16px;">
       <div style="font-size:28px;font-weight:700;color:#70B5F9;margin-bottom:8px;">sip</div>
       <h2 style="font-size:22px;margin-bottom:16px;color:#E6EDF3;">${heading}</h2>
       <p style="color:#C9D1D9;font-size:15px;line-height:1.7;margin-bottom:24px;">${body}</p>
-      <a href="${cta.href}" style="display:inline-block;background:#0A66C2;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;">${cta.label}</a>
+      ${buttons}
     </div>
   `;
 }
@@ -87,6 +100,28 @@ export function nudgeEmail(kind: NudgeKind, row: NudgeRow): { to: string; subjec
           'A request has been sitting for two days',
           `<strong>${seekerName}</strong> asked for a sip and has not heard back. Accepting or declining both take one click, and either is better than silence.`,
           { href: `${APP_URL}/dashboard`, label: 'Open your dashboard' }
+        ),
+      };
+
+    /**
+     * The mentor's side of an accepted sip that never got a time.
+     *
+     * Both actions land on the same signed-in page rather than mutating from
+     * the link itself: mail scanners fetch every URL in an inbound message, so
+     * a GET that nudged or filed a report would fire for seekers and mentors
+     * who never opened the email. Same reasoning as POST /api/confirm/[token].
+     */
+    case 'mentor_no_time_48h':
+      return {
+        to: row.mentor_email,
+        subject: `${row.seeker_name} still hasn't picked a time`,
+        html: shell(
+          'No time on the calendar yet',
+          `You accepted <strong>${seekerName}</strong>'s sip two days ago and there is still no time booked. You can give them a nudge, or if you think this one is going nowhere, flag it for us to look at.`,
+          [
+            { href: `${APP_URL}/unbooked/${row.id}`, label: 'Nudge them' },
+            { href: `${APP_URL}/unbooked/${row.id}?report=1`, label: 'Report as no-show', secondary: true },
+          ]
         ),
       };
 
@@ -137,6 +172,24 @@ export const NUDGE_QUERIES: Record<NudgeKind, ReturnType<typeof sql>> = {
       -- gets two emails in the same run.
       AND EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'seeker_book_48h')
       AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'seeker_book_5d')
+    LIMIT 200`,
+
+  /**
+   * The mentor's counterpart to seeker_book_48h: same 48-hour, no-time-set
+   * condition, told to the other side with something they can do about it.
+   *
+   * Both fire on the same run and that is intended — the seeker gets the
+   * reminder, the mentor gets the controls. Neither is told about the other,
+   * because nudging is the mentor's call to make.
+   */
+  mentor_no_time_48h: sql`
+    SELECT r.id, r.seeker_email, r.seeker_name, m.email AS mentor_email,
+           m.first_name AS mentor_first_name, m.last_name AS mentor_last_name
+    FROM requests r JOIN mentors m ON m.id = r.mentor_id
+    WHERE r.status = 'accepted' AND r.scheduled_at IS NULL
+      AND r.responded_at IS NOT NULL AND r.responded_at <= now() - interval '48 hours'
+      AND r.responded_at >= now() - interval '30 days'
+      AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'mentor_no_time_48h')
     LIMIT 200`,
 
   // Seeker-initiated (no origin room) and still unanswered after 48h.
