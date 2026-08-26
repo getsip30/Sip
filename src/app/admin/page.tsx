@@ -38,6 +38,17 @@ type SessionFeedbackEntry = {
   createdAt: string; seekerClerkId: string; roomTitle: string | null;
   mentorFirstName: string | null; mentorLastName: string | null;
 };
+/**
+ * A reflection the seeker agreed could be quoted. Nothing is shown publicly off
+ * the back of this — it is a shortlist to read and pick from by hand.
+ */
+type ShareableReflection = {
+  id: string; requestId: string;
+  didDifferently: string | null; counterfactual: string | null;
+  createdAt: string; updatedAt: string;
+  seekerClerkId: string; seekerName: string; seekerEmail: string | null;
+  mentorName: string; mentorCompany: string | null;
+};
 type Overview = {
   stats: {
     totalMentors: number; bannedMentors: number; openMentors: number;
@@ -52,7 +63,7 @@ type Overview = {
   asks: Ask[]; notes: Note[]; referrals: Referral[]; follows: Follow[]; consents: Consent[];
 };
 
-const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Follows', 'Consents', 'Flags', 'No-shows', 'Feedback', 'Session Feedback'] as const;
+const TABS = ['Overview', 'Mentors', 'Seekers', 'Rooms', 'Sips', 'Asks', 'Notes', 'Referrals', 'Follows', 'Consents', 'Flags', 'No-shows', 'Feedback', 'Session Feedback', 'Reflections'] as const;
 type Tab = typeof TABS[number];
 
 const card: React.CSSProperties = { background: '#121923', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20 };
@@ -65,17 +76,19 @@ export default function AdminPage() {
   const [noShows, setNoShows] = useState<NoShowReport[]>([]);
   const [siteFeedback, setSiteFeedback] = useState<SiteFeedbackEntry[]>([]);
   const [sessionFeedback, setSessionFeedback] = useState<SessionFeedbackEntry[]>([]);
+  const [shareableReflections, setShareableReflections] = useState<ShareableReflection[]>([]);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
 
   const fetchAll = useCallback(async () => {
     try {
-      const [ov, fl, sf, sess, ns] = await Promise.all([
+      const [ov, fl, sf, sess, ns, refl] = await Promise.all([
         fetch('/api/admin/overview'),
         fetch('/api/admin/flags'),
         fetch('/api/admin/site-feedback'),
         fetch('/api/admin/session-feedback'),
         fetch('/api/admin/no-show-reports'),
+        fetch('/api/admin/reflections'),
       ]);
       if (sess.ok) setSessionFeedback(await sess.json());
       if (ov.status === 403 || fl.status === 403 || sf.status === 403) { setForbidden(true); setLoading(false); return; }
@@ -83,6 +96,7 @@ export default function AdminPage() {
       if (fl.ok) setFlags(await fl.json());
       if (sf.ok) setSiteFeedback(await sf.json());
       if (ns.ok) setNoShows(await ns.json());
+      if (refl.ok) setShareableReflections(await refl.json());
       setLoading(false);
     } catch (err) {
       console.error('fetchAll failed:', err);
@@ -142,7 +156,7 @@ export default function AdminPage() {
           {TABS.map(t => (
             <button key={t} onClick={() => setTab(t)}
               style={{ ...btn, background: tab === t ? 'rgba(112,181,249,0.15)' : 'transparent', borderColor: tab === t ? 'rgba(112,181,249,0.4)' : 'rgba(255,255,255,0.1)', color: tab === t ? '#70B5F9' : '#8A93A3', padding: '8px 16px', fontSize: 13 }}>
-              {t}{t === 'Flags' && openFlags.length > 0 ? ` (${openFlags.length})` : ''}{t === 'No-shows' && openNoShows.length > 0 ? ` (${openNoShows.length})` : ''}{t === 'Feedback' && siteFeedback.length > 0 ? ` (${siteFeedback.length})` : ''}
+              {t}{t === 'Flags' && openFlags.length > 0 ? ` (${openFlags.length})` : ''}{t === 'No-shows' && openNoShows.length > 0 ? ` (${openNoShows.length})` : ''}{t === 'Feedback' && siteFeedback.length > 0 ? ` (${siteFeedback.length})` : ''}{t === 'Reflections' && shareableReflections.length > 0 ? ` (${shareableReflections.length})` : ''}
             </button>
           ))}
         </div>
@@ -197,6 +211,53 @@ export default function AdminPage() {
                   </span>
                 </div>
                 {f.comment && <div style={{ whiteSpace: 'pre-wrap' }}>{f.comment}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Reflections the seeker agreed could be quoted. Read-only and
+            admin-only: ticking the box is permission to be quoted somewhere a
+            human chooses, not permission to be published, so nothing here
+            feeds a public surface. */}
+        {tab === 'Reflections' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ color: '#8A93A3', fontSize: 12, marginBottom: 4 }}>
+              Seekers who ticked &ldquo;okay if we share your answer publicly&rdquo;. Nothing on this list is
+              published anywhere — it is here to read and pick from by hand.
+            </div>
+            {shareableReflections.length === 0 && <div style={{ color: '#8A93A3' }}>No shareable reflections yet.</div>}
+            {shareableReflections.map(r => (
+              <div key={r.id} style={card}>
+                <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 10 }}>
+                  <span style={{ color: '#EDEFF3', fontWeight: 600 }}>{r.seekerName}</span>
+                  {r.seekerEmail ? ` · ${r.seekerEmail}` : ''}
+                  {' · with '}{r.mentorName}{r.mentorCompany ? ` @ ${r.mentorCompany}` : ''}
+                  {' · '}{new Date(r.createdAt).toLocaleString()}
+                  {/* Answers can be edited after the fact, so say when the text
+                      on screen was actually last written. */}
+                  {r.updatedAt && new Date(r.updatedAt).getTime() - new Date(r.createdAt).getTime() > 60000
+                    ? ` · edited ${new Date(r.updatedAt).toLocaleString()}`
+                    : ''}
+                </div>
+
+                {r.didDifferently && (
+                  <div style={{ marginBottom: r.counterfactual ? 12 : 0 }}>
+                    <div style={{ fontSize: 11, color: '#70B5F9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                      Doing differently
+                    </div>
+                    <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{r.didDifferently}</div>
+                  </div>
+                )}
+
+                {r.counterfactual && (
+                  <div>
+                    <div style={{ fontSize: 11, color: '#70B5F9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                      If they&rsquo;d skipped it
+                    </div>
+                    <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{r.counterfactual}</div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
