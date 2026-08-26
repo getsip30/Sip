@@ -20,6 +20,8 @@ import { safeExternalUrl } from '@/lib/utils';
 import NoShowButton from '@/components/NoShowButton';
 import AccountMenu from '@/components/AccountMenu';
 import SessionTakeaways from '@/components/SessionTakeaways';
+import ReflectionForm, { type Reflection } from '@/components/ReflectionForm';
+import { isReflectionOpen } from '@/lib/reflections';
 import { useTakeaways } from '@/hooks/useTakeaways';
 
 type LiveRoom = { id: string; title: string; firstName: string; lastName: string; role: string; company: string; mentorId: string; startedAt: string; topics?: string; avatarData?: string | null };
@@ -36,6 +38,7 @@ type SipRequest = {
   scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null;
   sessionStatus?: string | null;
   seekerFeedbackGiven?: boolean; mentorNote?: string | null;
+  reflection?: Reflection | null;
   mentor?: { firstName: string; lastName: string; role: string; company: string; calendarLink: string | null; googleCalendarLink?: string | null; contactEmail?: string | null; };
 };
 
@@ -48,6 +51,30 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; 
   declined: { bg: 'rgba(248,113,113,0.1)', color: '#F87171', border: 'rgba(248,113,113,0.3)', label: 'declined' },
   cancelled: { bg: 'rgba(248,113,113,0.1)', color: '#F87171', border: 'rgba(248,113,113,0.3)', label: 'cancelled' },
 };
+
+/**
+ * The one state a request card is in. Exactly one, never a stack: an accepted
+ * sip used to render the booking row, the time picker, the feedback form and
+ * the takeaways composer all at once, which asked for four things and made none
+ * of them look like the next step.
+ *
+ * 'awaiting_time' has no expiry on purpose. It is not a countdown — it ends when
+ * a time is set and at no other moment, however long that takes.
+ *
+ * 'reflect' is derived here, live, from the stored time against the clock. There
+ * is deliberately no column and no job behind it: a flag would be wrong on every
+ * dashboard load that happens before the job that sets it runs.
+ */
+type CardState = 'other' | 'pending' | 'awaiting_time' | 'upcoming' | 'reflect';
+
+function cardState(r: Pick<SipRequest, 'status' | 'scheduledAt'>, now: number): CardState {
+  if (r.status === 'pending') return 'pending';
+  // Declined and cancelled keep their existing dimmed card and are not one of
+  // the four states this flow describes.
+  if (r.status !== 'accepted') return 'other';
+  if (!r.scheduledAt) return 'awaiting_time';
+  return isReflectionOpen(r.scheduledAt, now) ? 'reflect' : 'upcoming';
+}
 
 const SEEKER_TOUR_STEPS: TourStep[] = [
   { label: 'Browse', title: 'Find a Mentor', description: 'Filter by topic, or search by name, role, or company.', bullets: ['Every mentor lists their actual topics', 'Live tag shows who you can talk to right now'] },
@@ -101,6 +128,20 @@ function SeekersContent() {
   const [feedbackComments, setFeedbackComments] = useState<Record<string, string>>({});
   const [submittingFeedback, setSubmittingFeedback] = useState<string | null>(null);
   const [showTour, setShowTour] = useState(false);
+
+  /**
+   * The clock the card states are derived from.
+   *
+   * Recomputed rather than stored: which state a card is in is a question about
+   * now, and the answer changes while nobody is touching anything. A minute is
+   * fine — the boundary this drives is an hour after a session, so being up to
+   * sixty seconds late to flip is invisible.
+   */
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   
 
@@ -587,6 +628,48 @@ function SeekersContent() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {sipList.shown.map((r, idx) => {
                     const s = STATUS_STYLE[r.status];
+                    // Derived on every render against the ticking clock, so a
+                    // card open on screen flips to the reflection view an hour
+                    // after the session without a reload and without a job.
+                    const state = cardState(r, now);
+
+                    // Shared by the two pre-session states. The reflection view
+                    // deliberately leaves it out: by then the note has done its
+                    // job and the card is asking a question, not giving
+                    // instructions.
+                    const mentorNoteBlock = r.mentorNote ? (
+                      <div style={{ background: 'rgba(112,181,249,0.08)', border: '1px solid rgba(112,181,249,0.25)', borderRadius: 10, padding: '10px 14px' }}>
+                        <p style={{ color: LINK, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Note from {r.mentor?.firstName}</p>
+                        <p style={{ color: TEXT, fontSize: 13, lineHeight: 1.5, margin: 0 }}>{r.mentorNote}</p>
+                      </div>
+                    ) : null;
+
+                    // Consent, cancel and the booking link the mentor shared.
+                    // Cancelling and booking only make sense while the sip is
+                    // still ahead, so this row does not follow the card into the
+                    // reflection state — the consent toggle does, on its own.
+                    const bookingUrl = safeExternalUrl(r.mentor?.calendarLink) ?? safeExternalUrl(r.mentor?.googleCalendarLink);
+                    const mailto = r.mentor?.contactEmail
+                      ? `mailto:${encodeURIComponent(r.mentor.contactEmail)}?subject=${encodeURIComponent('Scheduling our 1:1')}`
+                      : null;
+                    // Only the method the mentor chose comes back from the API,
+                    // so whichever link is present is the one they meant to share.
+                    const bookingHref = bookingUrl ?? (r.originRoomId ? mailto : null);
+                    const actionsRow = (
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <button onClick={() => toggleConsent(r.id, r.seekerConsentToShow)} disabled={togglingConsent === r.id}
+                          style={{ background: r.seekerConsentToShow ? 'rgba(91,219,138,0.1)' : 'transparent', border: `1px solid ${r.seekerConsentToShow ? 'rgba(91,219,138,0.3)' : BORDER}`, color: r.seekerConsentToShow ? '#5BDB8A' : MUTED, padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {r.seekerConsentToShow ? 'showing on profile' : 'show on profile'}
+                        </button>
+                        <button onClick={() => cancelRequest(r.id)} disabled={cancelling === r.id} style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{cancelling === r.id ? 'cancelling...' : 'cancel'}</button>
+                        {bookingHref && (
+                          <a href={bookingHref} target="_blank" rel="noopener noreferrer"
+                            style={{ background: ACCENT, color: 'white', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+                            {bookingUrl ? 'book your sip →' : 'email to schedule →'}
+                          </a>
+                        )}
+                      </div>
+                    );
                     return (
                       <motion.div key={r.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={listItem(idx)}
                         style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24, opacity: (r.status === 'declined' || r.status === 'cancelled') ? 0.5 : 1 }}>
@@ -606,50 +689,53 @@ function SeekersContent() {
 
                         <p style={{ color: MUTED, fontSize: 14, margin: '0 0 16px' }}>&quot;{r.message}&quot;</p>
 
+                        {/* Exactly one state, never a stack. See cardState. */}
                         {r.status === 'accepted' && (
                           <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            {r.mentorNote && (
-                              <div style={{ background: 'rgba(112,181,249,0.08)', border: '1px solid rgba(112,181,249,0.25)', borderRadius: 10, padding: '10px 14px' }}>
-                                <p style={{ color: LINK, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Note from {r.mentor?.firstName}</p>
-                                <p style={{ color: TEXT, fontSize: 13, lineHeight: 1.5, margin: 0 }}>{r.mentorNote}</p>
-                              </div>
-                            )}
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                              <button onClick={() => toggleConsent(r.id, r.seekerConsentToShow)} disabled={togglingConsent === r.id}
-                                style={{ background: r.seekerConsentToShow ? 'rgba(91,219,138,0.1)' : 'transparent', border: `1px solid ${r.seekerConsentToShow ? 'rgba(91,219,138,0.3)' : BORDER}`, color: r.seekerConsentToShow ? '#5BDB8A' : MUTED, padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                                {r.seekerConsentToShow ? 'showing on profile' : 'show on profile'}
-                              </button>
-                              <button onClick={() => cancelRequest(r.id)} disabled={cancelling === r.id} style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#F87171', padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{cancelling === r.id ? 'cancelling...' : 'cancel'}</button>
-                              {(() => {
-                                // Only the method the mentor chose comes back
-                                // from the API, so whichever link is present is
-                                // the one they meant to share.
-                                const bookingUrl = safeExternalUrl(r.mentor?.calendarLink) ?? safeExternalUrl(r.mentor?.googleCalendarLink);
-                                const mailto = r.mentor?.contactEmail
-                                  ? `mailto:${encodeURIComponent(r.mentor.contactEmail)}?subject=${encodeURIComponent('Scheduling our 1:1')}`
-                                  : null;
-                                const href = bookingUrl ?? (r.originRoomId ? mailto : null);
-                                if (!href) return null;
-                                return (
-                                  <a href={href} target="_blank" rel="noopener noreferrer"
-                                    style={{ background: ACCENT, color: 'white', padding: '8px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                                    {bookingUrl ? 'book your sip →' : 'email to schedule →'}
-                                  </a>
-                                );
-                              })()}
-                            </div>
 
-                            {!r.scheduledAt ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                                  <input type="datetime-local" value={scheduleDrafts[r.id] || ''} onChange={e => { setScheduleDrafts(d => ({ ...d, [r.id]: e.target.value })); setScheduleErrors(d => ({ ...d, [r.id]: '' })); }} aria-label="Scheduled date and time" style={{ background: BG, border: `1px solid ${scheduleErrors[r.id] ? '#F87171' : BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, fontFamily: 'inherit' }} />
-                                  <button onClick={() => saveSchedule(r.id)} disabled={scheduling === r.id} style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: scheduling === r.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>{scheduling === r.id ? 'saving...' : 'save time'}</button>
+                            {/* ---------- ACCEPTED, NO TIME SET ----------
+                                Never expires on its own. The only thing that
+                                ends this state is a time being saved. */}
+                            {state === 'awaiting_time' && (
+                              <>
+                                {mentorNoteBlock}
+                                <div>
+                                  <p style={{ color: TEXT, fontSize: 14, fontWeight: 600, margin: '0 0 4px' }}>Pick a time</p>
+                                  <p style={{ color: MUTED, fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                                    {r.mentor?.firstName || 'Your mentor'} said yes. Book with them, then log the time here so
+                                    they know when to expect you.
+                                  </p>
                                 </div>
-                                {scheduleErrors[r.id] && <span style={{ color: '#F87171', fontSize: 11 }}>{scheduleErrors[r.id]}</span>}
-                              </div>
-                            ) : (
-                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <span style={{ color: MUTED, fontSize: 12 }}>scheduled: {new Date(r.scheduledAt).toLocaleString()}</span>
+                                {actionsRow}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <input type="datetime-local" value={scheduleDrafts[r.id] || ''} onChange={e => { setScheduleDrafts(d => ({ ...d, [r.id]: e.target.value })); setScheduleErrors(d => ({ ...d, [r.id]: '' })); }} aria-label="Scheduled date and time" style={{ background: BG, border: `1px solid ${scheduleErrors[r.id] ? '#F87171' : BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, fontFamily: 'inherit' }} />
+                                    <button onClick={() => saveSchedule(r.id)} disabled={scheduling === r.id} style={{ background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: scheduling === r.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>{scheduling === r.id ? 'saving...' : 'save time'}</button>
+                                  </div>
+                                  {scheduleErrors[r.id] && <span style={{ color: '#F87171', fontSize: 11 }}>{scheduleErrors[r.id]}</span>}
+                                </div>
+                              </>
+                            )}
+
+                            {/* ---------- TIME SET, STILL AHEAD ---------- */}
+                            {state === 'upcoming' && r.scheduledAt && (
+                              <>
+                                {mentorNoteBlock}
+                                <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14 }}>
+                                  <p style={{ color: MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, margin: '0 0 8px' }}>Your sip</p>
+                                  <p style={{ color: TEXT, fontSize: 14, fontWeight: 600, margin: '0 0 2px' }}>
+                                    {r.mentor ? `${r.mentor.firstName} ${r.mentor.lastName}` : 'Your mentor'}
+                                  </p>
+                                  {r.mentor && <p style={{ color: MUTED, fontSize: 12, margin: '0 0 8px' }}>{r.mentor.role} @ {r.mentor.company}</p>}
+                                  <p style={{ color: TEXT, fontSize: 13, margin: 0 }}>
+                                    {new Date(r.scheduledAt).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+                                    {' at '}
+                                    {new Date(r.scheduledAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                                {actionsRow}
+                                {/* Hides itself outside its own window, so it is
+                                    only ever on screen when it can be pressed. */}
                                 <NoShowButton
                                   requestId={r.id}
                                   scheduledAt={r.scheduledAt}
@@ -657,46 +743,71 @@ function SeekersContent() {
                                   reporting="mentor"
                                   onMarked={status => setRequests(prev => prev.map(x => x.id === r.id ? { ...x, sessionStatus: status } : x))}
                                 />
-                              </div>
+                              </>
                             )}
 
-                            {r.seekerFeedbackGiven ? (
-                              <span style={{ color: '#5BDB8A', fontSize: 12 }}>feedback sent</span>
-                            ) : (
-                              <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                <div role="radiogroup" aria-label="Rating" style={{ display: 'flex', gap: 4 }}>
-                                  {[1, 2, 3, 4, 5].map(n => (
-                                    <button key={n} type="button" role="radio" aria-checked={(feedbackRatings[r.id] || 0) === n} aria-label={`${n} star${n > 1 ? 's' : ''}`}
-                                      onClick={() => setFeedbackRatings(d => ({ ...d, [r.id]: n }))}
-                                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 18, color: (feedbackRatings[r.id] || 0) >= n ? '#F59E0B' : 'rgba(255,255,255,0.2)' }}>★</button>
-                                  ))}
-                                </div>
-                                <textarea value={feedbackComments[r.id] || ''} onChange={e => setFeedbackComments(d => ({ ...d, [r.id]: e.target.value }))}
-                                  placeholder="optional comment..." aria-label="Optional feedback comment" rows={2} maxLength={1000}
-                                  style={{ width: '100%', background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
-                                <button onClick={() => submitFeedback(r.id)} disabled={submittingFeedback === r.id || !feedbackRatings[r.id]}
-                                  style={{ alignSelf: 'flex-end', background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>                                  {submittingFeedback === r.id ? 'sending...' : 'submit feedback'}
-                                </button>
-                              </div>
-                            )}
+                            {/* ---------- AN HOUR PAST THE SESSION ----------
+                                Order is fixed: the quick reaction first, then
+                                the two reflection questions, then the sharing
+                                opt-in inside the same form. */}
+                            {state === 'reflect' && (
+                              <>
+                                {/* (1) how'd the call go */}
+                                {r.seekerFeedbackGiven ? (
+                                  <span style={{ color: '#5BDB8A', fontSize: 12 }}>thanks &mdash; your rating is in</span>
+                                ) : (
+                                  <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    <p style={{ color: TEXT, fontSize: 14, fontWeight: 600, margin: 0 }}>
+                                      How&rsquo;d the call go{r.mentor ? ` with ${r.mentor.firstName}` : ''}?
+                                    </p>
+                                    <div role="radiogroup" aria-label="Rating" style={{ display: 'flex', gap: 4 }}>
+                                      {[1, 2, 3, 4, 5].map(n => (
+                                        <button key={n} type="button" role="radio" aria-checked={(feedbackRatings[r.id] || 0) === n} aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                                          onClick={() => setFeedbackRatings(d => ({ ...d, [r.id]: n }))}
+                                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 18, color: (feedbackRatings[r.id] || 0) >= n ? '#F59E0B' : 'rgba(255,255,255,0.2)' }}>★</button>
+                                      ))}
+                                    </div>
+                                    <textarea value={feedbackComments[r.id] || ''} onChange={e => setFeedbackComments(d => ({ ...d, [r.id]: e.target.value }))}
+                                      placeholder="optional comment..." aria-label="Optional feedback comment" rows={2} maxLength={1000}
+                                      style={{ width: '100%', background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', color: TEXT, fontSize: 12, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+                                    <button onClick={() => submitFeedback(r.id)} disabled={submittingFeedback === r.id || !feedbackRatings[r.id]}
+                                      style={{ alignSelf: 'flex-end', background: 'rgba(112,181,249,0.12)', border: '1px solid rgba(112,181,249,0.3)', color: LINK, padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                      {submittingFeedback === r.id ? 'sending...' : 'submit feedback'}
+                                    </button>
+                                  </div>
+                                )}
 
-                            {/* The seeker's own takeaways. The mentor writes
-                                theirs separately and neither side sees the
-                                other's, which is what the caption says. */}
-                            {(() => {
-                              const session = takeaways.bySession.get(r.id);
-                              if (!session) return null;
-                              return (
-                                <SessionTakeaways
-                                  compact
-                                  readOnly={!session.writable}
-                                  target={{ kind: 'request', sessionId: r.id }}
-                                  takeaways={session.takeaways}
-                                  onSaved={saved => takeaways.applySaved(r.id, saved)}
-                                  onDeleted={id => takeaways.applyDeleted(r.id, id)}
+                                {/* (2) the two questions and (3) the opt-in */}
+                                <ReflectionForm
+                                  requestId={r.id}
+                                  existing={r.reflection ?? null}
+                                  onSaved={saved => setRequests(prev => prev.map(x => x.id === r.id ? { ...x, reflection: saved } : x))}
                                 />
-                              );
-                            })()}
+
+                                {/* The seeker's own takeaways. The mentor writes
+                                    theirs separately and neither side sees the
+                                    other's, which is what the caption says. */}
+                                {(() => {
+                                  const session = takeaways.bySession.get(r.id);
+                                  if (!session) return null;
+                                  return (
+                                    <SessionTakeaways
+                                      compact
+                                      readOnly={!session.writable}
+                                      target={{ kind: 'request', sessionId: r.id }}
+                                      takeaways={session.takeaways}
+                                      onSaved={saved => takeaways.applySaved(r.id, saved)}
+                                      onDeleted={id => takeaways.applyDeleted(r.id, id)}
+                                    />
+                                  );
+                                })()}
+
+                                <button onClick={() => toggleConsent(r.id, r.seekerConsentToShow)} disabled={togglingConsent === r.id}
+                                  style={{ alignSelf: 'flex-start', background: r.seekerConsentToShow ? 'rgba(91,219,138,0.1)' : 'transparent', border: `1px solid ${r.seekerConsentToShow ? 'rgba(91,219,138,0.3)' : BORDER}`, color: r.seekerConsentToShow ? '#5BDB8A' : MUTED, padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  {r.seekerConsentToShow ? 'showing on profile' : 'show on profile'}
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </motion.div>
