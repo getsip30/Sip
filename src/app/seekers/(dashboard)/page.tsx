@@ -89,7 +89,22 @@ function SeekersContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isMentor, isSeeker, loaded: rolesLoaded } = useRoles();
-  const [tab, setTab] = useState<'browse' | 'live' | 'mine'>('browse');
+  /**
+   * Which tab to open on, honouring ?tab= so a link can point at one.
+   *
+   * Emails send seekers here to do a specific thing — log a time, answer the
+   * reflection questions — and both live under "my sips". Without this the
+   * button in those emails landed on the mentor directory, one step short of
+   * what it promised, and the copy had to make up the difference.
+   *
+   * Read in the initialiser, so it decides the first render only. After that
+   * the tab belongs to whoever is clicking, and a stale query string must not
+   * yank them back — the same reason `filter` reads ?topic= this way.
+   */
+  const tabParam = searchParams.get('tab');
+  const [tab, setTab] = useState<'browse' | 'live' | 'mine'>(
+    tabParam === 'mine' || tabParam === 'live' ? tabParam : 'browse'
+  );
   const [page, setPage] = useState(1);
 
   const [mentors, setMentors] = useState<Mentor[]>([]);
@@ -594,7 +609,7 @@ function SeekersContent() {
               {!user ? (
                 <>
                 <p style={{ color: MUTED, marginBottom: 20 }}>Sign in to see the sips you&apos;ve requested.</p>
-                  <Link href="/sign-in?redirect_url=/seekers" style={{ display: 'inline-block', background: ACCENT, color: 'white', padding: '13px 28px', borderRadius: 12, fontSize: 15, fontWeight: 600, textDecoration: 'none' }}>sign in →</Link>
+                  <Link href="/sign-in?redirect_url=/seekers%3Ftab%3Dmine" style={{ display: 'inline-block', background: ACCENT, color: 'white', padding: '13px 28px', borderRadius: 12, fontSize: 15, fontWeight: 600, textDecoration: 'none' }}>sign in →</Link>
                 </>
               ) : (
                 <>
