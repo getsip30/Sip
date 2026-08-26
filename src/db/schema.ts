@@ -549,3 +549,51 @@ export const flags = pgTable('flags', {
   index('flags_reported_clerk_id_idx').on(t.reportedClerkId),
   index('flags_room_id_idx').on(t.roomId),
 ]);
+/**
+ * The seeker's post-sip reflection: what actually changed because of the call.
+ *
+ * Separate from `sipFeedback` (a rating of the mentor) and from `takeaways`
+ * (private notes the seeker keeps for themselves). This one is about outcome,
+ * and one of its two answers is written to be quotable — `shareable` is the
+ * seeker's explicit opt-in for that, defaulting to false so silence is a no.
+ *
+ * `mentorId` is a real foreign key, not a copied-down name. `requests` already
+ * carries an FK to `mentors`, so who the sip was with is always joinable, and
+ * a denormalised name here would be a second version of the truth that goes
+ * stale the moment a mentor edits their profile. It is stored rather than
+ * derived purely so the "shareable quotes for a mentor" read is one index hit
+ * instead of a join through requests.
+ */
+export const reflections = pgTable('reflections', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  requestId: uuid('request_id').references(() => requests.id, { onDelete: 'cascade' }).notNull(),
+  /**
+   * Clerk id of the seeker who wrote it. Not nullable: the form only exists on
+   * the signed-in dashboard, so unlike `requests.seekerClerkId` — which has to
+   * tolerate an email-only invite — there is always an account behind a row.
+   */
+  seekerClerkId: text('seeker_clerk_id').notNull(),
+  mentorId: uuid('mentor_id').references(() => mentors.id, { onDelete: 'cascade' }).notNull(),
+  /** "What's one thing you're doing differently because of this call?" */
+  didDifferently: text('did_differently'),
+  /** "What would this week have looked like if you'd skipped this call?" */
+  counterfactual: text('counterfactual'),
+  /**
+   * Both answers are nullable and the route only requires one of them, because
+   * half an answer is worth more than an abandoned form. What is NOT optional
+   * is consent: nothing is ever shown publicly on the strength of a default.
+   */
+  shareable: boolean('shareable').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  /**
+   * One reflection per seeker per sip. The same idempotency trick `takeaways`,
+   * `nudges` and `noShowReports` use: a re-submit lands on the existing row via
+   * ON CONFLICT instead of stacking a second answer, which matters here because
+   * the prompt stays on the card and is easy to send twice.
+   */
+  uniqueIndex('reflections_request_seeker_idx').on(t.requestId, t.seekerClerkId),
+  // Pulling a mentor's shareable quotes, newest first.
+  index('reflections_mentor_created_idx').on(t.mentorId, t.createdAt),
+]);
