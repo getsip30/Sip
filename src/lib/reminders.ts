@@ -228,6 +228,10 @@ export function reminderEmails(kind: ReminderKind, row: ReminderRow): Mail[] {
 
     // Seeker only. The two questions are about what changed for the person who
     // asked, and the mentor has nothing to answer here.
+    //
+    // Both linked and named, for the reason spelled out on the acceptance email
+    // in @/lib/accept: ?tab=mine opens My Sips directly, and the sentence says
+    // where that is anyway, so the instruction survives a mangled link.
     case 'session_reflection':
       return [
         {
@@ -235,8 +239,8 @@ export function reminderEmails(kind: ReminderKind, row: ReminderRow): Mail[] {
           subject: `How was your sip with ${row.mentor_first_name}?`,
           html: shell(
             'Two quick questions',
-            `Your sip with <strong>${mentorName}</strong> should be done. Two questions on your dashboard, a sentence each — what you're doing differently, and what this week would have looked like without it.`,
-            { href: `${APP_URL}/seekers`, label: 'Answer them' }
+            `Your sip with <strong>${mentorName}</strong> should be done. Two questions, a sentence each — what you're doing differently, and what this week would have looked like without it.<br><br>You'll find them under <strong>My Sips</strong> on your dashboard, on the card for this sip.`,
+            { href: `${APP_URL}/seekers?tab=mine`, label: 'Go to My Sips' }
           ),
         },
       ];
