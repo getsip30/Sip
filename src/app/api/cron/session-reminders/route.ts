@@ -17,10 +17,14 @@ import {
 /**
  * Timed session reminders, driven by an EXTERNAL poller.
  *
+ * Covers the pre-session reminders (T-24h, T-1h, T-10m) and the post-session
+ * reflection nudge (T+1h). All four are driven off REMINDER_KINDS, so a new kind
+ * is picked up here without touching this route or the external schedule.
+ *
  * NOT in vercel.json, and it must not be added there: Vercel Hobby allows two
  * cron jobs (both already spent on checkins and reminders) and caps them at once
- * per day, which cannot express T-1h or T-10m. The same constraint is documented
- * on /api/cron/go-live.
+ * per day, which cannot express T-1h, T-10m or T+1h. The same constraint is
+ * documented on /api/cron/go-live.
  *
  * Instead, point a free external scheduler such as cron-job.org at:
  *
