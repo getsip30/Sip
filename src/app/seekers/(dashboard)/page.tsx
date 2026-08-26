@@ -747,12 +747,23 @@ function SeekersContent() {
                             )}
 
                             {/* ---------- AN HOUR PAST THE SESSION ----------
-                                Order is fixed: the quick reaction first, then
-                                the two reflection questions, then the sharing
-                                opt-in inside the same form. */}
+                                Order is fixed: the two reflection questions and
+                                the sharing opt-in first, then the quick reaction,
+                                then takeaways. The questions lead because they
+                                are the ones worth answering while the call is
+                                still fresh; a star rating is easy to give at any
+                                point and does not need the best attention on the
+                                card. */}
                             {state === 'reflect' && (
                               <>
-                                {/* (1) how'd the call go */}
+                                {/* (1) the two questions and the opt-in */}
+                                <ReflectionForm
+                                  requestId={r.id}
+                                  existing={r.reflection ?? null}
+                                  onSaved={saved => setRequests(prev => prev.map(x => x.id === r.id ? { ...x, reflection: saved } : x))}
+                                />
+
+                                {/* (2) how'd the call go */}
                                 {r.seekerFeedbackGiven ? (
                                   <span style={{ color: '#5BDB8A', fontSize: 12 }}>thanks &mdash; your rating is in</span>
                                 ) : (
@@ -776,13 +787,6 @@ function SeekersContent() {
                                     </button>
                                   </div>
                                 )}
-
-                                {/* (2) the two questions and (3) the opt-in */}
-                                <ReflectionForm
-                                  requestId={r.id}
-                                  existing={r.reflection ?? null}
-                                  onSaved={saved => setRequests(prev => prev.map(x => x.id === r.id ? { ...x, reflection: saved } : x))}
-                                />
 
                                 {/* The seeker's own takeaways. The mentor writes
                                     theirs separately and neither side sees the
