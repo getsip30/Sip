@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useRoles } from '@/hooks/useRoles';
+import { detectBrowserTimezone, formatScheduledAtOr, formatScheduledDate, formatScheduledTime } from '@/lib/scheduled-time';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import { ease, DUR, swapVariants, badgeVariants, badgeTransition, listItem } from '@/lib/motion';
 import { useRequestList, RequestFilterBar, ShowMore } from '@/components/RequestFilters';
@@ -26,7 +27,7 @@ import { isReflectionOpen } from '@/lib/reflections';
 import { useTakeaways } from '@/hooks/useTakeaways';
 
 type LiveRoom = { id: string; title: string; firstName: string; lastName: string; role: string; company: string; mentorId: string; startedAt: string; topics?: string; avatarData?: string | null };
-type UpcomingRoom = { id: string; title: string; scheduledAt: string; firstName: string; lastName: string; role: string; company: string };
+type UpcomingRoom = { id: string; title: string; scheduledAt: string; scheduledAtTimezone: string | null; firstName: string; lastName: string; role: string; company: string };
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
@@ -36,7 +37,8 @@ type SipRequest = {
   id: string; mentorId: string; seekerName: string; seekerEmail: string; message: string;
   status: 'pending' | 'accepted' | 'declined' | 'cancelled'; createdAt: string; originRoomId?: string | null;
   seekerConsentToShow: boolean; mentorConsentToShow: boolean;
-  scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null;
+  scheduledAt?: string | null; scheduledAtTimezone?: string | null;
+  cancelledAt?: string | null; cancelledBy?: string | null;
   sessionStatus?: string | null;
   seekerFeedbackGiven?: boolean; mentorNote?: string | null;
   reflection?: Reflection | null;
@@ -237,11 +239,20 @@ function SeekersContent() {
     setScheduling(requestId);
     const res = await fetch(`/api/requests/${requestId}/schedule`,  {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scheduledAt: new Date(scheduledAt).toISOString() }),
+      // The zone goes up with the time, silently. The seeker picked a wall
+      // clock on a `datetime-local`, which carries no zone of its own, so
+      // without this the instant is only meaningful to the browser that made
+      // it — and every other viewer, mentor included, renders it as their own.
+      body: JSON.stringify({
+        scheduledAt: new Date(scheduledAt).toISOString(),
+        timezone: detectBrowserTimezone() ?? undefined,
+      }),
     });
     if (res.ok) {
       const updated = await res.json();
-      setRequests(prev => prev.map(r => r.id === requestId ? { ...r, scheduledAt: updated.scheduledAt } : r));
+      setRequests(prev => prev.map(r => r.id === requestId
+        ? { ...r, scheduledAt: updated.scheduledAt, scheduledAtTimezone: updated.scheduledAtTimezone }
+        : r));
     } else {
       setScheduleErrors(d => ({ ...d, [requestId]: 'something went wrong, try again' }));
     }
@@ -469,7 +480,7 @@ function SeekersContent() {
               <Link key={r.id} href={`/rooms/${r.id}`} style={{ textDecoration: 'none', background: 'rgba(112,181,249,0.08)', border: '1px solid rgba(112,181,249,0.25)', borderRadius: 14, padding: '14px 20px', color: TEXT, minWidth: 220 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{r.firstName} {r.lastName}</div>
                 <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>{r.role} @ {r.company}</div>
-                <div style={{ color: LINK, fontSize: 12, marginTop: 6, fontWeight: 600 }}>live at {new Date(r.scheduledAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</div>
+                <div style={{ color: LINK, fontSize: 12, marginTop: 6, fontWeight: 600 }}>live at {formatScheduledAtOr(r.scheduledAt, r.scheduledAtTimezone)}</div>
               </Link>
             ))}
           </div>
@@ -751,9 +762,9 @@ function SeekersContent() {
                                   </p>
                                   {r.mentor && <p style={{ color: MUTED, fontSize: 12, margin: '0 0 8px' }}>{r.mentor.role} @ {r.mentor.company}</p>}
                                   <p style={{ color: TEXT, fontSize: 13, margin: 0 }}>
-                                    {new Date(r.scheduledAt).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+                                    {formatScheduledDate(r.scheduledAt, r.scheduledAtTimezone)}
                                     {' at '}
-                                    {new Date(r.scheduledAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                    {formatScheduledTime(r.scheduledAt, r.scheduledAtTimezone)}
                                   </p>
                                 </div>
                                 {actionsRow}

@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { isUuid } from '@/lib/validate';
+import { isValidTimezone } from '@/lib/scheduled-time';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -22,10 +23,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const email = await getUserEmail(userId);
     if (!email) return NextResponse.json({ error: 'No email on file' }, { status: 400 });
 
-    const { scheduledAt } = await req.json();
+    const { scheduledAt, timezone } = await req.json();
     if (!scheduledAt || isNaN(Date.parse(scheduledAt))) {
       return NextResponse.json({ error: 'Invalid date' }, { status: 400 });
     }
+    // The zone is captured silently from the seeker's browser, so it is a
+    // convenience they never see and must never be able to fail on. An
+    // unrecognised or missing value is stored as null and read as UTC rather
+    // than rejected: refusing the booking would turn a detail the seeker was
+    // never asked about into a wall between them and their sip.
+    const scheduledAtTimezone = isValidTimezone(timezone) ? timezone : null;
     if (new Date(scheduledAt).getTime() < Date.now() + 60 * 60 * 1000) {
       return NextResponse.json({ error: 'Pick a time at least an hour from now' }, { status: 400 });
     }
@@ -59,6 +66,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const updated = await db.update(requests)
       .set({
         scheduledAt: new Date(scheduledAt),
+        scheduledAtTimezone,
         sessionStatus: 'scheduled',
         ...(dayChanged ? { reminderSentAt: null } : {}),
       })

@@ -8,6 +8,7 @@ import { logSwallowed } from '@/lib/logger';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { transporter } from '@/lib/mailer';
 import { escapeHtml, subjectSafe } from '@/lib/utils';
+import { formatScheduledAtOr, isValidTimezone } from '@/lib/scheduled-time';
 
 const MIN_LEAD_MS = 10 * 60 * 1000;
 const MAX_LEAD_MS = 30 * 24 * 60 * 60 * 1000;
@@ -47,8 +48,11 @@ export async function POST(req: Request) {
     const existingScheduled = await db.select().from(rooms).where(and(eq(rooms.mentorId, mentor.id), eq(rooms.status, 'scheduled')));
     if (existingScheduled.length > 0) return NextResponse.json(existingScheduled[0]);
 
-    const { scheduledAt, title } = await req.json();
+    const { scheduledAt, title, timezone } = await req.json();
     const when = new Date(scheduledAt);
+    // Captured from the mentor's browser, same as a seeker booking a sip. Null
+    // when unrecognised — never a reason to refuse the room.
+    const scheduledAtTimezone = isValidTimezone(timezone) ? timezone : null;
     if (isNaN(when.getTime())) return NextResponse.json({ error: 'Invalid date' }, { status: 400 });
     const leadMs = when.getTime() - Date.now();
     if (leadMs < MIN_LEAD_MS) return NextResponse.json({ error: 'Pick a time at least 10 minutes from now.' }, { status: 400 });
@@ -65,9 +69,13 @@ export async function POST(req: Request) {
       roomUrl,
       status: 'scheduled',
       scheduledAt: when,
+      scheduledAtTimezone,
     }).returning();
 
-    const whenStr = when.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+    // Formatted in the zone the room was scheduled in, not the server's. This
+    // string goes out to every follower, wherever they are, and it has to be
+    // the same time the mentor sees on their own dashboard.
+    const whenStr = formatScheduledAtOr(when, scheduledAtTimezone);
     // `after()` rather than a floating promise — on serverless the latter can be
     // killed the moment the response is returned.
     after(async () => {

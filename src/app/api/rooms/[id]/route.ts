@@ -23,6 +23,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .select({
         id: rooms.id, title: rooms.title, roomUrl: rooms.roomUrl, status: rooms.status, mode: rooms.mode,
         scheduledAt: rooms.scheduledAt,
+        scheduledAtTimezone: rooms.scheduledAtTimezone,
         firstName: mentors.firstName, lastName: mentors.lastName, role: mentors.role, company: mentors.company,
         mentorClerkId: mentors.clerkId,
       })

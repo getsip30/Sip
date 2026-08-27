@@ -8,9 +8,10 @@ import { escapeHtml } from '@/lib/utils';
 import { logSwallowed } from '@/lib/logger';
 import { NUDGE_QUERIES, claimNudge, nudgeEmail, type NudgeKind, type NudgeRow } from '@/lib/nudges';
 import { awardBadgesQuietly } from '@/lib/badges';
+import { formatScheduledAtOr } from '@/lib/scheduled-time';
 
 type Row = {
-  id: string; seeker_email: string; seeker_name: string; scheduled_at: string;
+  id: string; seeker_email: string; seeker_name: string; scheduled_at: string; scheduled_at_timezone: string | null;
   mentor_first_name: string; mentor_last_name: string; mentor_email: string;
 };
 
@@ -20,7 +21,7 @@ export async function GET(req: Request) {
   }
 
   const due = await db.execute(sql`
-    SELECT r.id, r.seeker_email, r.seeker_name, r.scheduled_at, m.first_name AS mentor_first_name, m.last_name AS mentor_last_name, m.email AS mentor_email
+    SELECT r.id, r.seeker_email, r.seeker_name, r.scheduled_at, r.scheduled_at_timezone, m.first_name AS mentor_first_name, m.last_name AS mentor_last_name, m.email AS mentor_email
     FROM requests r
     JOIN mentors m ON m.id = r.mentor_id
     WHERE r.status = 'accepted'
@@ -31,7 +32,9 @@ export async function GET(req: Request) {
 
   let sent = 0;
   for (const row of due.rows as unknown as Row[]) {
-    const when = new Date(row.scheduled_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+    // In the seeker's booking zone, not the server's. Both emails below use
+    // the same string, so the two people on the call read the same time.
+    const when = formatScheduledAtOr(row.scheduled_at, row.scheduled_at_timezone);
     try {
       await transporter.sendMail({
         from: `Sip <${process.env.GMAIL_USER}>`,
