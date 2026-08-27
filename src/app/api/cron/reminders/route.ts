@@ -20,14 +20,36 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  /**
+   * Sips happening tomorrow — on the seeker's calendar, not the server's.
+   *
+   * This used to read `r.scheduled_at::date = (now() + interval '1 day')::date`,
+   * which compared two dates neither of which belonged to the person being
+   * emailed. `scheduled_at` holds the UTC wall clock, so a seeker in Los
+   * Angeles booking 8pm on the 3rd is stored on the 4th, and "tomorrow" landed
+   * a day early for them; east of UTC an early-morning sip missed the other
+   * way. The further from UTC, the worse, and it was never visible from here
+   * because the query itself was perfectly happy.
+   *
+   * Now both sides are reduced to a date *inside the sip's own zone*: the
+   * stored instant is read there, `now()` is read there, and "tomorrow" means
+   * what the seeker would mean by it.
+   *
+   * The zone is taken from pg_timezone_names rather than used directly. An
+   * `AT TIME ZONE` with a name Postgres does not recognise raises, and one bad
+   * row would take down the whole nightly run — this degrades that row to UTC
+   * instead, which is where rows without a zone already sit.
+   */
   const due = await db.execute(sql`
     SELECT r.id, r.seeker_email, r.seeker_name, r.scheduled_at, r.scheduled_at_timezone, m.first_name AS mentor_first_name, m.last_name AS mentor_last_name, m.email AS mentor_email
     FROM requests r
     JOIN mentors m ON m.id = r.mentor_id
+    LEFT JOIN pg_timezone_names z ON z.name = r.scheduled_at_timezone
     WHERE r.status = 'accepted'
       AND r.scheduled_at IS NOT NULL
       AND r.reminder_sent_at IS NULL
-      AND r.scheduled_at::date = (now() + interval '1 day')::date
+      AND (((r.scheduled_at AT TIME ZONE 'UTC') AT TIME ZONE COALESCE(z.name, 'UTC'))::date
+           = ((now() AT TIME ZONE COALESCE(z.name, 'UTC')) + interval '1 day')::date)
   `);
 
   let sent = 0;
@@ -60,7 +82,7 @@ export async function GET(req: Request) {
     FROM requests r
     WHERE r.status = 'accepted'
       AND r.scheduled_at IS NOT NULL
-      AND r.scheduled_at < now()
+      AND (r.scheduled_at AT TIME ZONE 'UTC') < now()
       AND r.sip_counted_at IS NULL
       AND (SELECT COUNT(*) FROM sip_feedback f where f.request_id = r.id AND f.rating >= 3) = 2
   `);

@@ -3,10 +3,9 @@
 Companion to the change that added `scheduled_at_timezone` and made every
 **display** of a scheduled time render in the booker's zone.
 
-**Nothing in this document was changed by that work, and nothing here should be
-changed without its own review.** This is the list of places where the *timing
-logic* around `scheduled_at` can still reach a wrong answer, written down while
-the code was fresh so the next pass does not have to rediscover it.
+**Status: three of the four are fixed.** They were reviewed and fixed as their
+own change, separately from the display work that produced this list. What
+remains open is item 4, which needs a decision rather than a patch — see below.
 
 ## The underlying shape
 
@@ -31,7 +30,7 @@ Two things still go wrong on top of that:
    `scheduled_at_timezone` makes the right answer computable for the first
    time — that is what makes this list actionable rather than theoretical.
 
-## Sites that can make a wrong decision
+## Fixed
 
 ### 1. `src/app/api/cron/reminders/route.ts:29` — "your sip is tomorrow" email
 
@@ -49,6 +48,13 @@ gets; sips booked before ~4 PM Pacific are unaffected.
 **Wrong outcome:** reminder email a day early (or, for zones east of UTC with
 early-morning sips, a day late).
 
+**Fixed.** Both sides are now reduced to a date inside the sip's own zone, so
+"tomorrow" means what the seeker means by it. The zone is resolved through a
+`LEFT JOIN pg_timezone_names` rather than fed straight to `AT TIME ZONE`: an
+unrecognised name would raise and take down the entire nightly run, and one bad
+row should not cost everyone else their reminder. Unrecognised degrades to UTC,
+which is where rows without a zone already sit.
+
 ### 2. `src/lib/reminders.ts:96-135` — the 24h / 1h / 10m / reflection windows
 
 ```sql
@@ -63,9 +69,13 @@ offset. The windows are 30 minutes wide and the offsets are whole hours, so the
 failure mode is not a late reminder but a *silent total miss*: the query matches
 nothing, no reminder is ever sent, and no error is raised.
 
-**Wrong outcome:** all reminders stop, silently, with no signal. Worth a
-`SET TimeZone` or an explicit `AT TIME ZONE 'UTC'` regardless of the rest of
-this list — it is the cheapest fix here and the highest-consequence failure.
+**Wrong outcome:** all reminders stop, silently, with no signal.
+
+**Fixed.** The comparisons go through a `STARTS_AT` fragment —
+`(r.scheduled_at AT TIME ZONE 'UTC')` — which names the zone the stored value is
+actually in and yields a `timestamptz`. The windows no longer depend on a
+setting. The same pinning was applied to the `scheduled_at < now()` sweep in the
+reminders cron, which had the identical exposure.
 
 ### 3. `src/app/api/requests/[id]/schedule/route.ts:53-54` — "did the day change"
 
@@ -82,7 +92,11 @@ their days may register as one.
 
 **Wrong outcome:** either a mentor reminder that never re-sends for a sip that
 genuinely moved to another day, or a duplicate reminder for one that didn't.
-Now fixable: compare the two instants formatted in `scheduled_at_timezone`.
+
+**Fixed.** Each booking's day is now taken in its own zone via
+`scheduledDayKey`. Verified at both boundaries: 11:30pm → 12:30am in New York
+reads as a day change, and 7pm → 9pm in New York does not, even though the
+latter crosses a UTC midnight and previously could have.
 
 ### 4. `src/app/dashboard/page.tsx:301` — session-note day grouping
 
@@ -92,8 +106,27 @@ const day = new Date(n.sessionDate).toLocaleDateString('en-CA');
 
 Groups notes into days in the **viewer's** zone, so a mentor travelling sees
 their own history re-bucket, and notes near midnight land under the wrong
-heading. Cosmetic rather than a wrong decision, but it is the same bug as the
-rest and belongs in the same pass.
+heading.
+
+**Not fixed, because there is no session zone to use.** `session_notes.
+session_date` is copied from `rooms.started_at` — when a live room actually
+began, not a time anyone booked. A room can go live having never been scheduled,
+so `rooms.scheduled_at_timezone` is null for many of these rows and, where it is
+set, describes the zone of a *scheduled* time rather than the start time in
+hand. The three options all mean different things:
+
+- **Mentor's own zone.** Semantically the right answer — these are one mentor's
+  private notes and they are the only reader. Needs a `mentors.timezone` column,
+  which is new scope and another migration.
+- **UTC.** Consistent with the rest of this change and stable across devices,
+  but it moves day boundaries off the mentor's real day, which is the whole
+  point of the grouping.
+- **Leave viewer-local.** Wrong only when the mentor changes zone, which for a
+  private notes accordion may be an acceptable price.
+
+Worth noting the header rendered from this key is a bare date with no zone
+attached, so whichever is chosen, no reader is being told something false — only
+grouped by a boundary they might not share.
 
 ## Sites that are fine — checked, no change needed
 
@@ -112,8 +145,7 @@ Recorded so the next pass does not re-audit them:
 - The 30-minute overlap check in
   `src/app/api/requests/[id]/schedule/route.ts:39-45` — instant arithmetic.
 
-## Suggested order
+## What is left
 
-(2) first and on its own — it is a one-line guard against a silent, total
-failure. Then (1) and (3), which now have the data they need. (4) whenever the
-dashboard is next open.
+Only item 4, and it is a product question before it is a code one. The other
+three are done and verified.

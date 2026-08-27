@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { isUuid } from '@/lib/validate';
-import { isValidTimezone } from '@/lib/scheduled-time';
+import { isValidTimezone, scheduledDayKey } from '@/lib/scheduled-time';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -57,8 +57,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // Only clear the reminder flag when the time actually moved to a different
     // day. Resetting it on every save let a seeker re-trigger the mentor's
     // reminder email on each nightly cron run.
-    const previous = r.scheduledAt ? new Date(r.scheduledAt) : null;
-    const dayChanged = !previous || previous.toDateString() !== new Date(scheduledAt).toDateString();
+    //
+    // "A different day" is asked in each booking's own zone. This used to use
+    // toDateString(), which answers in the server's zone: a seeker moving a sip
+    // from 11:30pm to 12:30am — plainly a new day to them — could read as the
+    // same one, leaving the mentor with a reminder for a date that had moved,
+    // and a move within a single one of their days could read as a change and
+    // send a second reminder for a sip that had not really shifted.
+    const previousDay = scheduledDayKey(r.scheduledAt, r.scheduledAtTimezone);
+    const dayChanged = previousDay === null || previousDay !== scheduledDayKey(scheduledAt, scheduledAtTimezone);
 
     // A time on the calendar is what makes this a session that can be attended
     // or missed, so this is where session tracking starts. Re-scheduling resets

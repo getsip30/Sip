@@ -87,6 +87,26 @@ const DUE_SELECT = sql`
   FROM requests r JOIN mentors m ON m.id = r.mentor_id
 `;
 
+/**
+ * `scheduled_at` as an absolute instant, so these windows do not depend on the
+ * database session's `TimeZone`.
+ *
+ * The column is `timestamp` without a zone, and Drizzle writes
+ * `date.toISOString()` into it — so the stored wall clock is the UTC one.
+ * Comparing it bare against `now()` (a `timestamptz`) made Postgres coerce the
+ * naive side using the session zone, which is UTC on Neon today and therefore
+ * right today, by configuration rather than by construction.
+ *
+ * That is a bad thing to leave resting on a setting. These windows are thirty
+ * minutes wide and zone offsets are whole hours, so a session zone that was not
+ * UTC would not send reminders late — it would match nothing at all, forever,
+ * without raising anything. Naming the zone the value is actually in removes
+ * the dependency: `AT TIME ZONE 'UTC'` reads the naive timestamp as UTC and
+ * yields a `timestamptz`, which compares against `now()` on equal terms
+ * wherever this runs.
+ */
+const STARTS_AT = sql`(r.scheduled_at AT TIME ZONE 'UTC')`;
+
 const COMMON = sql`
   r.status = 'accepted'
   AND r.scheduled_at IS NOT NULL
@@ -97,24 +117,24 @@ export const REMINDER_QUERIES: Record<ReminderKind, ReturnType<typeof sql>> = {
   session_24h: sql`
     ${DUE_SELECT}
     WHERE ${COMMON}
-      AND r.scheduled_at > now() + interval '23 hours 30 minutes'
-      AND r.scheduled_at <= now() + interval '24 hours'
+      AND ${STARTS_AT} > now() + interval '23 hours 30 minutes'
+      AND ${STARTS_AT} <= now() + interval '24 hours'
       AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'session_24h')
     LIMIT 200`,
 
   session_1h: sql`
     ${DUE_SELECT}
     WHERE ${COMMON}
-      AND r.scheduled_at > now() + interval '30 minutes'
-      AND r.scheduled_at <= now() + interval '1 hour'
+      AND ${STARTS_AT} > now() + interval '30 minutes'
+      AND ${STARTS_AT} <= now() + interval '1 hour'
       AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'session_1h')
     LIMIT 200`,
 
   session_10m: sql`
     ${DUE_SELECT}
     WHERE ${COMMON}
-      AND r.scheduled_at > now()
-      AND r.scheduled_at <= now() + interval '10 minutes'
+      AND ${STARTS_AT} > now()
+      AND ${STARTS_AT} <= now() + interval '10 minutes'
       AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'session_10m')
     LIMIT 200`,
 
@@ -133,8 +153,8 @@ export const REMINDER_QUERIES: Record<ReminderKind, ReturnType<typeof sql>> = {
   session_reflection: sql`
     ${DUE_SELECT}
     WHERE ${COMMON}
-      AND r.scheduled_at <= now() - interval '1 hour'
-      AND r.scheduled_at > now() - interval '1 hour 30 minutes'
+      AND ${STARTS_AT} <= now() - interval '1 hour'
+      AND ${STARTS_AT} > now() - interval '1 hour 30 minutes'
       AND NOT EXISTS (SELECT 1 FROM reflections f WHERE f.request_id = r.id)
       AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'session_reflection')
     LIMIT 200`,

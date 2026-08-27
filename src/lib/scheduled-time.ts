@@ -177,15 +177,24 @@ export function formatScheduledTime(
 }
 
 /**
- * Day only, no clock: `Oct 3, 2026`.
+ * The calendar day a scheduled time falls on, in its own zone: `2026-10-03`.
  *
- * For history lists that show which day a sip happened on and never the time.
- * No zone abbreviation, because none is shown — a bare date with a zone tag
- * reads as more precision than the string actually carries.
+ * For deciding whether two bookings are on the same day. `Date.toDateString()`
+ * answers that in whatever zone the process happens to run in, which is the
+ * server's — not the seeker's, and not stable across hosts. This asks the
+ * question where it means something.
+ *
+ * ISO-ordered on purpose, so the strings also sort and group correctly.
  */
-export function formatScheduledDay(
+export function scheduledDayKey(
   scheduledAt: Date | string | null | undefined,
   timezone: string | null | undefined
 ): string | null {
-  return parts(scheduledAt, timezone, { month: 'short', day: 'numeric', year: 'numeric' });
+  const instant = toInstant(scheduledAt);
+  if (!instant) return null;
+  const zone = resolveTimezone(timezone);
+  // en-CA renders YYYY-MM-DD, which is the format this needs to sort in.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(instant);
 }
