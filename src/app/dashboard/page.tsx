@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
-import { detectBrowserTimezone, formatScheduledAtOr } from '@/lib/scheduled-time';
+import { detectBrowserTimezone, formatScheduledAtOr, formatScheduledDay } from '@/lib/scheduled-time';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import Collapse from '@/components/Collapse';
 import { useRequestList, RequestFilterBar, ShowMore } from '@/components/RequestFilters';
@@ -764,7 +764,9 @@ export default function Dashboard() {
                             <span style={{ color: MUTED, fontSize: 12 }}>
                               {s.kind === 'room' ? 'live session' : s.kind === 'archived' ? 'session no longer on Sip' : '1:1'}
                               {' · '}
-                              {new Date(s.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {s.sessionDateTimezone
+                                ? formatScheduledDay(s.sessionDate, s.sessionDateTimezone)
+                                : new Date(s.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                             </span>
                           </div>
                           {s.kind === 'archived' ? (

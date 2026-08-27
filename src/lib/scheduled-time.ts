@@ -175,3 +175,17 @@ export function formatScheduledTime(
 ): string | null {
   return parts(scheduledAt, timezone, { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
 }
+
+/**
+ * Day only, no clock: `Oct 3, 2026`.
+ *
+ * For history lists that show which day a sip happened on and never the time.
+ * No zone abbreviation, because none is shown — a bare date with a zone tag
+ * reads as more precision than the string actually carries.
+ */
+export function formatScheduledDay(
+  scheduledAt: Date | string | null | undefined,
+  timezone: string | null | undefined
+): string | null {
+  return parts(scheduledAt, timezone, { month: 'short', day: 'numeric', year: 'numeric' });
+}

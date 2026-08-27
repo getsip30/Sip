@@ -6,6 +6,14 @@ export type TakeawaySession = {
   kind: 'request' | 'room' | 'archived';
   sessionId: string;
   sessionDate: string;
+  /**
+   * The zone `sessionDate` was booked in, when it came from a booked sip time.
+   *
+   * Null for a room (dated by when it actually started) and for an archived
+   * takeaway (which keeps only the date it was filed under). Those keep the
+   * viewer's own formatting — there is no chosen zone to prefer over it.
+   */
+  sessionDateTimezone: string | null;
   sessionLabel: string;
   role: 'mentor' | 'seeker';
   /** False once the session is closed to new notes; existing ones still show. */

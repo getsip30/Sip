@@ -27,6 +27,8 @@ type SessionOut = {
   kind: 'request' | 'room' | 'archived';
   sessionId: string;
   sessionDate: Date;
+  /** The booking zone, when this date came from a booked time. Null otherwise. */
+  sessionDateTimezone: string | null;
   sessionLabel: string;
   role: Role;
   /**
@@ -122,6 +124,7 @@ export async function GET(req: Request) {
         sessions.push({
           kind: 'request', sessionId: r.id, role: 'mentor', writable,
           sessionDate: r.scheduledAt ?? r.respondedAt ?? r.createdAt,
+          sessionDateTimezone: r.scheduledAt ? r.scheduledAtTimezone : null,
           sessionLabel: r.seekerName,
           takeaways: [],
         });
@@ -150,6 +153,7 @@ export async function GET(req: Request) {
       sessions.push({
         kind: 'request', sessionId: r.id, role: 'seeker', writable,
         sessionDate: r.scheduledAt ?? r.respondedAt ?? r.createdAt,
+        sessionDateTimezone: r.scheduledAt ? r.scheduledAtTimezone : null,
         sessionLabel: [mentorFirstName, mentorLastName].filter(Boolean).join(' ') || 'your mentor',
         takeaways: [],
       });
@@ -169,6 +173,7 @@ export async function GET(req: Request) {
         sessions.push({
           kind: 'room', sessionId: room.id, role: 'mentor', writable,
           sessionDate: room.startedAt, sessionLabel: room.title,
+          sessionDateTimezone: null,
           participants: [],
           takeaways: [],
         });
@@ -196,6 +201,7 @@ export async function GET(req: Request) {
       sessions.push({
         kind: 'room', sessionId: room.id, role: 'seeker', writable,
         sessionDate: room.startedAt, sessionLabel: room.title,
+        sessionDateTimezone: null,
         takeaways: [],
       });
     }
@@ -254,6 +260,7 @@ export async function GET(req: Request) {
           // Nothing left to write against, but still readable and deletable.
           writable: false,
           sessionDate: t.sessionDate, sessionLabel: t.sessionLabel,
+          sessionDateTimezone: null,
           takeaways: [shape(t)],
         });
       }
