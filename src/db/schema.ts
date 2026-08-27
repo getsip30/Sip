@@ -187,6 +187,21 @@ export const rooms = pgTable('rooms', {
   startedAt: timestamp('started_at').defaultNow().notNull(),
   endedAt: timestamp('ended_at'),
   scheduledAt: timestamp('scheduled_at'),
+  /**
+   * The IANA zone the mentor was in when they picked `scheduledAt`.
+   *
+   * `scheduledAt` is a `timestamp` without a zone, so on its own it is a wall
+   * clock with no anchor — the same row rendered in two browsers produced two
+   * different times. This column is what makes that wall clock mean something:
+   * the pair is the single source of truth, and every surface formats the time
+   * in this zone rather than the viewer's. Captured silently from
+   * `Intl.DateTimeFormat().resolvedOptions().timeZone`; never asked for.
+   *
+   * Null on rows written before this column existed, and on any row whose
+   * client sent a zone the server could not validate. Formatters fall back to
+   * UTC there, which is what those rows have always been read as.
+   */
+  scheduledAtTimezone: text('scheduled_at_timezone'),
 }, (t) => [
   index('rooms_mentor_id_idx').on(t.mentorId),
   index('rooms_status_idx').on(t.status),
@@ -210,6 +225,8 @@ export const requests = pgTable('requests', {
   respondedAt: timestamp('responded_at'),
   mentorNote: text('mentor_note'),
   scheduledAt: timestamp('scheduled_at'),
+  /** The seeker's IANA zone at the moment they booked. See `rooms.scheduledAtTimezone`. */
+  scheduledAtTimezone: text('scheduled_at_timezone'),
   cancelledAt: timestamp('cancelled_at'),
   cancelledBy: text('cancelled_by'),
   reminderSentAt: timestamp('reminder_sent_at'),
