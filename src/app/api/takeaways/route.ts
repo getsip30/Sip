@@ -27,8 +27,25 @@ type SessionOut = {
   kind: 'request' | 'room' | 'archived';
   sessionId: string;
   sessionDate: Date;
-  /** The booking zone, when this date came from a booked time. Null otherwise. */
-  sessionDateTimezone: string | null;
+  /**
+   * Which sip this is in the run shared with one counterpart, and how many
+   * there are — `3` of `4`.
+   *
+   * Counted over every accepted sip between the two, not just the ones that
+   * end up on screen. A pair who met three times and took notes on the first
+   * and third read "Meet 1" and "Meet 3": the number says where the sip sits in
+   * their actual history, so a gap is information rather than an error.
+   *
+   * Computed here rather than on the client because the client only ever sees
+   * the sessions that survived filtering, which is the wrong denominator — it
+   * would renumber the third meeting as the second.
+   *
+   * Null where the concept does not apply: a live room has an audience rather
+   * than a counterpart, and an archived takeaway kept only a name string when
+   * its session was deleted.
+   */
+  meetIndex: number | null;
+  meetTotal: number | null;
   sessionLabel: string;
   role: Role;
   /**
@@ -47,6 +64,47 @@ type SessionOut = {
 };
 
 const SESSION_LIMIT = 200;
+
+/**
+ * Number every sip in a pair's shared history, oldest first.
+ *
+ * `rows` is the unfiltered list — before the writable/written filter — because
+ * position is a property of what happened between two people, not of what
+ * either of them wrote down afterwards.
+ *
+ * Grouping is on a caller-supplied key rather than the counterpart's name. Two
+ * different seekers can both be "John Smith", and one seeker can be renamed
+ * between sips; grouping on the label would merge the first pair and split the
+ * second, and the numbering built on top would be wrong both ways.
+ *
+ * Ties on date break on id, so a pair who booked two sips for the same instant
+ * get a stable order instead of one that changes between loads.
+ */
+function meetPositions<T>(
+  rows: T[],
+  key: (row: T) => string,
+  id: (row: T) => string,
+  date: (row: T) => Date,
+): Map<string, { index: number; total: number }> {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const k = key(row);
+    const group = groups.get(k);
+    if (group) group.push(row); else groups.set(k, [row]);
+  }
+
+  const positions = new Map<string, { index: number; total: number }>();
+  for (const group of groups.values()) {
+    [...group]
+      .sort((a, b) => {
+        const diff = date(a).getTime() - date(b).getTime();
+        return diff !== 0 ? diff : id(a).localeCompare(id(b));
+      })
+      .forEach((row, i) => positions.set(id(row), { index: i + 1, total: group.length }));
+  }
+  return positions;
+}
+
 
 function shape(row: typeof takeaways.$inferSelect): TakeawayOut {
   return {
@@ -118,13 +176,26 @@ export async function GET(req: Request) {
         .where(and(eq(requests.mentorId, mentorId), eq(requests.status, 'accepted')))
         .orderBy(desc(requests.createdAt))
         .limit(SESSION_LIMIT);
+      // Positions come off the unfiltered rows, so a sip with no notes still
+      // occupies its place in the count. Keyed on the seeker's email rather
+      // than seeker_clerk_id: that column is nullable, because a seeker can be
+      // invited by email and sign up later, and keying on it would split one
+      // person's history at the moment they registered.
+      const positions = meetPositions(
+        rows,
+        r => `seeker:${r.seekerEmail.toLowerCase()}`,
+        r => r.id,
+        r => r.scheduledAt ?? r.respondedAt ?? r.createdAt,
+      );
       for (const r of rows) {
         const writable = requestIsWritable(r, now.getTime());
         if (!writable && !writtenOnRequest.has(r.id)) continue;
+        const at = positions.get(r.id);
         sessions.push({
           kind: 'request', sessionId: r.id, role: 'mentor', writable,
           sessionDate: r.scheduledAt ?? r.respondedAt ?? r.createdAt,
-          sessionDateTimezone: r.scheduledAt ? r.scheduledAtTimezone : null,
+          meetIndex: at?.index ?? null,
+          meetTotal: at?.total ?? null,
           sessionLabel: r.seekerName,
           takeaways: [],
         });
@@ -147,13 +218,21 @@ export async function GET(req: Request) {
       .where(and(seekerMatch, eq(requests.status, 'accepted')))
       .orderBy(desc(requests.createdAt))
       .limit(SESSION_LIMIT);
+    const seekerPositions = meetPositions(
+      asSeeker,
+      ({ request: r }) => `mentor:${r.mentorId}`,
+      ({ request: r }) => r.id,
+      ({ request: r }) => r.scheduledAt ?? r.respondedAt ?? r.createdAt,
+    );
     for (const { request: r, mentorFirstName, mentorLastName } of asSeeker) {
       const writable = requestIsWritable(r, now.getTime());
       if (!writable && !writtenOnRequest.has(r.id)) continue;
+      const at = seekerPositions.get(r.id);
       sessions.push({
         kind: 'request', sessionId: r.id, role: 'seeker', writable,
         sessionDate: r.scheduledAt ?? r.respondedAt ?? r.createdAt,
-        sessionDateTimezone: r.scheduledAt ? r.scheduledAtTimezone : null,
+        meetIndex: at?.index ?? null,
+        meetTotal: at?.total ?? null,
         sessionLabel: [mentorFirstName, mentorLastName].filter(Boolean).join(' ') || 'your mentor',
         takeaways: [],
       });
@@ -173,7 +252,7 @@ export async function GET(req: Request) {
         sessions.push({
           kind: 'room', sessionId: room.id, role: 'mentor', writable,
           sessionDate: room.startedAt, sessionLabel: room.title,
-          sessionDateTimezone: null,
+          meetIndex: null, meetTotal: null,
           participants: [],
           takeaways: [],
         });
@@ -201,7 +280,7 @@ export async function GET(req: Request) {
       sessions.push({
         kind: 'room', sessionId: room.id, role: 'seeker', writable,
         sessionDate: room.startedAt, sessionLabel: room.title,
-        sessionDateTimezone: null,
+        meetIndex: null, meetTotal: null,
         takeaways: [],
       });
     }
@@ -260,7 +339,7 @@ export async function GET(req: Request) {
           // Nothing left to write against, but still readable and deletable.
           writable: false,
           sessionDate: t.sessionDate, sessionLabel: t.sessionLabel,
-          sessionDateTimezone: null,
+          meetIndex: null, meetTotal: null,
           takeaways: [shape(t)],
         });
       }

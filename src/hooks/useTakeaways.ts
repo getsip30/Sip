@@ -5,15 +5,21 @@ import type { Takeaway, Participant } from '@/components/SessionTakeaways';
 export type TakeawaySession = {
   kind: 'request' | 'room' | 'archived';
   sessionId: string;
+  /**
+   * When the session happened. Never displayed — it orders the list, and it is
+   * what `withMeetLabels` counts along to number repeat sips.
+   */
   sessionDate: string;
   /**
-   * The zone `sessionDate` was booked in, when it came from a booked sip time.
+   * Where this sip sits in the run shared with one counterpart, and how many
+   * there are. Both null for rooms and archived notes.
    *
-   * Null for a room (dated by when it actually started) and for an archived
-   * takeaway (which keeps only the date it was filed under). Those keep the
-   * viewer's own formatting — there is no chosen zone to prefer over it.
+   * Counted by the server over every accepted sip between the two, including
+   * ones with no notes — so these can be non-contiguous on screen, and that is
+   * the point. See `meetLabel`.
    */
-  sessionDateTimezone: string | null;
+  meetIndex: number | null;
+  meetTotal: number | null;
   sessionLabel: string;
   role: 'mentor' | 'seeker';
   /** False once the session is closed to new notes; existing ones still show. */
@@ -21,6 +27,27 @@ export type TakeawaySession = {
   participants?: Participant[];
   takeaways: Takeaway[];
 };
+
+/**
+ * `Meet 3` for a sip in a pair's shared history, or null when there is nothing
+ * to disambiguate.
+ *
+ * These cards used to carry a date, which is what told two sips with the same
+ * person apart. The date is gone, so the ordinal does that job instead.
+ *
+ * The number is the sip's real position between the two people, counted by the
+ * server over all of them — so a pair who met three times and wrote notes on
+ * the first and third read "Meet 1" and "Meet 3". The gap is deliberate: the
+ * middle sip happened, and renumbering the third as "Meet 2" to close the hole
+ * would be tidier and wrong.
+ *
+ * A pair who have met once get no label. "Meet 1" against a single entry is
+ * noise dressed up as information.
+ */
+export function meetLabel(session: Pick<TakeawaySession, 'meetIndex' | 'meetTotal'>): string | null {
+  if (session.meetIndex === null || session.meetTotal === null || session.meetTotal < 2) return null;
+  return `Meet ${session.meetIndex}`;
+}
 
 /**
  * The caller's own takeaways, and the sessions they may write more against.

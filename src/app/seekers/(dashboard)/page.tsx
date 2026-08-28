@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useRoles } from '@/hooks/useRoles';
-import { detectBrowserTimezone, formatScheduledAtOr, formatScheduledDate, formatScheduledDay, formatScheduledTime } from '@/lib/scheduled-time';
+import { detectBrowserTimezone, formatScheduledAtOr, formatScheduledDate, formatScheduledTime } from '@/lib/scheduled-time';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import { ease, DUR, swapVariants, badgeVariants, badgeTransition, listItem } from '@/lib/motion';
 import { useRequestList, RequestFilterBar, ShowMore } from '@/components/RequestFilters';
@@ -24,7 +24,7 @@ import { INTEREST_TAGS } from '@/lib/interests';
 import SessionTakeaways from '@/components/SessionTakeaways';
 import ReflectionForm, { type Reflection } from '@/components/ReflectionForm';
 import { isReflectionOpen } from '@/lib/reflections';
-import { useTakeaways } from '@/hooks/useTakeaways';
+import { meetLabel, useTakeaways } from '@/hooks/useTakeaways';
 
 type LiveRoom = { id: string; title: string; firstName: string; lastName: string; role: string; company: string; mentorId: string; startedAt: string; topics?: string; avatarData?: string | null };
 type UpcomingRoom = { id: string; title: string; scheduledAt: string; scheduledAtTimezone: string | null; firstName: string; lastName: string; role: string; company: string };
@@ -886,10 +886,7 @@ function SeekersContent() {
                             <span style={{ fontWeight: 600, fontSize: 14 }}>{s.sessionLabel}</span>
                             <span style={{ color: MUTED, fontSize: 12 }}>
                               {s.kind === 'room' ? 'live session' : s.kind === 'archived' ? 'session no longer on Sip' : '1:1'}
-                              {' · '}
-                              {s.sessionDateTimezone
-                                ? formatScheduledDay(s.sessionDate, s.sessionDateTimezone)
-                                : new Date(s.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {meetLabel(s) && ` · ${meetLabel(s)}`}
                             </span>
                           </div>
                           {s.kind === 'archived' ? (

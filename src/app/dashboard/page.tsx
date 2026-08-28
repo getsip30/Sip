@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
-import { detectBrowserTimezone, formatScheduledAtOr, formatScheduledDay } from '@/lib/scheduled-time';
+import { detectBrowserTimezone, formatScheduledAtOr } from '@/lib/scheduled-time';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import Collapse from '@/components/Collapse';
 import { useRequestList, RequestFilterBar, ShowMore } from '@/components/RequestFilters';
@@ -20,7 +20,7 @@ import BadgeCelebration from '@/components/BadgeCelebration';
 import NoShowButton from '@/components/NoShowButton';
 import AccountMenu from '@/components/AccountMenu';
 import SessionTakeaways from '@/components/SessionTakeaways';
-import { useTakeaways } from '@/hooks/useTakeaways';
+import { meetLabel, useTakeaways } from '@/hooks/useTakeaways';
 import { OwnBadgePill } from '@/components/BadgePill';
 import { SIP_MILESTONES, type BadgeType } from '@/lib/badge-meta';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, SUCCESS2, WARNING, DANGER, CLAY } from '@/lib/theme';
@@ -763,10 +763,7 @@ export default function Dashboard() {
                             <span style={{ fontWeight: 600, fontSize: 14 }}>{s.sessionLabel}</span>
                             <span style={{ color: MUTED, fontSize: 12 }}>
                               {s.kind === 'room' ? 'live session' : s.kind === 'archived' ? 'session no longer on Sip' : '1:1'}
-                              {' · '}
-                              {s.sessionDateTimezone
-                                ? formatScheduledDay(s.sessionDate, s.sessionDateTimezone)
-                                : new Date(s.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {meetLabel(s) && ` · ${meetLabel(s)}`}
                             </span>
                           </div>
                           {s.kind === 'archived' ? (

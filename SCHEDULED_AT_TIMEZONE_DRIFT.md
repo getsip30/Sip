@@ -3,9 +3,9 @@
 Companion to the change that added `scheduled_at_timezone` and made every
 **display** of a scheduled time render in the booker's zone.
 
-**Status: three of the four are fixed.** They were reviewed and fixed as their
-own change, separately from the display work that produced this list. What
-remains open is item 4, which needs a decision rather than a patch — see below.
+**Status: closed.** Three of the four were fixed as their own change, separately
+from the display work that produced this list. The fourth was reviewed and
+deliberately left as it is. Nothing here is outstanding.
 
 ## The underlying shape
 
@@ -108,25 +108,35 @@ Groups notes into days in the **viewer's** zone, so a mentor travelling sees
 their own history re-bucket, and notes near midnight land under the wrong
 heading.
 
-**Not fixed, because there is no session zone to use.** `session_notes.
-session_date` is copied from `rooms.started_at` — when a live room actually
-began, not a time anyone booked. A room can go live having never been scheduled,
-so `rooms.scheduled_at_timezone` is null for many of these rows and, where it is
-set, describes the zone of a *scheduled* time rather than the start time in
-hand. The three options all mean different things:
+**Decision: left viewer-local. Closed, not deferred.**
 
-- **Mentor's own zone.** Semantically the right answer — these are one mentor's
-  private notes and they are the only reader. Needs a `mentors.timezone` column,
-  which is new scope and another migration.
-- **UTC.** Consistent with the rest of this change and stable across devices,
-  but it moves day boundaries off the mentor's real day, which is the whole
-  point of the grouping.
-- **Leave viewer-local.** Wrong only when the mentor changes zone, which for a
-  private notes accordion may be an acceptable price.
+There is no session zone to use here, which is what separates this from the
+other three. `session_notes.session_date` is copied from `rooms.started_at` —
+when a live room actually began, not a time anyone booked. A room can go live
+having never been scheduled, so `rooms.scheduled_at_timezone` is null for many
+of these rows, and where it is set it describes the zone of a *scheduled* time
+rather than the start time in hand.
 
-Worth noting the header rendered from this key is a bare date with no zone
-attached, so whichever is chosen, no reader is being told something false — only
-grouped by a boundary they might not share.
+The two alternatives were both worse:
+
+- **A `mentors.timezone` column.** Semantically the best answer — these are one
+  mentor's private notes and they are the only reader — but it buys a migration
+  and a new piece of profile state to keep current, for an accordion heading.
+- **UTC.** Consistent with the rest of this work and stable across devices, but
+  it moves the day boundary off the mentor's real day, which is the entire
+  purpose of grouping by day. Consistency would have cost the feature its point.
+
+Viewer-local is wrong only when the mentor changes zone, and then only for notes
+near midnight. The heading rendered from this key is a bare date carrying no
+zone label, so nobody is being told anything false — the notes are merely
+grouped on a boundary the reader may not share, which is a fair price for not
+adding a column.
+
+This is the one place in the codebase where a time is deliberately shown in the
+viewer's zone rather than a stored one. That is intentional, and it is not a
+counterexample to the rule the rest of this change establishes: everywhere a
+time was *chosen by someone*, it renders in the zone they chose it in. Nobody
+chose this one.
 
 ## Sites that are fine — checked, no change needed
 
@@ -147,5 +157,4 @@ Recorded so the next pass does not re-audit them:
 
 ## What is left
 
-Only item 4, and it is a product question before it is a code one. The other
-three are done and verified.
+Nothing. Three fixed and verified, one reviewed and deliberately left alone.
