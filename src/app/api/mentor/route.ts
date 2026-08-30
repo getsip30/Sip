@@ -1,11 +1,13 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { mentors, seekers, referralEvents } from '@/db/schema';
+import { mentors, mentorExperiences, seekers, referralEvents } from '@/db/schema';
 import { eq, desc, sql, and, isNull } from 'drizzle-orm';
 import { NextResponse, after } from 'next/server';
 import { transporter } from '@/lib/mailer';
 import { generateUniqueReferralCode } from '@/lib/referral';
 import { publicMentor } from '@/lib/mentor';
+import { serializeTags } from '@/lib/mentor-tags';
+import { parseExperiences } from '@/lib/mentor-experience';
 import { badgesForMentors } from '@/lib/badges';
 import { bookingOptions } from '@/lib/booking';
 import { escapeHtml, safeExternalUrl } from '@/lib/utils';
@@ -84,6 +86,25 @@ async function notifyMatchingSeekers(mentor: typeof mentors.$inferSelect) {
   }
 }
 
+/**
+ * Replace a mentor's whole work-experience list.
+ *
+ * Delete-then-insert rather than a diff: the form owns the entire section and
+ * sends it whole, entries have no stable client-side identity, and ordering is
+ * positional. Reconciling by id would buy nothing and cost a merge the UI
+ * cannot express.
+ *
+ * Not a transaction, deliberately — the db client here is the Neon HTTP driver,
+ * which has no interactive transaction. The window between the delete and the
+ * insert is one round trip on a mentor's own profile save; the failure mode is
+ * a list that has to be re-entered, not a corrupted row elsewhere.
+ */
+async function replaceExperiences(mentorId: string, entries: { company: string; title: string; isCurrent: boolean; sortOrder: number }[]) {
+  await db.delete(mentorExperiences).where(eq(mentorExperiences.mentorId, mentorId));
+  if (entries.length === 0) return;
+  await db.insert(mentorExperiences).values(entries.map(e => ({ ...e, mentorId })));
+}
+
 export async function POST(req: Request) {
   try {
   const { userId } = await auth();
@@ -93,7 +114,7 @@ export async function POST(req: Request) {
   if (!success) return NextResponse.json({ error: 'Too many requests. Slow down a bit.' }, { status: 429 });
 
   const body = await req.json();
-  const { firstName, lastName, role, company, bio, topics, calendarLink, googleCalendarLink, contactEmail, availability, linkedin, showLinkedin, avatarData, defaultNote, ref } = body;
+  const { firstName, lastName, role, company, bio, topics, tags, calendarLink, googleCalendarLink, contactEmail, availability, linkedin, showLinkedin, avatarData, defaultNote, experiences, ref } = body;
 
   if (!firstName || !lastName || !role || !company) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -146,6 +167,24 @@ export async function POST(req: Request) {
   }
   const safeDefaultNote = typeof defaultNote === 'string' ? (defaultNote.trim() || null) : null;
 
+  // Tags are re-parsed here rather than trusted from the form: the cap, the
+  // per-tag length and the comma stripping all live in one place, so a hand-
+  // rolled request cannot store a tag the renderer would have to defend
+  // against. Absent field means "not sent", which leaves the stored value
+  // alone; an empty array means the mentor cleared them.
+  let safeTags: string | undefined;
+  if (tags !== undefined && tags !== null) {
+    if (!Array.isArray(tags) && typeof tags !== 'string') {
+      return NextResponse.json({ error: 'Tags must be a list' }, { status: 400 });
+    }
+    safeTags = serializeTags(Array.isArray(tags) ? tags.map(String) : String(tags).split(','));
+  }
+
+  const parsedExperiences = parseExperiences(experiences);
+  if (parsedExperiences && !parsedExperiences.ok) {
+    return NextResponse.json({ error: parsedExperiences.error }, { status: 400 });
+  }
+
   const existing = await db.select().from(mentors).where(eq(mentors.clerkId, userId));
   if (existing[0]?.banned) return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
 
@@ -172,8 +211,9 @@ export async function POST(req: Request) {
   if (existing.length > 0) {
     try {
       const updated = await db.update(mentors)
-        .set({ firstName, lastName, email, role, company, bio: bio || '', topics: topics || '', calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null, defaultNote: safeDefaultNote })      .where(eq(mentors.clerkId, userId))
+        .set({ firstName, lastName, email, role, company, bio: bio || '', topics: topics || '', ...(safeTags !== undefined ? { tags: safeTags } : {}), calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin, avatarData: avatarData || null, defaultNote: safeDefaultNote })      .where(eq(mentors.clerkId, userId))
         .returning();
+      if (parsedExperiences?.ok) await replaceExperiences(updated[0].id, parsedExperiences.entries);
       return NextResponse.json(updated[0]);
     } catch (err) {
       if (isEmailTaken(err)) return NextResponse.json({ error: EMAIL_TAKEN }, { status: 409 });
@@ -192,7 +232,7 @@ export async function POST(req: Request) {
   let mentor: (typeof mentors.$inferSelect)[];
   try {
     mentor = await db.insert(mentors).values({
-      clerkId: userId, firstName, lastName, email, role, company, bio: bio || '', topics: topics || '',    calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin,
+      clerkId: userId, firstName, lastName, email, role, company, bio: bio || '', topics: topics || '', tags: safeTags ?? '',    calendarLink: safeCalendarLink, googleCalendarLink: safeGoogleCalendarLink, contactEmail: contactEmail || null, availability: availability || 'flexible', linkedin: safeLinkedin, showLinkedin: !!showLinkedin,
       avatarData: avatarData || null,
       defaultNote: safeDefaultNote,
       referralCode,
@@ -202,6 +242,8 @@ export async function POST(req: Request) {
     if (isEmailTaken(err)) return NextResponse.json({ error: EMAIL_TAKEN }, { status: 409 });
     throw err;
   }
+
+  if (parsedExperiences?.ok) await replaceExperiences(mentor[0].id, parsedExperiences.entries);
 
   if (invitedByClerkId) {
     await db.insert(referralEvents).values({
@@ -282,7 +324,20 @@ export async function GET(req: Request) {
     referrerName = referrerMentor[0] ? `${referrerMentor[0].firstName} ${referrerMentor[0].lastName}` : null;
   }
 
-  return NextResponse.json({ ...m, referrerName }, { status: 200 });
+  // The signup form doubles as edit-profile and prefills from this response, so
+  // the work-experience rows have to come back with it. Without them a mentor
+  // re-saving their profile would POST an empty list and wipe their own history.
+  const experienceRows = await db
+    .select({
+      company: mentorExperiences.company,
+      title: mentorExperiences.title,
+      isCurrent: mentorExperiences.isCurrent,
+    })
+    .from(mentorExperiences)
+    .where(eq(mentorExperiences.mentorId, m.id))
+    .orderBy(mentorExperiences.sortOrder);
+
+  return NextResponse.json({ ...m, referrerName, experiences: experienceRows }, { status: 200 });
   } catch (err) {
     return handleApiError(err, 'GET /api/mentor');
   }
