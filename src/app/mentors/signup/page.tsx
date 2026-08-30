@@ -7,6 +7,9 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/Logo';
 import PixelAvatarPicker from '@/components/PixelAvatarPicker';
+import MentorTagPicker from '@/components/MentorTagPicker';
+import MentorExperienceEditor, { type ExperienceRow } from '@/components/MentorExperienceEditor';
+import { parseTags } from '@/lib/mentor-tags';
 import { MENTOR_FAQ } from './faq';
 
 const TOPIC_OPTIONS = ['tech', 'startups', 'design', 'VC', 'AI/ML', 'product', 'finance', 'research', 'co-op', 'grad school'];
@@ -132,8 +135,9 @@ function MentorSignup() {
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '', role: '', company: '',
-    bio: '', topics: [] as string[], calendarLink: '', googleCalendarLink: '', contactEmail: '', availability: 'flexible',
+    bio: '', topics: [] as string[], tags: [] as string[], calendarLink: '', googleCalendarLink: '', contactEmail: '', availability: 'flexible',
     linkedin: '', showLinkedin: false, avatarData: '', defaultNote: '',
+    experiences: [] as ExperienceRow[],
   });
 
   const set = (k: string, v: string | string[]) => setForm(f => ({ ...f, [k]: v }));
@@ -148,6 +152,13 @@ function MentorSignup() {
           firstName: data.firstName, lastName: data.lastName, email: data.email,
           role: data.role, company: data.company, bio: data.bio,
           topics: data.topics ? data.topics.split(',').filter(Boolean) : [],
+          tags: parseTags(data.tags),
+          // Server order is display order. Not seeded from role/company: those
+          // two fields above ARE the current position, and duplicating them
+          // into the list would show every mentor their own job twice.
+          experiences: Array.isArray(data.experiences)
+            ? data.experiences.map((e: ExperienceRow) => ({ company: e.company, title: e.title, isCurrent: !!e.isCurrent }))
+            : [],
           calendarLink: data.calendarLink || '', googleCalendarLink: data.googleCalendarLink || '', contactEmail: data.contactEmail || '', availability: data.availability,
           linkedin: data.linkedin || '', showLinkedin: data.showLinkedin,
           avatarData: data.avatarData || '',
@@ -171,7 +182,7 @@ function MentorSignup() {
       const res = await fetch('/api/mentor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, topics: form.topics.join(','), ref }),
+        body: JSON.stringify({ ...form, topics: form.topics.join(','), tags: form.tags, ref }),
       });
       if (!res.ok) { const data = await res.json(); setError(data.error || 'Something went wrong'); setLoading(false); return; }
       router.push('/dashboard');
@@ -246,6 +257,13 @@ function MentorSignup() {
                     <input id="company" value={form.company} onChange={e => set('company', e.target.value)} placeholder="where you work" style={input} />
                   </div>
                 </div>
+                <div style={{ marginBottom: 24 }}>
+                  <label style={label}>Anywhere else you&apos;ve been (optional)</label>
+                  <div style={{ color: MUTED, fontSize: 12, marginBottom: 12, lineHeight: 1.6 }}>
+                    The stuff someone would otherwise go digging through LinkedIn to find out. One line each — &quot;founded it, sold it in 2019&quot; beats three sentences about synergy.
+                  </div>
+                  <MentorExperienceEditor value={form.experiences} onChange={rows => setForm(f => ({ ...f, experiences: rows }))} />
+                </div>
                 {error && <div style={{ color: '#F87171', fontSize: 13, marginBottom: 12 }}>{error}</div>}
                 <motion.button
                   whileHover={{ scale: 1.02, background: '#0856A8' }}
@@ -281,6 +299,16 @@ function MentorSignup() {
                       </motion.button>
                     ))}
                   </div>
+                  <div style={{ color: MUTED, fontSize: 12, marginTop: 8 }}>
+                    These are what seekers filter on, so keep them to what you&apos;d actually field a question about.
+                  </div>
+                </div>
+                <div style={{ marginBottom: 28 }}>
+                  <label style={label}>Tags — the human ones</label>
+                  <div style={{ color: MUTED, fontSize: 12, marginBottom: 14, lineHeight: 1.6 }}>
+                    Not another list of skills. This is the bit that makes someone pick you out of a page of job titles: when you&apos;re free, who you get on with, what you got wrong on the way here, what you do that has nothing to do with work.
+                  </div>
+                  <MentorTagPicker value={form.tags} onChange={tags => setForm(f => ({ ...f, tags }))} />
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => setStep(1)} style={{ flex: 1, background: 'transparent', color: MUTED, border: '1px solid rgba(255,255,255,0.1)', padding: '14px', borderRadius: 12, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>← back</motion.button>
