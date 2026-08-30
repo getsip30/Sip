@@ -10,14 +10,17 @@ import PixelAvatar from '@/components/PixelAvatar';
 import { MessageConsentGate } from '@/components/MessageConsentGate';
 import BadgePill from '@/components/BadgePill';
 import type { BadgeType } from '@/lib/badge-meta';
+import { parseTags } from '@/lib/mentor-tags';
 
 type EarnedBadge = { badgeType: BadgeType; awardedAt: string };
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
-  bio: string; topics: string; availability: string; isOpen: boolean; xp: number; sipCount: number;
+  bio: string; topics: string; tags?: string; availability: string; isOpen: boolean; xp: number; sipCount: number;
   linkedin?: string; showLinkedin?: boolean; avgResponseMinutes?: number | null; avatarData?: string;
 };
+
+export type MentorExperience = { id: string; company: string; title: string; isCurrent: boolean };
 
 function formatResponseTime(minutes: number): string {
   if (minutes < 60) return `~${Math.round(minutes)} min`;
@@ -47,17 +50,23 @@ export default function MentorProfileClient({
   mentor: initialMentor,
   notes: initialNotes,
   badges = [],
+  experiences = [],
 }: {
   mentor: Mentor;
   notes: SipNote[];
   /** Already in prestige order — the server sorts, so every surface agrees. */
   badges?: EarnedBadge[];
+  /** Already in the mentor's chosen display order. */
+  experiences?: MentorExperience[];
 }) {
   const { id } = useParams();
   const { user } = useUser();
   const router = useRouter();
   const { isSeeker, loaded: rolesLoaded } = useRoles();
   const [mentor] = useState<Mentor>(initialMentor);
+  // Parsed on render rather than trusted as-is: a row written before the cap or
+  // the normalizer changed still renders within today's limits.
+  const selfTags = parseTags(mentor.tags);
   const [following, setFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [followBusy, setFollowBusy] = useState(false);
@@ -304,6 +313,40 @@ export default function MentorProfileClient({
                 <span key={t} style={{ background: 'rgba(112,181,249,0.07)', border: '1px solid rgba(112,181,249,0.15)', color: LINK, padding: '5px 14px', borderRadius: 14, fontSize: 13 }}>{t.trim()}</span>
               ))}
             </div>
+
+            {/* The mentor's own tags, styled apart from topics on purpose: the
+                blue pills above are the directory's filter vocabulary, these are
+                the person. Same row of pills for both would read as one list and
+                lose the distinction the whole feature rests on. */}
+            {selfTags.length > 0 && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                {selfTags.map(t => (
+                  <span key={t} style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, color: MUTED, padding: '4px 12px', borderRadius: 14, fontSize: 12 }}>{t}</span>
+                ))}
+              </div>
+            )}
+
+            {/* Work history. Deliberately compact — a company and a one-liner —
+                because the job it does is "spot something impressive without
+                opening LinkedIn", and a wall of text does not do that job. */}
+            {experiences.length > 0 && (
+              <div style={{ marginTop: 20, borderTop: `1px solid ${BORDER}`, paddingTop: 16 }}>
+                <h2 style={{ fontSize: 12, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
+                  Also been
+                </h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {experiences.map(e => (
+                    <div key={e.id} style={{ display: 'flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#EDEFF3' }}>{e.company}</span>
+                      <span style={{ fontSize: 13, color: MUTED, lineHeight: 1.5 }}>{e.title}</span>
+                      {e.isCurrent && (
+                        <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: 'rgba(91,219,138,0.08)', color: '#5BDB8A', border: '1px solid rgba(91,219,138,0.15)' }}>now</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </motion.div>
 
           {/* TOP RIGHT: STATS + BADGES */}

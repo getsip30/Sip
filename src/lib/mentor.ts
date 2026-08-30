@@ -1,4 +1,6 @@
-import type { mentors } from '@/db/schema';
+import { db } from '@/db';
+import { mentorExperiences, type mentors } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 /**
  * Shape a mentor row for any PUBLIC consumer (directory, leaderboard, profile
@@ -19,6 +21,13 @@ export function publicMentor(m: typeof mentors.$inferSelect) {
     company: m.company,
     bio: m.bio,
     topics: m.topics,
+    /**
+     * The mentor's own tags. Public because they are the whole point: a seeker
+     * scanning the directory should see a person, not a job title. Unlike
+     * `experiences`, these ride along on every list payload — they are a handful
+     * of short strings already on the row, so there is nothing extra to fetch.
+     */
+    tags: m.tags,
     availability: m.availability,
     isOpen: m.isOpen,
     xp: m.xp,
@@ -36,4 +45,26 @@ export function publicMentor(m: typeof mentors.$inferSelect) {
     linkedin: m.showLinkedin ? m.linkedin : null,
     showLinkedin: m.showLinkedin,
   };
+}
+
+/**
+ * A mentor's public work history, in display order.
+ *
+ * Kept out of `publicMentor` on purpose. That function shapes a row the caller
+ * already has, and the directory endpoint runs it over every open mentor —
+ * folding a second table in would turn one query into an N+1 across the whole
+ * list. The section is only rendered on a profile, which is a single-row page
+ * and can afford one extra query.
+ */
+export async function experiencesForMentor(mentorId: string) {
+  return db
+    .select({
+      id: mentorExperiences.id,
+      company: mentorExperiences.company,
+      title: mentorExperiences.title,
+      isCurrent: mentorExperiences.isCurrent,
+    })
+    .from(mentorExperiences)
+    .where(eq(mentorExperiences.mentorId, mentorId))
+    .orderBy(mentorExperiences.sortOrder);
 }
