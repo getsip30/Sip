@@ -17,6 +17,7 @@ export async function GET(req: Request) {
     const result = await db
       .select({
         id: rooms.id, title: rooms.title, scheduledAt: rooms.scheduledAt,
+        scheduledAtTimezone: rooms.scheduledAtTimezone,
         mentorId: mentors.id, firstName: mentors.firstName, lastName: mentors.lastName,
         role: mentors.role, company: mentors.company, avatarData: mentors.avatarData,
       })

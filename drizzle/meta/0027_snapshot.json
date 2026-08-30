@@ -1,6 +1,6 @@
 {
-  "id": "f98d807d-c293-47ea-9a5f-2fb19a5d2084",
-  "prevId": "eaf7199a-ffa6-47ca-871a-1759b3227fb1",
+  "id": "0079404a-685b-4ff2-9937-4c245008dae8",
+  "prevId": "f98d807d-c293-47ea-9a5f-2fb19a5d2084",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -699,6 +699,101 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.mentor_experiences": {
+      "name": "mentor_experiences",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "mentor_id": {
+          "name": "mentor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "company": {
+          "name": "company",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_current": {
+          "name": "is_current",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "mentor_experiences_mentor_idx": {
+          "name": "mentor_experiences_mentor_idx",
+          "columns": [
+            {
+              "expression": "mentor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sort_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "mentor_experiences_mentor_id_mentors_id_fk": {
+          "name": "mentor_experiences_mentor_id_mentors_id_fk",
+          "tableFrom": "mentor_experiences",
+          "tableTo": "mentors",
+          "columnsFrom": [
+            "mentor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.mentors": {
       "name": "mentors",
       "schema": "",
@@ -757,6 +852,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "tags": {
+          "name": "tags",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
         },
         "calendar_link": {
           "name": "calendar_link",

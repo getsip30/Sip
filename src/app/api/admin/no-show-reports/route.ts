@@ -36,6 +36,7 @@ export async function GET(req: Request) {
         seekerName: requests.seekerName,
         seekerEmail: requests.seekerEmail,
         scheduledAt: requests.scheduledAt,
+        scheduledAtTimezone: requests.scheduledAtTimezone,
         sessionStatus: requests.sessionStatus,
         requestStatus: requests.status,
         mentorFirstName: mentors.firstName,

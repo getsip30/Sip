@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-handler';
 import { mutationLimiter } from '@/lib/ratelimit';
 import { isUuid } from '@/lib/validate';
+import { isValidTimezone, scheduledDayKey } from '@/lib/scheduled-time';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -22,10 +23,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const email = await getUserEmail(userId);
     if (!email) return NextResponse.json({ error: 'No email on file' }, { status: 400 });
 
-    const { scheduledAt } = await req.json();
+    const { scheduledAt, timezone } = await req.json();
     if (!scheduledAt || isNaN(Date.parse(scheduledAt))) {
       return NextResponse.json({ error: 'Invalid date' }, { status: 400 });
     }
+    // The zone is captured silently from the seeker's browser, so it is a
+    // convenience they never see and must never be able to fail on. An
+    // unrecognised or missing value is stored as null and read as UTC rather
+    // than rejected: refusing the booking would turn a detail the seeker was
+    // never asked about into a wall between them and their sip.
+    const scheduledAtTimezone = isValidTimezone(timezone) ? timezone : null;
     if (new Date(scheduledAt).getTime() < Date.now() + 60 * 60 * 1000) {
       return NextResponse.json({ error: 'Pick a time at least an hour from now' }, { status: 400 });
     }
@@ -50,8 +57,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // Only clear the reminder flag when the time actually moved to a different
     // day. Resetting it on every save let a seeker re-trigger the mentor's
     // reminder email on each nightly cron run.
-    const previous = r.scheduledAt ? new Date(r.scheduledAt) : null;
-    const dayChanged = !previous || previous.toDateString() !== new Date(scheduledAt).toDateString();
+    //
+    // "A different day" is asked in each booking's own zone. This used to use
+    // toDateString(), which answers in the server's zone: a seeker moving a sip
+    // from 11:30pm to 12:30am — plainly a new day to them — could read as the
+    // same one, leaving the mentor with a reminder for a date that had moved,
+    // and a move within a single one of their days could read as a change and
+    // send a second reminder for a sip that had not really shifted.
+    const previousDay = scheduledDayKey(r.scheduledAt, r.scheduledAtTimezone);
+    const dayChanged = previousDay === null || previousDay !== scheduledDayKey(scheduledAt, scheduledAtTimezone);
 
     // A time on the calendar is what makes this a session that can be attended
     // or missed, so this is where session tracking starts. Re-scheduling resets
@@ -59,6 +73,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const updated = await db.update(requests)
       .set({
         scheduledAt: new Date(scheduledAt),
+        scheduledAtTimezone,
         sessionStatus: 'scheduled',
         ...(dayChanged ? { reminderSentAt: null } : {}),
       })

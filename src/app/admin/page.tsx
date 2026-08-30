@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { BADGE_META, type BadgeType } from '@/lib/badge-meta';
 import AdminDashboard from '@/components/AdminDashboard';
+import { formatScheduledAtOr } from '@/lib/scheduled-time';
 
 type Flag = {
   id: string; roomId: string; reporterClerkId: string; reporterRole: string;
@@ -13,7 +14,7 @@ type NoShowReport = {
   reportedRole: string; evidenceUrl: string | null; status: string;
   reviewedAt: string | null; createdAt: string;
   reportedName: string; reportedEmail: string | null; reporterName: string; reporterRole: string;
-  sipLabel: string; scheduledAt: string | null; sessionStatus: string | null; requestStatus: string | null;
+  sipLabel: string; scheduledAt: string | null; scheduledAtTimezone: string | null; sessionStatus: string | null; requestStatus: string | null;
 };
 type Mentor = {
   id: string; firstName: string; lastName: string; email: string; role: string; company: string;
@@ -26,7 +27,7 @@ type Seeker = {
   currentStreak: number; banned: boolean; createdAt: string;
 };
 type Room = { id: string; title: string; roomName: string; status: string; startedAt: string; endedAt: string | null; mentorId: string };
-type Req = { id: string; seekerName: string; seekerEmail: string; mentorId: string; status: string; createdAt: string; scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null };
+type Req = { id: string; seekerName: string; seekerEmail: string; mentorId: string; status: string; createdAt: string; scheduledAt?: string | null; scheduledAtTimezone?: string | null; cancelledAt?: string | null; cancelledBy?: string | null };
 type FeedbackEntry = { id: string; requestId: string; mentorId: string; role: string; raterClerkId: string; rating: number; comment: string | null; createdAt: string };
 type Ask = { id: string; mentorId: string; seekerClerkId: string; seekerName: string; seekerEmail: string; question: string; answer: string | null; status: string; createdAt: string; answeredAt: string | null };
 type Note = { id: string; mentorId: string; seekerName: string; seekerEmail: string | null; note: string; status: string; createdAt: string };
@@ -338,7 +339,7 @@ export default function AdminPage() {
                 ) : data.requests.filter(r => r.scheduledAt || r.status === 'cancelled').map(r => (
                   <div key={r.id} style={{ ...card, padding: 16 }}>
                     <div style={{ fontWeight: 600 }}>{r.seekerName} <span style={{ color: '#8A93A3', fontWeight: 400 }}>· {r.status}</span></div>
-                    {r.scheduledAt && <div style={{ fontSize: 12, color: '#8A93A3' }}>scheduled: {new Date(r.scheduledAt).toLocaleString()}</div>}
+                    {r.scheduledAt && <div style={{ fontSize: 12, color: '#8A93A3' }}>scheduled: {formatScheduledAtOr(r.scheduledAt, r.scheduledAtTimezone)}</div>}
                     {r.status === 'cancelled' && <div style={{ fontSize: 12, color: '#F87171' }}>cancelled by {r.cancelledBy} · {r.cancelledAt ? new Date(r.cancelledAt).toLocaleString() : ''}</div>}
                   </div>
                 ))}
@@ -440,7 +441,7 @@ export default function AdminPage() {
                   <div key={n.id} style={{ background: '#121923', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 12, padding: 18 }}>
                     <div style={{ fontSize: 12, color: '#8A93A3', marginBottom: 6 }}>
                       reported {new Date(n.createdAt).toLocaleString()} · sip {n.requestId.slice(0, 8)}
-                      {n.scheduledAt ? ` · was scheduled ${new Date(n.scheduledAt).toLocaleString()}` : ' · no scheduled time'}
+                      {n.scheduledAt ? ` · was scheduled ${formatScheduledAtOr(n.scheduledAt, n.scheduledAtTimezone)}` : ' · no scheduled time'}
                     </div>
                     <div style={{ fontWeight: 600, marginBottom: 4 }}>
                       {n.reportedName} <span style={{ color: '#8A93A3', fontWeight: 400 }}>did not turn up ({n.reportedRole})</span>
