@@ -20,6 +20,23 @@ export const mentors = pgTable('mentors', {
   company: text('company').notNull(),
   bio: text('bio').notNull(),
   topics: text('topics').notNull(),
+  /**
+   * The mentor's own tags: a CSV, same storage shape as `topics` and
+   * `seekers.interests`.
+   *
+   * Deliberately NOT merged into `topics`. That column is the directory's
+   * filter and search key (see the seeker dashboard's `matchFilter`), so it has
+   * to stay a small, shared vocabulary. These are the opposite: personal,
+   * low-stakes, half of them not professional at all — "free most evenings",
+   * "loves climbing", "happy to talk to first-years". They exist to make a
+   * profile read like a person when a seeker is scanning a list, and a seeker
+   * filtering on "tech" must not have that list reordered by someone's hobby.
+   *
+   * Curated suggestions live in @/lib/mentor-tags, but the column accepts
+   * anything: the list is a prompt, not a taxonomy. Commas are the delimiter,
+   * so they are stripped from custom tags on the way in.
+   */
+  tags: text('tags').default('').notNull(),
   calendarLink: text('calendar_link'),
   /** Google Calendar appointment schedule, offered alongside calendarLink. */
   googleCalendarLink: text('google_calendar_link'),
@@ -95,6 +112,45 @@ export const mentors = pgTable('mentors', {
    */
   deletedAt: timestamp('deleted_at'),
 });
+
+/**
+ * A mentor's work history: one row per position, shown on their public profile.
+ *
+ * Why a table rather than more columns on `mentors`: the count is open-ended,
+ * and the entries are ordered. `mentors.role` and `mentors.company` stay
+ * exactly as they were — the single denormalized CURRENT position that the
+ * onboarding gate, every mentor card, the match email and the profile heading
+ * all read. Nothing here replaces them, so none of those readers change.
+ *
+ * The point of this table is credibility at a glance: a seeker should be able
+ * to spot "founded two companies" without leaving the site to check LinkedIn.
+ * That is also why there is no description column and never should be. Each
+ * entry is a company and a one-line title, and the ceiling on `title` is what
+ * keeps it from growing into a LinkedIn paragraph.
+ */
+export const mentorExperiences = pgTable('mentor_experiences', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  mentorId: uuid('mentor_id').references(() => mentors.id, { onDelete: 'cascade' }).notNull(),
+  company: text('company').notNull(),
+  /**
+   * Title or one-liner — "Staff engineer", "Founded it, sold it in 2019".
+   * Held to a short ceiling in POST /api/mentor/experience on purpose; see the
+   * note on the table.
+   */
+  title: text('title').notNull(),
+  /** Whether this is a position they still hold. More than one may be. */
+  isCurrent: boolean('is_current').default(false).notNull(),
+  /**
+   * Display order within a mentor's list, ascending. Assigned by the client
+   * from the order of the rows in the form rather than inferred from dates —
+   * there are no dates here, by design.
+   */
+  sortOrder: integer('sort_order').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  // The only access path: every entry for one mentor, in display order.
+  index('mentor_experiences_mentor_idx').on(t.mentorId, t.sortOrder),
+]);
 
 export const seekers = pgTable('seekers', {
   id: uuid('id').defaultRandom().primaryKey(),

@@ -183,6 +183,13 @@
       "when": 1787769144044,
       "tag": "0025_calm_wither",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1788061904320,
+      "tag": "0026_fantastic_bug",
+      "breakpoints": true
     }
   ]
 }
