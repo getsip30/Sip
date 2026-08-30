@@ -26,7 +26,7 @@ import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, SUCCESS2, WARNING, DANG
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
-  bio: string; topics: string; calendarLink: string | null; googleCalendarLink: string | null; contactEmail: string | null; availability: string;
+  bio: string; topics: string; tags: string; calendarLink: string | null; googleCalendarLink: string | null; contactEmail: string | null; availability: string;
   isOpen: boolean; autoAccept: boolean; xp: number; sipCount: number; referrerName?: string | null; avatarData?: string;
 };
 type EarnedBadge = { badgeType: BadgeType; awardedAt: string; seen: boolean };
@@ -620,6 +620,10 @@ export default function Dashboard() {
               {(() => {
                 const checklist = [
                   { label: 'Complete your profile (bio + topics)', done: !!mentor.bio && !!mentor.topics },
+                  // The checklist is the only thing that reaches mentors who
+                  // signed up before tags existed. Their profiles are the ones
+                  // seekers scroll past, so this earns its line.
+                  { label: 'Add a few tags — the human ones, not just job ones', done: !!mentor.tags },
                   { label: 'Add a booking link or contact email', done: bookingOptions(mentor).length > 0 },
                   { label: 'Answer your first ask', done: asks.some(a => !!a.answer) },
                   { label: 'Complete your first sip', done: mentor.sipCount > 0 },

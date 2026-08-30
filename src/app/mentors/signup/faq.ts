@@ -35,6 +35,10 @@ export const MENTOR_FAQ: { q: string; a: string }[] = [
     a: 'No. Your account email is never shown to seekers. You choose whether to share a booking link or a separate contact email, and it is only released to a seeker after you accept their request.',
   },
   {
+    q: 'What should my profile actually look like?',
+    a: 'Not a CV. The profiles that get requests read like a person: a bio in your own voice, tags that admit you are booked most weeks or that you dropped out once, a work history in one-liners rather than paragraphs. Seekers are scanning a page of job titles that all look the same — the thing that makes them pick you is usually not the job title. Write it the way you would describe yourself to a friend, not the way you would write a LinkedIn headline.',
+  },
+  {
     q: 'What do I actually talk about?',
     a: 'You pick the topics you are willing to cover when you sign up, and requests are matched against them. Most conversations are about how you got where you are, what you would do differently, and what the person asking should do next.',
   },

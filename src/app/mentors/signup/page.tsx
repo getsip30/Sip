@@ -61,6 +61,9 @@ export default function MentorSignupPage() {
           <p style={{ color: MUTED, fontSize: 15, lineHeight: 1.7 }}>
             You know something someone needs to hear. List yourself, stay in control, show up when you want to.
           </p>
+          <p style={{ color: MUTED, fontSize: 15, lineHeight: 1.7, marginTop: 12 }}>
+            One thing before you start: this is not a CV. Write it the way you&apos;d describe yourself to a friend. The profiles that get requests are the ones that sound like a person, not a company page.
+          </p>
         </div>
 
         <Suspense fallback={<FormSkeleton />}>
@@ -287,7 +290,9 @@ function MentorSignup() {
                 <div style={{ marginBottom: 20 }}>
                   <label style={label} htmlFor="bio">Your one-liner bio</label>
                   <textarea id="bio" value={form.bio} onChange={e => set('bio', e.target.value)} placeholder="what do you actually want to talk about? be real, not corporate." rows={3} style={{ ...input, resize: 'none' }} />
-                  <div style={{ color: MUTED, fontSize: 12, marginTop: 6 }}>{form.bio.length}/500 chars</div>
+                  <div style={{ color: MUTED, fontSize: 12, marginTop: 6, lineHeight: 1.6 }}>
+                    Say it like you&apos;d say it out loud. &quot;I spent four years being bad at this before I got good&quot; does more than &quot;passionate about driving impact.&quot; {form.bio.length}/500 chars
+                  </div>
                 </div>
                 <div style={{ marginBottom: 28 }}>
                 <label style={label}>Topics you&apos;re open to discuss</label>
@@ -353,7 +358,7 @@ function MentorSignup() {
                   <textarea id="defaultNote" value={form.defaultNote} onChange={e => set('defaultNote', e.target.value)} maxLength={300} rows={2}
                     placeholder="usually free evenings, will confirm exact time" style={{ ...input, resize: 'none' }} />
                   <div style={{ color: MUTED, fontSize: 12, marginTop: 6 }}>
-                    Sent alongside your booking link when a request is accepted without you — instant booking, or the &quot;send my link&quot; shortcut in a room. A note you type while accepting always wins. {form.defaultNote.length}/300 chars
+                    Sent alongside your booking link when a request is accepted without you — instant booking, or the &quot;send my link&quot; shortcut in a room. A note you type while accepting always wins. Keep it casual — this is a message to a nervous student, not an out-of-office. {form.defaultNote.length}/300 chars
                   </div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
