@@ -183,6 +183,13 @@
       "when": 1787769144044,
       "tag": "0025_calm_wither",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787867126523,
+      "tag": "0026_chubby_gorilla_man",
+      "breakpoints": true
     }
   ]
 }

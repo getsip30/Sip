@@ -13,8 +13,9 @@ import SessionTakeaways from '@/components/SessionTakeaways';
 import { useTakeaways } from '@/hooks/useTakeaways';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ease, DUR, listItem } from '@/lib/motion';
+import { formatScheduledAtOr } from '@/lib/scheduled-time';
 
-type Room = { id: string; title: string; roomUrl: string | null; status: string; mode: string; scheduledAt: string | null; firstName: string; lastName: string; role: string; company: string; mentorClerkId: string };
+type Room = { id: string; title: string; roomUrl: string | null; status: string; mode: string; scheduledAt: string | null; scheduledAtTimezone: string | null; firstName: string; lastName: string; role: string; company: string; mentorClerkId: string };
 type ConnectStatus = 'none' | 'pending' | 'accepted';
 type QueueEntry = { id: string; seekerClerkId: string; seekerName: string; topic?: string; status: string; isMine?: boolean; visitCount?: number; flagCount?: number; doneAt?: string | null; connectStatus?: ConnectStatus; connectCooldownUntil?: string | null };
 
@@ -348,7 +349,7 @@ export default function RoomPage() {
           <div style={{ background: SURFACE, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '24px 28px' }}>
             <div style={{ fontSize: 13, color: MUTED, marginBottom: 6 }}>{isRoomMentor ? 'this sip is scheduled' : 'not started yet'}</div>
             <div style={{ fontSize: 20, fontWeight: 700, marginBottom: isRoomMentor ? 16 : 0 }}>
-              {room.scheduledAt ? `starts ${new Date(room.scheduledAt).toLocaleString()}` : 'starting soon'}
+              {room.scheduledAt ? `starts ${formatScheduledAtOr(room.scheduledAt, room.scheduledAtTimezone)}` : 'starting soon'}
             </div>
             {isRoomMentor && (
               <button onClick={goLiveNow} disabled={starting} style={{ background: ACCENT, color: 'white', border: 'none', padding: '10px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: starting ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>

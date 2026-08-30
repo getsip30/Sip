@@ -2,6 +2,7 @@ import { db } from '@/db';
 import { nudges } from '@/db/schema';
 import { sql } from 'drizzle-orm';
 import { escapeHtml } from '@/lib/utils';
+import { formatScheduledAtOr } from '@/lib/scheduled-time';
 
 /**
  * Timed reminders for a scheduled 1:1, at roughly T-24h, T-1h, T-10m and T+1h.
@@ -32,6 +33,7 @@ export type ReminderRow = {
   seeker_email: string;
   seeker_name: string;
   scheduled_at: string;
+  scheduled_at_timezone: string | null;
   mentor_email: string;
   mentor_first_name: string;
   mentor_last_name: string;
@@ -80,10 +82,30 @@ export async function claimReminder(requestId: string, kind: ReminderKind) {
  * other way, at sips that are already behind us.
  */
 const DUE_SELECT = sql`
-  SELECT r.id, r.seeker_email, r.seeker_name, r.scheduled_at, r.confirm_token,
+  SELECT r.id, r.seeker_email, r.seeker_name, r.scheduled_at, r.scheduled_at_timezone, r.confirm_token,
          m.email AS mentor_email, m.first_name AS mentor_first_name, m.last_name AS mentor_last_name
   FROM requests r JOIN mentors m ON m.id = r.mentor_id
 `;
+
+/**
+ * `scheduled_at` as an absolute instant, so these windows do not depend on the
+ * database session's `TimeZone`.
+ *
+ * The column is `timestamp` without a zone, and Drizzle writes
+ * `date.toISOString()` into it — so the stored wall clock is the UTC one.
+ * Comparing it bare against `now()` (a `timestamptz`) made Postgres coerce the
+ * naive side using the session zone, which is UTC on Neon today and therefore
+ * right today, by configuration rather than by construction.
+ *
+ * That is a bad thing to leave resting on a setting. These windows are thirty
+ * minutes wide and zone offsets are whole hours, so a session zone that was not
+ * UTC would not send reminders late — it would match nothing at all, forever,
+ * without raising anything. Naming the zone the value is actually in removes
+ * the dependency: `AT TIME ZONE 'UTC'` reads the naive timestamp as UTC and
+ * yields a `timestamptz`, which compares against `now()` on equal terms
+ * wherever this runs.
+ */
+const STARTS_AT = sql`(r.scheduled_at AT TIME ZONE 'UTC')`;
 
 const COMMON = sql`
   r.status = 'accepted'
@@ -95,24 +117,24 @@ export const REMINDER_QUERIES: Record<ReminderKind, ReturnType<typeof sql>> = {
   session_24h: sql`
     ${DUE_SELECT}
     WHERE ${COMMON}
-      AND r.scheduled_at > now() + interval '23 hours 30 minutes'
-      AND r.scheduled_at <= now() + interval '24 hours'
+      AND ${STARTS_AT} > now() + interval '23 hours 30 minutes'
+      AND ${STARTS_AT} <= now() + interval '24 hours'
       AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'session_24h')
     LIMIT 200`,
 
   session_1h: sql`
     ${DUE_SELECT}
     WHERE ${COMMON}
-      AND r.scheduled_at > now() + interval '30 minutes'
-      AND r.scheduled_at <= now() + interval '1 hour'
+      AND ${STARTS_AT} > now() + interval '30 minutes'
+      AND ${STARTS_AT} <= now() + interval '1 hour'
       AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'session_1h')
     LIMIT 200`,
 
   session_10m: sql`
     ${DUE_SELECT}
     WHERE ${COMMON}
-      AND r.scheduled_at > now()
-      AND r.scheduled_at <= now() + interval '10 minutes'
+      AND ${STARTS_AT} > now()
+      AND ${STARTS_AT} <= now() + interval '10 minutes'
       AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'session_10m')
     LIMIT 200`,
 
@@ -131,8 +153,8 @@ export const REMINDER_QUERIES: Record<ReminderKind, ReturnType<typeof sql>> = {
   session_reflection: sql`
     ${DUE_SELECT}
     WHERE ${COMMON}
-      AND r.scheduled_at <= now() - interval '1 hour'
-      AND r.scheduled_at > now() - interval '1 hour 30 minutes'
+      AND ${STARTS_AT} <= now() - interval '1 hour'
+      AND ${STARTS_AT} > now() - interval '1 hour 30 minutes'
       AND NOT EXISTS (SELECT 1 FROM reflections f WHERE f.request_id = r.id)
       AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.request_id = r.id AND n.kind = 'session_reflection')
     LIMIT 200`,
@@ -152,13 +174,20 @@ function shell(heading: string, body: string, cta?: { href: string; label: strin
   `;
 }
 
-/** Formatted in UTC, since neither party's timezone is stored anywhere. */
-function when(scheduledAt: string): string {
-  return `${new Date(scheduledAt).toLocaleString('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone: 'UTC',
-  })} UTC`;
+/**
+ * Formatted in the zone the sip was booked in.
+ *
+ * This used to be hardcoded to UTC with a "UTC" suffix, because there was no
+ * zone stored to do anything better with — correct, but it asked both people to
+ * do the arithmetic themselves for a call one of them had scheduled in their
+ * own calendar. Now the booking carries its zone, so the email says the time
+ * the seeker actually chose, abbreviation and all.
+ *
+ * Rows that predate the column read as UTC (see FALLBACK_TIMEZONE), which is
+ * the same string these emails have always sent for them.
+ */
+function when(row: Pick<ReminderRow, 'scheduled_at' | 'scheduled_at_timezone'>): string {
+  return formatScheduledAtOr(row.scheduled_at, row.scheduled_at_timezone);
 }
 
 export type Mail = { to: string; subject: string; html: string };
@@ -173,7 +202,7 @@ export type Mail = { to: string; subject: string; html: string };
 export function reminderEmails(kind: ReminderKind, row: ReminderRow): Mail[] {
   const mentorName = `${escapeHtml(row.mentor_first_name)} ${escapeHtml(row.mentor_last_name)}`;
   const seekerName = escapeHtml(row.seeker_name);
-  const at = when(row.scheduled_at);
+  const at = when(row);
 
   switch (kind) {
     case 'session_24h':

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoles } from '@/hooks/useRoles';
+import { detectBrowserTimezone, formatScheduledAtOr } from '@/lib/scheduled-time';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import Collapse from '@/components/Collapse';
 import { useRequestList, RequestFilterBar, ShowMore } from '@/components/RequestFilters';
@@ -19,7 +20,7 @@ import BadgeCelebration from '@/components/BadgeCelebration';
 import NoShowButton from '@/components/NoShowButton';
 import AccountMenu from '@/components/AccountMenu';
 import SessionTakeaways from '@/components/SessionTakeaways';
-import { useTakeaways } from '@/hooks/useTakeaways';
+import { meetLabel, useTakeaways } from '@/hooks/useTakeaways';
 import { OwnBadgePill } from '@/components/BadgePill';
 import { SIP_MILESTONES, type BadgeType } from '@/lib/badge-meta';
 import { BG, SURFACE, BORDER, TEXT, MUTED, ACCENT, LINK, SUCCESS2, WARNING, DANGER, CLAY } from '@/lib/theme';
@@ -33,7 +34,8 @@ type EarnedBadge = { badgeType: BadgeType; awardedAt: string; seen: boolean };
 type Request = {
   id: string; seekerName: string; seekerEmail: string; message: string; status: string; createdAt: string;
   seekerLinkedin?: string; seekerConsentToShow: boolean; mentorConsentToShow: boolean;
-  scheduledAt?: string | null; cancelledAt?: string | null; cancelledBy?: string | null;
+  scheduledAt?: string | null; scheduledAtTimezone?: string | null;
+  cancelledAt?: string | null; cancelledBy?: string | null;
   sessionStatus?: string | null;
   mentorFeedbackGiven?: boolean;
   // Set only by the in-room "request 1:1" button, so it marks the requests this
@@ -163,7 +165,7 @@ export default function Dashboard() {
   }
   const [isLive, setIsLive] = useState(false);
   const [liveRoomId, setLiveRoomId] = useState<string | null>(null);
-  const [scheduledRoom, setScheduledRoom] = useState<{ id: string; scheduledAt: string } | null>(null);
+  const [scheduledRoom, setScheduledRoom] = useState<{ id: string; scheduledAt: string; scheduledAtTimezone: string | null } | null>(null);
   const [showGoLiveMenu, setShowGoLiveMenu] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [scheduleAtDraft, setScheduleAtDraft] = useState('');
@@ -562,7 +564,7 @@ export default function Dashboard() {
                   )}
                   {scheduledRoom && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ color: LINK, fontSize: 13 }}>scheduled: {new Date(scheduledRoom.scheduledAt).toLocaleString()}</span>
+                      <span style={{ color: LINK, fontSize: 13 }}>scheduled: {formatScheduledAtOr(scheduledRoom.scheduledAt, scheduledRoom.scheduledAtTimezone)}</span>
                       <button onClick={async () => { await fetch('/api/rooms/schedule', { method: 'DELETE' }); setScheduledRoom(null); }}
                         style={{ background: 'rgba(139,148,158,0.1)', border: '1px solid rgba(139,148,158,0.2)', color: MUTED, padding: '8px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                         cancel
@@ -602,7 +604,7 @@ export default function Dashboard() {
                       <button onClick={async () => {
                         if (!scheduleAtDraft) { setScheduleError('pick a date and time'); return; }
                         setScheduling(true);
-                        const res = await fetch('/api/rooms/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scheduledAt: new Date(scheduleAtDraft).toISOString(), title: `${mentor.firstName}'s Sip Room` }) });
+                        const res = await fetch('/api/rooms/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scheduledAt: new Date(scheduleAtDraft).toISOString(), title: `${mentor.firstName}'s Sip Room`, timezone: detectBrowserTimezone() ?? undefined }) });
                         const data = await res.json();
                         setScheduling(false);
                         if (res.ok) { setScheduledRoom(data); setShowScheduleForm(false); setScheduleAtDraft(''); }
@@ -761,8 +763,7 @@ export default function Dashboard() {
                             <span style={{ fontWeight: 600, fontSize: 14 }}>{s.sessionLabel}</span>
                             <span style={{ color: MUTED, fontSize: 12 }}>
                               {s.kind === 'room' ? 'live session' : s.kind === 'archived' ? 'session no longer on Sip' : '1:1'}
-                              {' · '}
-                              {new Date(s.sessionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {meetLabel(s) && ` · ${meetLabel(s)}`}
                             </span>
                           </div>
                           {s.kind === 'archived' ? (
@@ -999,7 +1000,7 @@ export default function Dashboard() {
                                 {cancelling === r.id ? 'cancelling...' : 'cancel'}
                               </motion.button>
                               {r.scheduledAt && (
-                                <span style={{ color: MUTED, fontSize: 12 }}>scheduled: {new Date(r.scheduledAt).toLocaleString()}</span>
+                                <span style={{ color: MUTED, fontSize: 12 }}>scheduled: {formatScheduledAtOr(r.scheduledAt, r.scheduledAtTimezone)}</span>
                               )}
                               <NoShowButton
                                 requestId={r.id}
