@@ -20,6 +20,7 @@ import { safeExternalUrl } from '@/lib/utils';
 import NoShowButton from '@/components/NoShowButton';
 import AccountMenu from '@/components/AccountMenu';
 import { INTEREST_TAGS } from '@/lib/interests';
+import { parseTags } from '@/lib/mentor-tags';
 import SessionTakeaways from '@/components/SessionTakeaways';
 import ReflectionForm, { type Reflection } from '@/components/ReflectionForm';
 import { isReflectionOpen } from '@/lib/reflections';
@@ -30,7 +31,7 @@ type UpcomingRoom = { id: string; title: string; scheduledAt: string; firstName:
 
 type Mentor = {
   id: string; firstName: string; lastName: string; role: string; company: string;
-  topics: string; bio: string; isOpen: boolean; availability: string; avatarData?: string;
+  topics: string; tags?: string; bio: string; isOpen: boolean; availability: string; avatarData?: string;
 };
 type SipRequest = {
   id: string; mentorId: string; seekerName: string; seekerEmail: string; message: string;
@@ -539,7 +540,23 @@ function SeekersContent() {
                         <span key={t} style={{ background: 'rgba(112,181,249,0.07)', border: '1px solid rgba(112,181,249,0.15)', color: LINK, padding: '3px 10px', borderRadius: 12, fontSize: 12 }}>{t.trim()}</span>
                       ))}
                     </div>
-                      <p style={{ color: MUTED, fontSize: 13, lineHeight: 1.65, marginBottom: 20 }}>&quot;{mentor.bio}&quot;</p>
+                      <p style={{ color: MUTED, fontSize: 13, lineHeight: 1.65, marginBottom: 14 }}>&quot;{mentor.bio}&quot;</p>
+                    {/* The mentor's own tags, muted and below the bio. This is
+                        the reason the card is worth scanning: the blue topic
+                        pills above tell a seeker what this person covers, these
+                        tell them whether they want to talk to THIS one. Capped
+                        at six so a card stays a card. */}
+                    {(() => {
+                      const selfTags = parseTags(mentor.tags).slice(0, 6);
+                      if (selfTags.length === 0) return null;
+                      return (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
+                          {selfTags.map(t => (
+                            <span key={t} style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, color: MUTED, padding: '3px 10px', borderRadius: 12, fontSize: 11 }}>{t}</span>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                       onClick={e => { e.stopPropagation(); if (!user) { router.push('/sign-in?redirect_url=/seekers'); } else if (rolesLoaded && !isSeeker) { router.push('/seekers/onboarding'); } else { setModal(mentor); } }}
                       style={{ width: '100%', background: 'rgba(10,102,194,0.12)', border: '1px solid rgba(10,102,194,0.3)', color: LINK, padding: '11px 0', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
