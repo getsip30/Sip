@@ -1,0 +1,78 @@
+# Files that should never be pulled into an agent's context window.
+#
+# Modeled on .gitignore, but the goal is different: .gitignore keeps junk out of
+# the repo, this keeps *bulk* out of context. The two lists overlap but are not
+# the same — the entries under "Tracked but still not worth reading" below are
+# committed files that .gitignore deliberately does not cover.
+
+# --- dependencies ---
+node_modules/
+.pnp
+.pnp.*
+.yarn/
+npm-global/
+
+# --- next.js build output ---
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# --- deploy / platform ---
+.vercel/
+.turbo/
+.swc/
+
+# --- secrets: never read these, and .env is not a reference doc ---
+# .env.example stays readable — it is the one that documents the shape.
+.env
+.env.local
+.env.production
+.env.production.local
+.env.sentry-build-plugin
+*.pem
+
+# --- logs, coverage, caches ---
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.eslintcache
+.cache/
+
+# --- lockfiles ---
+# 381 KB of resolved dependency graph. Read package.json instead; on the rare
+# occasion a transitive version actually matters, `npm ls <pkg>` answers it in
+# one line.
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# --- Tracked but still not worth reading ---
+
+# Drizzle's generated snapshots: 28 files, ~1.2 MB of JSON, and every new
+# migration adds a full copy of the schema. They are machine state for
+# drizzle-kit's diffing, not a description of the schema — src/db/schema.ts is
+# that, and drizzle/*.sql is the history. Reading one of these is almost always
+# an accident.
+drizzle/meta/
+
+# Binary assets — nothing to read, and images burn tokens as attachments.
+public/**/*.png
+public/**/*.jpg
+public/**/*.jpeg
+public/**/*.gif
+public/**/*.webp
+public/**/*.ico
+public/**/*.svg
+public/**/*.woff
+public/**/*.woff2
+
+# --- editor / OS noise ---
+.DS_Store
+.idea/
+.vscode/

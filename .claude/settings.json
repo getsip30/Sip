@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.production)",
+      "Read(./.env.production.local)",
+      "Read(./.env.sentry-build-plugin)",
+      "Read(./**/*.pem)",
+
+      "Read(./package-lock.json)",
+      "Read(./yarn.lock)",
+      "Read(./pnpm-lock.yaml)",
+
+      "Read(./drizzle/meta/**)",
+
+      "Read(./.next/**)",
+      "Read(./out/**)",
+      "Read(./build/**)",
+      "Read(./dist/**)",
+      "Read(./.vercel/**)",
+      "Read(./.turbo/**)",
+      "Read(./.swc/**)",
+      "Read(./**/*.tsbuildinfo)",
+      "Read(./next-env.d.ts)",
+
+      "Read(./npm-global/**)",
+      "Read(./.yarn/**)",
+
+      "Read(./coverage/**)",
+      "Read(./.cache/**)",
+      "Read(./.eslintcache)",
+      "Read(./**/*.log)",
+
+      "Read(./public/**/*.png)",
+      "Read(./public/**/*.jpg)",
+      "Read(./public/**/*.jpeg)",
+      "Read(./public/**/*.gif)",
+      "Read(./public/**/*.webp)",
+      "Read(./public/**/*.ico)",
+      "Read(./public/**/*.woff)",
+      "Read(./public/**/*.woff2)"
+    ]
+  }
+}
