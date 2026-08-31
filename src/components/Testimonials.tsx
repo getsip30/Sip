@@ -1,6 +1,5 @@
-'use client';
-import { motion, useReducedMotion } from 'framer-motion';
 import { SURFACE, TEXT, MUTED, LINK } from '@/lib/theme';
+import Reveal from '@/components/landing/Reveal';
 
 type Testimonial = {
   quote: string;
@@ -17,6 +16,12 @@ type Testimonial = {
  * seeker notes pulled from finished sessions. These are hand-collected and
  * static: they are the only social proof on the page before any mentor data
  * loads, so they must not depend on a fetch.
+ *
+ * A plain Server Component. It used to reach for framer-motion directly
+ * (motion.div, motion.figure, useReducedMotion) to fade each card in on
+ * scroll, which meant the whole file needed 'use client' for content that is
+ * otherwise four hardcoded quotes. <Reveal> — the same client leaf Steps and
+ * Faq use — now does that job, so this file ships no JS of its own.
  */
 const TESTIMONIALS: Testimonial[] = [
   {
@@ -55,19 +60,12 @@ const mono: React.CSSProperties = {
 };
 
 export default function Testimonials() {
-  const reduced = useReducedMotion();
-
   return (
     <section
       style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}
       aria-labelledby="testimonials-heading"
     >
-      <motion.div
-        initial={reduced ? false : { opacity: 0, y: 22 }}
-        whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: '-70px' }}
-        transition={{ duration: 0.6, ease: [0.22, 0.61, 0.36, 1] }}
-      >
+      <Reveal>
         <div style={{ ...mono, fontSize: 11, color: MUTED, marginBottom: 20 }}>Testimonials</div>
         <h2
           id="testimonials-heading"
@@ -81,42 +79,42 @@ export default function Testimonials() {
         >
           What people are saying
         </h2>
-      </motion.div>
+      </Reveal>
 
       <div className="testimonial-grid">
         {TESTIMONIALS.map((t, i) => (
-          <motion.figure
-            key={t.name}
-            className="testimonial-card"
-            initial={reduced ? false : { opacity: 0, y: 22 }}
-            whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-70px' }}
-            transition={{ duration: 0.6, delay: i * 0.07, ease: [0.22, 0.61, 0.36, 1] }}
-          >
-            <blockquote
-              style={{ fontSize: 15, lineHeight: 1.66, color: TEXT, margin: 0, textWrap: 'pretty' }}
-            >
-              &ldquo;{t.quote}&rdquo;
-            </blockquote>
-            <figcaption style={{ marginTop: 18, fontSize: 12.5, color: MUTED, lineHeight: 1.55 }}>
-              <span style={{ color: TEXT, fontWeight: 600 }}>{t.name}</span>
-              <br />
-              {t.role}
-              {t.link && (
-                <>
-                  {' · '}
-                  <a
-                    href={t.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: LINK, textDecoration: 'none' }}
-                  >
-                    LinkedIn ↗
-                  </a>
-                </>
-              )}
-            </figcaption>
-          </motion.figure>
+          // `style={{ display: 'flex' }}` on the wrapper, same reason as
+          // MentorGrid's mentor-card Reveal: the animated element is a div
+          // wrapping the real grid item, and without this the grid's default
+          // align-items: stretch reaches the wrapper instead of the card,
+          // leaving the card itself unstretched inside it.
+          <Reveal key={t.name} delay={i * 0.07} style={{ display: 'flex' }}>
+            <figure className="testimonial-card">
+              <blockquote
+                style={{ fontSize: 15, lineHeight: 1.66, color: TEXT, margin: 0, textWrap: 'pretty' }}
+              >
+                &ldquo;{t.quote}&rdquo;
+              </blockquote>
+              <figcaption style={{ marginTop: 18, fontSize: 12.5, color: MUTED, lineHeight: 1.55 }}>
+                <span style={{ color: TEXT, fontWeight: 600 }}>{t.name}</span>
+                <br />
+                {t.role}
+                {t.link && (
+                  <>
+                    {' · '}
+                    <a
+                      href={t.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: LINK, textDecoration: 'none' }}
+                    >
+                      LinkedIn ↗
+                    </a>
+                  </>
+                )}
+              </figcaption>
+            </figure>
+          </Reveal>
         ))}
       </div>
 
@@ -130,6 +128,7 @@ export default function Testimonials() {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
+          width: 100%;
           margin: 0;
           border: 1px solid rgba(255,255,255,0.09);
           border-radius: 16px;

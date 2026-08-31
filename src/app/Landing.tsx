@@ -7,10 +7,24 @@ import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion
 import { useRoles } from '@/hooks/useRoles';
 import PixelAvatar from '@/components/PixelAvatar';
 import Logo from '@/components/Logo';
-import Footer from '@/components/Footer';
-import Testimonials from '@/components/Testimonials';
-import MentorQuiz from '@/components/MentorQuiz';
+import dynamic from 'next/dynamic';
+import Reveal from '@/components/landing/Reveal';
+import { MAX_PAGE_WIDTH, GUTTER, mono, ArrowRight, Eyebrow, Rule } from '@/components/landing/shared';
 import { BG, SURFACE, TEXT, MUTED, ACCENT, LINK, SUCCESS2 } from '@/lib/theme';
+
+/**
+ * MentorQuiz was a static import of an 847-line modal that renders only after
+ * a click, and only for a visitor who turns out to be signed out. Bundled
+ * eagerly, its code — plus the lucide icons and AnimatePresence it pulls in —
+ * shipped and parsed in the homepage's entry chunk for every visitor whether
+ * or not they ever open it.
+ *
+ * `ssr: false` because the component has nothing to contribute server-side: it
+ * returns null until `open` is true, `open` starts false, and by the time a
+ * visitor could have clicked "Find a match" the page has long since hydrated.
+ * There is no content here for a crawler or a slow connection to miss.
+ */
+const MentorQuiz = dynamic(() => import('@/components/MentorQuiz'), { ssr: false });
 
 type Mentor = {
   id: string;
@@ -34,57 +48,6 @@ type FeaturedNote = {
   mentorRole: string;
   mentorCompany: string;
 };
-
-const MAX_PAGE_WIDTH = 1180;
-const GUTTER = 'clamp(20px, 5vw, 56px)';
-
-const mono: React.CSSProperties = {
-  fontFamily: "var(--font-space-mono), 'Space Mono', monospace",
-  letterSpacing: '0.14em',
-  textTransform: 'uppercase',
-};
-
-function ArrowRight({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 12h15M13 5.5 19.5 12 13 18.5" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-/** Fades and lifts children the first time they enter the viewport. */
-function Reveal({
-  children,
-  delay = 0,
-  y = 22,
-  style,
-}: {
-  children: React.ReactNode;
-  delay?: number;
-  y?: number;
-  style?: React.CSSProperties;
-}) {
-  const reduced = useReducedMotion();
-  return (
-    <motion.div
-      initial={reduced ? false : { opacity: 0, y }}
-      whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-70px' }}
-      transition={{ duration: 0.6, delay, ease: [0.22, 0.61, 0.36, 1] }}
-      style={style}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function Eyebrow({ children, color = MUTED }: { children: React.ReactNode; color?: string }) {
-  return <div style={{ ...mono, fontSize: 11, color, marginBottom: 20 }}>{children}</div>;
-}
-
-function Rule() {
-  return <div style={{ height: 1, background: 'rgba(255,255,255,0.09)' }} />;
-}
 
 function Nav({
   isMentor,
@@ -188,15 +151,23 @@ function Nav({
   );
 }
 
+/**
+ * The hero copy does not animate in, deliberately.
+ *
+ * These three elements were <motion.*> with `initial={{ opacity: 0, y: 18 }}`,
+ * which framer-motion serializes into the server-rendered HTML. The <h1> is the
+ * page's LCP element, and it was being shipped as `opacity:0` — so the largest
+ * contentful paint could not happen until the JS had downloaded, hydrated, and
+ * run the enter animation. Lighthouse measured LCP at 12.9s against an FCP of
+ * 1.8s: the whole gap was the hero waiting on hydration to become visible.
+ *
+ * A CSS fade would still hold the element at opacity 0 for the duration and
+ * push LCP out by that much, so the animation is dropped rather than moved.
+ * The rail beside it still animates; it is not an LCP candidate.
+ */
 function Hero({ mentors }: { mentors: Mentor[] }) {
   const reduced = useReducedMotion();
   const openCount = mentors.length;
-
-  const rise = (delay: number) => ({
-    initial: reduced ? false : { opacity: 0, y: 18 },
-    animate: reduced ? undefined : { opacity: 1, y: 0 },
-    transition: { duration: 0.7, delay, ease: [0.22, 0.61, 0.36, 1] as const },
-  });
 
   return (
     <section
@@ -208,12 +179,9 @@ function Hero({ mentors }: { mentors: Mentor[] }) {
     >
       <div className="hero-grid">
         <div style={{ minWidth: 0 }}>
-          <motion.div {...rise(0)}>
-            <Eyebrow color={LINK}>Live calls</Eyebrow>
-          </motion.div>
+          <Eyebrow color={LINK}>Live calls</Eyebrow>
 
-          <motion.h1
-            {...rise(0.06)}
+          <h1
             style={{
               fontSize: 'clamp(42px, 7.4vw, 82px)',
               lineHeight: 0.98,
@@ -227,10 +195,9 @@ function Hero({ mentors }: { mentors: Mentor[] }) {
             who already
             <br />
             <span style={{ color: LINK }}>did the thing.</span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            {...rise(0.14)}
+          <p
             style={{
               marginTop: 26,
               fontSize: 'clamp(16px, 1.9vw, 19px)',
@@ -241,7 +208,7 @@ function Hero({ mentors }: { mentors: Mentor[] }) {
           >
             Sip puts students in front of people working the jobs they want. Say what you&apos;re
             stuck on, see who can actually help, and have the conversation this week.
-          </motion.p>
+          </p>
         </div>
 
         <motion.aside
@@ -324,24 +291,6 @@ function Hero({ mentors }: { mentors: Mentor[] }) {
   );
 }
 
-const STEPS = [
-  {
-    n: '01',
-    title: 'Say what you’re stuck on',
-    body: 'One sentence is enough. We read it against every mentor who is currently taking conversations, and rank who fits.',
-  },
-  {
-    n: '02',
-    title: 'See who can actually help',
-    body: 'Real job, real company, and the specific topics they agreed to talk about. Profiles are short on purpose, so you can tell quickly.',
-  },
-  {
-    n: '03',
-    title: 'Have the conversation',
-    body: 'Join a live room and take your place in the queue, or book a time that suits you both. Most first sips happen within the week.',
-  },
-];
-
 /**
  * The landing page's primary conversion path: a full-width section, at the same
  * visual weight as "How it works", whose only job is to open the quiz.
@@ -363,6 +312,30 @@ const STEPS = [
  * blur: that treatment belongs to the quiz modal, and using it in two places
  * would stop it meaning "something is on top of the page".
  */
+/**
+ * Holds the quiz section's space while Clerk is still resolving the session.
+ *
+ * The prompt is present in the statically rendered HTML — with no request to
+ * read, Clerk resolves to signed-out at build time — but on the client the
+ * first render has isLoaded false, so the section unmounted and then remounted
+ * a beat later when the session arrived. Everything below it moved twice.
+ *
+ * Reserving rather than simply leaving the prompt mounted keeps the rule the
+ * section already had: a signed-in visitor never sees quiz copy, not even for
+ * one frame. They get an empty box that collapses instead, which is one shift
+ * for them and none for the signed-out visitor this page is mostly for.
+ *
+ * The padding clamps are copied from .quiz-prompt so only the inner content
+ * height is estimated, in .quiz-prompt-reserve::before.
+ */
+function QuizPromptReserve() {
+  return (
+    <section style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}>
+      <div className="quiz-prompt-reserve" aria-hidden="true" />
+    </section>
+  );
+}
+
 function QuizPrompt({ onStartQuiz }: { onStartQuiz: () => void }) {
   return (
     <section style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}>
@@ -413,56 +386,33 @@ function QuizPrompt({ onStartQuiz }: { onStartQuiz: () => void }) {
   );
 }
 
-function Steps() {
-  return (
-    <section
-      id="how-it-works"
-      style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}
-    >
-      <Reveal>
-        <Eyebrow>How it works</Eyebrow>
-        <h2
-          style={{
-            fontSize: 'clamp(30px, 4.4vw, 48px)',
-            lineHeight: 1.06,
-            letterSpacing: '-0.03em',
-            fontWeight: 700,
-            margin: '0 0 clamp(40px, 6vw, 72px)',
-            maxWidth: 620,
-          }}
-        >
-          Three steps, no cold outreach.
-        </h2>
-      </Reveal>
-
-      <div>
-        {STEPS.map((s, i) => (
-          <Reveal key={s.n} delay={i * 0.07}>
-            <div className="step-row">
-              <div style={{ ...mono, fontSize: 12, color: LINK, paddingTop: 5 }}>{s.n}</div>
-              <h3
-                style={{
-                  fontSize: 'clamp(20px, 2.5vw, 27px)',
-                  fontWeight: 600,
-                  letterSpacing: '-0.02em',
-                  margin: 0,
-                  lineHeight: 1.22,
-                }}
-              >
-                {s.title}
-              </h3>
-              <p style={{ fontSize: 15.5, lineHeight: 1.68, color: MUTED, margin: 0, maxWidth: 460 }}>{s.body}</p>
-            </div>
-            <Rule />
-          </Reveal>
-        ))}
-      </div>
-    </section>
-  );
+/**
+ * Placeholder occupying one card's worth of grid while the mentor fetch is in
+ * flight. The heights are estimates of the real cards below — a plain card is
+ * an avatar row plus a topic chip row, the lead card adds a bio paragraph —
+ * chosen so the grid does not resize when the data lands. They are the one
+ * approximate thing here; if the card design changes, these move with it.
+ */
+function MentorCardSkeleton({ lead = false }: { lead?: boolean }) {
+  return <div className={`mentor-card mentor-card-skeleton${lead ? ' mentor-card-lead' : ''}`} aria-hidden="true" />;
 }
 
-function MentorGrid({ mentors }: { mentors: Mentor[] }) {
-  if (mentors.length === 0) return null;
+/**
+ * `loaded` distinguishes "the fetch has not answered yet" from "there is
+ * genuinely nobody open", which an empty array alone cannot.
+ *
+ * The section used to return null for both, so on every load it was absent
+ * from the server-rendered HTML and then inserted — heading, and five cards —
+ * once /api/mentor answered, shoving everything below it down the page. Now
+ * the heading is in the static HTML (it is true regardless of who is open) and
+ * the cards are stood in for until the real ones arrive.
+ *
+ * Nobody open is still a hidden section rather than an empty grid, and that
+ * case does still shift. It is the rare one, and the alternative is a heading
+ * promising mentors above an empty box.
+ */
+function MentorGrid({ mentors, loaded }: { mentors: Mentor[]; loaded: boolean }) {
+  if (loaded && mentors.length === 0) return null;
   const featured = mentors.slice(0, 5);
 
   return (
@@ -491,6 +441,8 @@ function MentorGrid({ mentors }: { mentors: Mentor[] }) {
       </Reveal>
 
       <div className="mentor-grid">
+        {!loaded &&
+          Array.from({ length: 5 }, (_, i) => <MentorCardSkeleton key={`skeleton-${i}`} lead={i === 0} />)}
         {featured.map((m, i) => {
           const topics = m.topics
             .split(',')
@@ -571,9 +523,22 @@ function MentorGrid({ mentors }: { mentors: Mentor[] }) {
   );
 }
 
-function Proof({ notes, mentorCount }: { notes: FeaturedNote[]; mentorCount: number }) {
+/**
+ * Two layouts behind one section: a pull-quote when mentors have approved notes
+ * to show, and a bare mentor count when they have not.
+ *
+ * While the fetches are outstanding this renders the count layout with the
+ * number itself held blank, rather than rendering nothing. Before, the whole
+ * section appeared from nowhere once /api/sip-notes/featured answered. The
+ * count layout is the one production is actually in — there are no approved
+ * notes today — so reserving that shape is reserving the right shape almost
+ * always. A site that does have notes still shifts once when they arrive,
+ * because the quote layout is genuinely taller and there is no honest way to
+ * reserve for a branch we cannot know yet.
+ */
+function Proof({ notes, mentorCount, loaded }: { notes: FeaturedNote[]; mentorCount: number; loaded: boolean }) {
   if (notes.length === 0) {
-    if (mentorCount === 0) return null;
+    if (loaded && mentorCount === 0) return null;
     return (
       <section style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}>
         <Reveal>
@@ -582,7 +547,10 @@ function Proof({ notes, mentorCount }: { notes: FeaturedNote[]; mentorCount: num
             <div>
               <div style={{ ...mono, fontSize: 11, color: MUTED, marginBottom: 12 }}>Mentors listed</div>
               <div style={{ fontSize: 'clamp(38px, 6vw, 60px)', fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1 }}>
-                {mentorCount}
+                {/* Non-breaking space, not an empty string: the number's line
+                    box has to exist at its full height before the count lands,
+                    or reserving the row buys nothing. */}
+                {loaded ? mentorCount : '\u00A0'}
               </div>
             </div>
             <p style={{ fontSize: 16, lineHeight: 1.65, color: MUTED, margin: 0, maxWidth: 420 }}>
@@ -706,64 +674,24 @@ function FinalCta({ signedIn, authResolved }: { signedIn: boolean; authResolved:
   );
 }
 
-/**
- * Common questions, rendered as real content.
- *
- * The landing page previously had no answer to any qualifying question a
- * visitor arrives with — most importantly "is this free", which is asked in
- * search constantly and which the page never once said. It also gave the site
- * almost no indexable body text: the hero and three step titles are headline
- * copy, not the kind of prose that can match a query.
- *
- * The list is owned by page.tsx (the server component) and passed down, so the
- * same strings feed the FAQPage structured data and what a person reads. They
- * cannot drift apart, which is both a Google requirement and the only way this
- * stays honest.
- */
-function Faq({ items }: { items: { q: string; a: string }[] }) {
-  return (
-    <section
-      id="faq"
-      aria-labelledby="faq-heading"
-      style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}
-    >
-      <Reveal>
-        <Eyebrow>Common questions</Eyebrow>
-        <h2
-          id="faq-heading"
-          style={{
-            fontSize: 'clamp(30px, 4.4vw, 48px)',
-            lineHeight: 1.06,
-            letterSpacing: '-0.03em',
-            fontWeight: 700,
-            margin: '0 0 clamp(40px, 6vw, 64px)',
-            maxWidth: 620,
-          }}
-        >
-          Before you sign up.
-        </h2>
-      </Reveal>
-
-      <div className="faq-grid">
-        {items.map((item, i) => (
-          <Reveal key={item.q} delay={Math.min(i, 3) * 0.05}>
-            <h3 style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em', margin: '0 0 10px' }}>
-              {item.q}
-            </h3>
-            <p style={{ fontSize: 15, lineHeight: 1.7, color: MUTED, margin: 0 }}>{item.a}</p>
-          </Reveal>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[] }) {
+export default function Landing({
+  testimonials,
+  steps,
+  faqSection,
+  footer,
+}: {
+  testimonials: React.ReactNode;
+  steps: React.ReactNode;
+  faqSection: React.ReactNode;
+  footer: React.ReactNode;
+}) {
   const { user, isLoaded } = useUser();
   const { isMentor, isSeeker, loaded: rolesLoaded } = useRoles();
 
   const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [mentorsLoaded, setMentorsLoaded] = useState(false);
   const [notes, setNotes] = useState<FeaturedNote[]>([]);
+  const [notesLoaded, setNotesLoaded] = useState(false);
   const [quizRequested, setQuizRequested] = useState(false);
 
   /**
@@ -781,19 +709,28 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
   useEffect(() => {
     let cancelled = false;
 
+    // Both `loaded` flags are set in .finally rather than .then: a failed fetch
+    // has to release the reserved space too, or a mentor list that 500s leaves
+    // skeleton cards on the page forever.
     fetch('/api/mentor?all=true')
       .then((r) => (r.ok ? r.json() : []))
       .then((data: Mentor[]) => {
         if (!cancelled) setMentors(Array.isArray(data) ? data : []);
       })
-      .catch((err) => console.error('landing: mentor fetch failed', err));
+      .catch((err) => console.error('landing: mentor fetch failed', err))
+      .finally(() => {
+        if (!cancelled) setMentorsLoaded(true);
+      });
 
     fetch('/api/sip-notes/featured')
       .then((r) => (r.ok ? r.json() : []))
       .then((data: FeaturedNote[]) => {
         if (!cancelled) setNotes(Array.isArray(data) ? data : []);
       })
-      .catch((err) => console.error('landing: notes fetch failed', err));
+      .catch((err) => console.error('landing: notes fetch failed', err))
+      .finally(() => {
+        if (!cancelled) setNotesLoaded(true);
+      });
 
     return () => {
       cancelled = true;
@@ -815,16 +752,20 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           this block a beat after first paint; the benefit is that signed-in
           visitors never get it at all, not even for a frame.
         */}
-        {canQuiz && <QuizPrompt onStartQuiz={() => setQuizRequested(true)} />}
-        <Testimonials />
-        <Steps />
-        <MentorGrid mentors={mentors} />
-        <Proof notes={notes} mentorCount={mentors.length} />
-        <Faq items={faq} />
+        {canQuiz ? (
+          <QuizPrompt onStartQuiz={() => setQuizRequested(true)} />
+        ) : isLoaded ? null : (
+          <QuizPromptReserve />
+        )}
+        {testimonials}
+        {steps}
+        <MentorGrid mentors={mentors} loaded={mentorsLoaded} />
+        <Proof notes={notes} mentorCount={mentors.length} loaded={mentorsLoaded && notesLoaded} />
+        {faqSection}
         <FinalCta signedIn={!!user} authResolved={isLoaded} />
       </main>
 
-      <Footer />
+      {footer}
 
       {/*
         Signed-out visitors only. MentorQuiz enforces this itself as well; the
@@ -849,6 +790,20 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           border-radius: 24px;
           background: ${SURFACE};
           padding: clamp(48px, 8vw, 88px) clamp(24px, 5vw, 64px);
+        }
+        /* Same padding clamps as .quiz-prompt above, so the only estimate is
+           the inner content height below. */
+        .quiz-prompt-reserve {
+          border: 1px solid transparent;
+          border-radius: 24px;
+          padding: clamp(48px, 8vw, 88px) clamp(24px, 5vw, 64px);
+        }
+        .quiz-prompt-reserve::before {
+          content: '';
+          display: block;
+          /* Eyebrow, two-line heading, one line of copy, the button, and the
+             small print under it, at the sizes .quiz-prompt renders them. */
+          height: clamp(247px, 30vw, 293px);
         }
         .quiz-prompt-glow {
           position: absolute;
@@ -923,14 +878,6 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           gap: 24px;
           margin-bottom: clamp(36px, 5vw, 58px);
         }
-        .step-row {
-          display: grid;
-          grid-template-columns: 46px minmax(0, 1fr);
-          gap: 8px 20px;
-          padding: clamp(26px, 3.4vw, 38px) 0;
-        }
-        .step-row h3 { grid-column: 2; }
-        .step-row p { grid-column: 2; }
         .mentor-grid {
           display: grid;
           grid-template-columns: minmax(0, 1fr);
@@ -945,6 +892,13 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           padding: 22px;
           background: ${SURFACE};
           transition: border-color 220ms ease, transform 220ms ease;
+        }
+        /* Stand-ins for cards still being fetched. See MentorCardSkeleton. */
+        .mentor-card-skeleton {
+          min-height: 152px;
+        }
+        .mentor-card-skeleton.mentor-card-lead {
+          min-height: 232px;
         }
         .mentor-card:hover {
           border-color: rgba(112,181,249,0.4);
@@ -991,22 +945,13 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           transition: border-color 200ms ease;
         }
         .cta-secondary:hover { border-color: rgba(255,255,255,0.34); }
-        .faq-grid {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr);
-          gap: clamp(28px, 4vw, 40px) clamp(32px, 5vw, 56px);
-        }
         .text-link { transition: color 180ms ease; }
         .text-link:hover { color: ${LINK}; }
 
         @media (min-width: 720px) {
-          .faq-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .mentor-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .mentor-card-lead { grid-column: span 2; }
           .proof-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-          .step-row { grid-template-columns: 92px minmax(0, 320px) minmax(0, 1fr); align-items: start; }
-          .step-row h3 { grid-column: 2; }
-          .step-row p { grid-column: 3; }
         }
         @media (min-width: 980px) {
           .hero-grid { grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.85fr); }
