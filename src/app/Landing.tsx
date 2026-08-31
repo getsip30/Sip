@@ -188,15 +188,23 @@ function Nav({
   );
 }
 
+/**
+ * The hero copy does not animate in, deliberately.
+ *
+ * These three elements were <motion.*> with `initial={{ opacity: 0, y: 18 }}`,
+ * which framer-motion serializes into the server-rendered HTML. The <h1> is the
+ * page's LCP element, and it was being shipped as `opacity:0` — so the largest
+ * contentful paint could not happen until the JS had downloaded, hydrated, and
+ * run the enter animation. Lighthouse measured LCP at 12.9s against an FCP of
+ * 1.8s: the whole gap was the hero waiting on hydration to become visible.
+ *
+ * A CSS fade would still hold the element at opacity 0 for the duration and
+ * push LCP out by that much, so the animation is dropped rather than moved.
+ * The rail beside it still animates; it is not an LCP candidate.
+ */
 function Hero({ mentors }: { mentors: Mentor[] }) {
   const reduced = useReducedMotion();
   const openCount = mentors.length;
-
-  const rise = (delay: number) => ({
-    initial: reduced ? false : { opacity: 0, y: 18 },
-    animate: reduced ? undefined : { opacity: 1, y: 0 },
-    transition: { duration: 0.7, delay, ease: [0.22, 0.61, 0.36, 1] as const },
-  });
 
   return (
     <section
@@ -208,12 +216,9 @@ function Hero({ mentors }: { mentors: Mentor[] }) {
     >
       <div className="hero-grid">
         <div style={{ minWidth: 0 }}>
-          <motion.div {...rise(0)}>
-            <Eyebrow color={LINK}>Live calls</Eyebrow>
-          </motion.div>
+          <Eyebrow color={LINK}>Live calls</Eyebrow>
 
-          <motion.h1
-            {...rise(0.06)}
+          <h1
             style={{
               fontSize: 'clamp(42px, 7.4vw, 82px)',
               lineHeight: 0.98,
@@ -227,10 +232,9 @@ function Hero({ mentors }: { mentors: Mentor[] }) {
             who already
             <br />
             <span style={{ color: LINK }}>did the thing.</span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            {...rise(0.14)}
+          <p
             style={{
               marginTop: 26,
               fontSize: 'clamp(16px, 1.9vw, 19px)',
@@ -241,7 +245,7 @@ function Hero({ mentors }: { mentors: Mentor[] }) {
           >
             Sip puts students in front of people working the jobs they want. Say what you&apos;re
             stuck on, see who can actually help, and have the conversation this week.
-          </motion.p>
+          </p>
         </div>
 
         <motion.aside
