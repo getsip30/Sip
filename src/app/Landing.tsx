@@ -7,9 +7,9 @@ import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion
 import { useRoles } from '@/hooks/useRoles';
 import PixelAvatar from '@/components/PixelAvatar';
 import Logo from '@/components/Logo';
-import Footer from '@/components/Footer';
-import Testimonials from '@/components/Testimonials';
 import dynamic from 'next/dynamic';
+import Reveal from '@/components/landing/Reveal';
+import { MAX_PAGE_WIDTH, GUTTER, mono, ArrowRight, Eyebrow, Rule } from '@/components/landing/shared';
 import { BG, SURFACE, TEXT, MUTED, ACCENT, LINK, SUCCESS2 } from '@/lib/theme';
 
 /**
@@ -48,57 +48,6 @@ type FeaturedNote = {
   mentorRole: string;
   mentorCompany: string;
 };
-
-const MAX_PAGE_WIDTH = 1180;
-const GUTTER = 'clamp(20px, 5vw, 56px)';
-
-const mono: React.CSSProperties = {
-  fontFamily: "var(--font-space-mono), 'Space Mono', monospace",
-  letterSpacing: '0.14em',
-  textTransform: 'uppercase',
-};
-
-function ArrowRight({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 12h15M13 5.5 19.5 12 13 18.5" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-/** Fades and lifts children the first time they enter the viewport. */
-function Reveal({
-  children,
-  delay = 0,
-  y = 22,
-  style,
-}: {
-  children: React.ReactNode;
-  delay?: number;
-  y?: number;
-  style?: React.CSSProperties;
-}) {
-  const reduced = useReducedMotion();
-  return (
-    <motion.div
-      initial={reduced ? false : { opacity: 0, y }}
-      whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-70px' }}
-      transition={{ duration: 0.6, delay, ease: [0.22, 0.61, 0.36, 1] }}
-      style={style}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function Eyebrow({ children, color = MUTED }: { children: React.ReactNode; color?: string }) {
-  return <div style={{ ...mono, fontSize: 11, color, marginBottom: 20 }}>{children}</div>;
-}
-
-function Rule() {
-  return <div style={{ height: 1, background: 'rgba(255,255,255,0.09)' }} />;
-}
 
 function Nav({
   isMentor,
@@ -342,24 +291,6 @@ function Hero({ mentors }: { mentors: Mentor[] }) {
   );
 }
 
-const STEPS = [
-  {
-    n: '01',
-    title: 'Say what you’re stuck on',
-    body: 'One sentence is enough. We read it against every mentor who is currently taking conversations, and rank who fits.',
-  },
-  {
-    n: '02',
-    title: 'See who can actually help',
-    body: 'Real job, real company, and the specific topics they agreed to talk about. Profiles are short on purpose, so you can tell quickly.',
-  },
-  {
-    n: '03',
-    title: 'Have the conversation',
-    body: 'Join a live room and take your place in the queue, or book a time that suits you both. Most first sips happen within the week.',
-  },
-];
-
 /**
  * The landing page's primary conversion path: a full-width section, at the same
  * visual weight as "How it works", whose only job is to open the quiz.
@@ -451,54 +382,6 @@ function QuizPrompt({ onStartQuiz }: { onStartQuiz: () => void }) {
           </div>
         </div>
       </Reveal>
-    </section>
-  );
-}
-
-function Steps() {
-  return (
-    <section
-      id="how-it-works"
-      style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}
-    >
-      <Reveal>
-        <Eyebrow>How it works</Eyebrow>
-        <h2
-          style={{
-            fontSize: 'clamp(30px, 4.4vw, 48px)',
-            lineHeight: 1.06,
-            letterSpacing: '-0.03em',
-            fontWeight: 700,
-            margin: '0 0 clamp(40px, 6vw, 72px)',
-            maxWidth: 620,
-          }}
-        >
-          Three steps, no cold outreach.
-        </h2>
-      </Reveal>
-
-      <div>
-        {STEPS.map((s, i) => (
-          <Reveal key={s.n} delay={i * 0.07}>
-            <div className="step-row">
-              <div style={{ ...mono, fontSize: 12, color: LINK, paddingTop: 5 }}>{s.n}</div>
-              <h3
-                style={{
-                  fontSize: 'clamp(20px, 2.5vw, 27px)',
-                  fontWeight: 600,
-                  letterSpacing: '-0.02em',
-                  margin: 0,
-                  lineHeight: 1.22,
-                }}
-              >
-                {s.title}
-              </h3>
-              <p style={{ fontSize: 15.5, lineHeight: 1.68, color: MUTED, margin: 0, maxWidth: 460 }}>{s.body}</p>
-            </div>
-            <Rule />
-          </Reveal>
-        ))}
-      </div>
     </section>
   );
 }
@@ -791,59 +674,17 @@ function FinalCta({ signedIn, authResolved }: { signedIn: boolean; authResolved:
   );
 }
 
-/**
- * Common questions, rendered as real content.
- *
- * The landing page previously had no answer to any qualifying question a
- * visitor arrives with — most importantly "is this free", which is asked in
- * search constantly and which the page never once said. It also gave the site
- * almost no indexable body text: the hero and three step titles are headline
- * copy, not the kind of prose that can match a query.
- *
- * The list is owned by page.tsx (the server component) and passed down, so the
- * same strings feed the FAQPage structured data and what a person reads. They
- * cannot drift apart, which is both a Google requirement and the only way this
- * stays honest.
- */
-function Faq({ items }: { items: { q: string; a: string }[] }) {
-  return (
-    <section
-      id="faq"
-      aria-labelledby="faq-heading"
-      style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}
-    >
-      <Reveal>
-        <Eyebrow>Common questions</Eyebrow>
-        <h2
-          id="faq-heading"
-          style={{
-            fontSize: 'clamp(30px, 4.4vw, 48px)',
-            lineHeight: 1.06,
-            letterSpacing: '-0.03em',
-            fontWeight: 700,
-            margin: '0 0 clamp(40px, 6vw, 64px)',
-            maxWidth: 620,
-          }}
-        >
-          Before you sign up.
-        </h2>
-      </Reveal>
-
-      <div className="faq-grid">
-        {items.map((item, i) => (
-          <Reveal key={item.q} delay={Math.min(i, 3) * 0.05}>
-            <h3 style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em', margin: '0 0 10px' }}>
-              {item.q}
-            </h3>
-            <p style={{ fontSize: 15, lineHeight: 1.7, color: MUTED, margin: 0 }}>{item.a}</p>
-          </Reveal>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[] }) {
+export default function Landing({
+  testimonials,
+  steps,
+  faqSection,
+  footer,
+}: {
+  testimonials: React.ReactNode;
+  steps: React.ReactNode;
+  faqSection: React.ReactNode;
+  footer: React.ReactNode;
+}) {
   const { user, isLoaded } = useUser();
   const { isMentor, isSeeker, loaded: rolesLoaded } = useRoles();
 
@@ -916,15 +757,15 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
         ) : isLoaded ? null : (
           <QuizPromptReserve />
         )}
-        <Testimonials />
-        <Steps />
+        {testimonials}
+        {steps}
         <MentorGrid mentors={mentors} loaded={mentorsLoaded} />
         <Proof notes={notes} mentorCount={mentors.length} loaded={mentorsLoaded && notesLoaded} />
-        <Faq items={faq} />
+        {faqSection}
         <FinalCta signedIn={!!user} authResolved={isLoaded} />
       </main>
 
-      <Footer />
+      {footer}
 
       {/*
         Signed-out visitors only. MentorQuiz enforces this itself as well; the
@@ -1037,14 +878,6 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           gap: 24px;
           margin-bottom: clamp(36px, 5vw, 58px);
         }
-        .step-row {
-          display: grid;
-          grid-template-columns: 46px minmax(0, 1fr);
-          gap: 8px 20px;
-          padding: clamp(26px, 3.4vw, 38px) 0;
-        }
-        .step-row h3 { grid-column: 2; }
-        .step-row p { grid-column: 2; }
         .mentor-grid {
           display: grid;
           grid-template-columns: minmax(0, 1fr);
@@ -1112,22 +945,13 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           transition: border-color 200ms ease;
         }
         .cta-secondary:hover { border-color: rgba(255,255,255,0.34); }
-        .faq-grid {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr);
-          gap: clamp(28px, 4vw, 40px) clamp(32px, 5vw, 56px);
-        }
         .text-link { transition: color 180ms ease; }
         .text-link:hover { color: ${LINK}; }
 
         @media (min-width: 720px) {
-          .faq-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .mentor-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .mentor-card-lead { grid-column: span 2; }
           .proof-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-          .step-row { grid-template-columns: 92px minmax(0, 320px) minmax(0, 1fr); align-items: start; }
-          .step-row h3 { grid-column: 2; }
-          .step-row p { grid-column: 3; }
         }
         @media (min-width: 980px) {
           .hero-grid { grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.85fr); }
