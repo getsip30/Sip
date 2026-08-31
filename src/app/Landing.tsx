@@ -9,8 +9,22 @@ import PixelAvatar from '@/components/PixelAvatar';
 import Logo from '@/components/Logo';
 import Footer from '@/components/Footer';
 import Testimonials from '@/components/Testimonials';
-import MentorQuiz from '@/components/MentorQuiz';
+import dynamic from 'next/dynamic';
 import { BG, SURFACE, TEXT, MUTED, ACCENT, LINK, SUCCESS2 } from '@/lib/theme';
+
+/**
+ * MentorQuiz was a static import of an 847-line modal that renders only after
+ * a click, and only for a visitor who turns out to be signed out. Bundled
+ * eagerly, its code — plus the lucide icons and AnimatePresence it pulls in —
+ * shipped and parsed in the homepage's entry chunk for every visitor whether
+ * or not they ever open it.
+ *
+ * `ssr: false` because the component has nothing to contribute server-side: it
+ * returns null until `open` is true, `open` starts false, and by the time a
+ * visitor could have clicked "Find a match" the page has long since hydrated.
+ * There is no content here for a crawler or a slow connection to miss.
+ */
+const MentorQuiz = dynamic(() => import('@/components/MentorQuiz'), { ssr: false });
 
 type Mentor = {
   id: string;
