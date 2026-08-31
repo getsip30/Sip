@@ -367,6 +367,30 @@ const STEPS = [
  * blur: that treatment belongs to the quiz modal, and using it in two places
  * would stop it meaning "something is on top of the page".
  */
+/**
+ * Holds the quiz section's space while Clerk is still resolving the session.
+ *
+ * The prompt is present in the statically rendered HTML — with no request to
+ * read, Clerk resolves to signed-out at build time — but on the client the
+ * first render has isLoaded false, so the section unmounted and then remounted
+ * a beat later when the session arrived. Everything below it moved twice.
+ *
+ * Reserving rather than simply leaving the prompt mounted keeps the rule the
+ * section already had: a signed-in visitor never sees quiz copy, not even for
+ * one frame. They get an empty box that collapses instead, which is one shift
+ * for them and none for the signed-out visitor this page is mostly for.
+ *
+ * The padding clamps are copied from .quiz-prompt so only the inner content
+ * height is estimated, in .quiz-prompt-reserve::before.
+ */
+function QuizPromptReserve() {
+  return (
+    <section style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}>
+      <div className="quiz-prompt-reserve" aria-hidden="true" />
+    </section>
+  );
+}
+
 function QuizPrompt({ onStartQuiz }: { onStartQuiz: () => void }) {
   return (
     <section style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}>
@@ -465,8 +489,33 @@ function Steps() {
   );
 }
 
-function MentorGrid({ mentors }: { mentors: Mentor[] }) {
-  if (mentors.length === 0) return null;
+/**
+ * Placeholder occupying one card's worth of grid while the mentor fetch is in
+ * flight. The heights are estimates of the real cards below — a plain card is
+ * an avatar row plus a topic chip row, the lead card adds a bio paragraph —
+ * chosen so the grid does not resize when the data lands. They are the one
+ * approximate thing here; if the card design changes, these move with it.
+ */
+function MentorCardSkeleton({ lead = false }: { lead?: boolean }) {
+  return <div className={`mentor-card mentor-card-skeleton${lead ? ' mentor-card-lead' : ''}`} aria-hidden="true" />;
+}
+
+/**
+ * `loaded` distinguishes "the fetch has not answered yet" from "there is
+ * genuinely nobody open", which an empty array alone cannot.
+ *
+ * The section used to return null for both, so on every load it was absent
+ * from the server-rendered HTML and then inserted — heading, and five cards —
+ * once /api/mentor answered, shoving everything below it down the page. Now
+ * the heading is in the static HTML (it is true regardless of who is open) and
+ * the cards are stood in for until the real ones arrive.
+ *
+ * Nobody open is still a hidden section rather than an empty grid, and that
+ * case does still shift. It is the rare one, and the alternative is a heading
+ * promising mentors above an empty box.
+ */
+function MentorGrid({ mentors, loaded }: { mentors: Mentor[]; loaded: boolean }) {
+  if (loaded && mentors.length === 0) return null;
   const featured = mentors.slice(0, 5);
 
   return (
@@ -495,6 +544,8 @@ function MentorGrid({ mentors }: { mentors: Mentor[] }) {
       </Reveal>
 
       <div className="mentor-grid">
+        {!loaded &&
+          Array.from({ length: 5 }, (_, i) => <MentorCardSkeleton key={`skeleton-${i}`} lead={i === 0} />)}
         {featured.map((m, i) => {
           const topics = m.topics
             .split(',')
@@ -575,9 +626,22 @@ function MentorGrid({ mentors }: { mentors: Mentor[] }) {
   );
 }
 
-function Proof({ notes, mentorCount }: { notes: FeaturedNote[]; mentorCount: number }) {
+/**
+ * Two layouts behind one section: a pull-quote when mentors have approved notes
+ * to show, and a bare mentor count when they have not.
+ *
+ * While the fetches are outstanding this renders the count layout with the
+ * number itself held blank, rather than rendering nothing. Before, the whole
+ * section appeared from nowhere once /api/sip-notes/featured answered. The
+ * count layout is the one production is actually in — there are no approved
+ * notes today — so reserving that shape is reserving the right shape almost
+ * always. A site that does have notes still shifts once when they arrive,
+ * because the quote layout is genuinely taller and there is no honest way to
+ * reserve for a branch we cannot know yet.
+ */
+function Proof({ notes, mentorCount, loaded }: { notes: FeaturedNote[]; mentorCount: number; loaded: boolean }) {
   if (notes.length === 0) {
-    if (mentorCount === 0) return null;
+    if (loaded && mentorCount === 0) return null;
     return (
       <section style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}>
         <Reveal>
@@ -586,7 +650,10 @@ function Proof({ notes, mentorCount }: { notes: FeaturedNote[]; mentorCount: num
             <div>
               <div style={{ ...mono, fontSize: 11, color: MUTED, marginBottom: 12 }}>Mentors listed</div>
               <div style={{ fontSize: 'clamp(38px, 6vw, 60px)', fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1 }}>
-                {mentorCount}
+                {/* Non-breaking space, not an empty string: the number's line
+                    box has to exist at its full height before the count lands,
+                    or reserving the row buys nothing. */}
+                {loaded ? mentorCount : '\u00A0'}
               </div>
             </div>
             <p style={{ fontSize: 16, lineHeight: 1.65, color: MUTED, margin: 0, maxWidth: 420 }}>
@@ -767,7 +834,9 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
   const { isMentor, isSeeker, loaded: rolesLoaded } = useRoles();
 
   const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [mentorsLoaded, setMentorsLoaded] = useState(false);
   const [notes, setNotes] = useState<FeaturedNote[]>([]);
+  const [notesLoaded, setNotesLoaded] = useState(false);
   const [quizRequested, setQuizRequested] = useState(false);
 
   /**
@@ -785,19 +854,28 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
   useEffect(() => {
     let cancelled = false;
 
+    // Both `loaded` flags are set in .finally rather than .then: a failed fetch
+    // has to release the reserved space too, or a mentor list that 500s leaves
+    // skeleton cards on the page forever.
     fetch('/api/mentor?all=true')
       .then((r) => (r.ok ? r.json() : []))
       .then((data: Mentor[]) => {
         if (!cancelled) setMentors(Array.isArray(data) ? data : []);
       })
-      .catch((err) => console.error('landing: mentor fetch failed', err));
+      .catch((err) => console.error('landing: mentor fetch failed', err))
+      .finally(() => {
+        if (!cancelled) setMentorsLoaded(true);
+      });
 
     fetch('/api/sip-notes/featured')
       .then((r) => (r.ok ? r.json() : []))
       .then((data: FeaturedNote[]) => {
         if (!cancelled) setNotes(Array.isArray(data) ? data : []);
       })
-      .catch((err) => console.error('landing: notes fetch failed', err));
+      .catch((err) => console.error('landing: notes fetch failed', err))
+      .finally(() => {
+        if (!cancelled) setNotesLoaded(true);
+      });
 
     return () => {
       cancelled = true;
@@ -819,11 +897,15 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           this block a beat after first paint; the benefit is that signed-in
           visitors never get it at all, not even for a frame.
         */}
-        {canQuiz && <QuizPrompt onStartQuiz={() => setQuizRequested(true)} />}
+        {canQuiz ? (
+          <QuizPrompt onStartQuiz={() => setQuizRequested(true)} />
+        ) : isLoaded ? null : (
+          <QuizPromptReserve />
+        )}
         <Testimonials />
         <Steps />
-        <MentorGrid mentors={mentors} />
-        <Proof notes={notes} mentorCount={mentors.length} />
+        <MentorGrid mentors={mentors} loaded={mentorsLoaded} />
+        <Proof notes={notes} mentorCount={mentors.length} loaded={mentorsLoaded && notesLoaded} />
         <Faq items={faq} />
         <FinalCta signedIn={!!user} authResolved={isLoaded} />
       </main>
@@ -853,6 +935,20 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           border-radius: 24px;
           background: ${SURFACE};
           padding: clamp(48px, 8vw, 88px) clamp(24px, 5vw, 64px);
+        }
+        /* Same padding clamps as .quiz-prompt above, so the only estimate is
+           the inner content height below. */
+        .quiz-prompt-reserve {
+          border: 1px solid transparent;
+          border-radius: 24px;
+          padding: clamp(48px, 8vw, 88px) clamp(24px, 5vw, 64px);
+        }
+        .quiz-prompt-reserve::before {
+          content: '';
+          display: block;
+          /* Eyebrow, two-line heading, one line of copy, the button, and the
+             small print under it, at the sizes .quiz-prompt renders them. */
+          height: clamp(247px, 30vw, 293px);
         }
         .quiz-prompt-glow {
           position: absolute;
@@ -949,6 +1045,13 @@ export default function Landing({ faq = [] }: { faq?: { q: string; a: string }[]
           padding: 22px;
           background: ${SURFACE};
           transition: border-color 220ms ease, transform 220ms ease;
+        }
+        /* Stand-ins for cards still being fetched. See MentorCardSkeleton. */
+        .mentor-card-skeleton {
+          min-height: 152px;
+        }
+        .mentor-card-skeleton.mentor-card-lead {
+          min-height: 232px;
         }
         .mentor-card:hover {
           border-color: rgba(112,181,249,0.4);
