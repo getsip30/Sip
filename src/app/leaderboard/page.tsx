@@ -39,7 +39,7 @@ export default function Leaderboard() {
 
       {/* NAV */}
       <motion.nav initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4 }}
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        style={{ position: 'fixed', top: 'var(--announcement-h, 0px)', left: 0, right: 0, zIndex: 100, padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <Logo />
         <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           {rolesLoaded && isMentor && <Link href="/dashboard" style={{ color: MUTED, textDecoration: 'none', fontSize: 14 }}>mentor dashboard</Link>}
@@ -47,7 +47,7 @@ export default function Leaderboard() {
         </div>
       </motion.nav>
 
-      <div id="main-content" style={{ maxWidth: 800, margin: '0 auto', padding: '90px 16px 60px' }}>
+      <div id="main-content" style={{ maxWidth: 800, margin: '0 auto', padding: 'calc(90px + var(--announcement-h, 0px)) 16px 60px' }}>
 
         {/* HEADER */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ marginBottom: 56, textAlign: 'center' }}>

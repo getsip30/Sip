@@ -4,6 +4,7 @@ import { FeedbackWidget } from '@/components/feedback-widget';
 import { Analytics } from '@vercel/analytics/next';
 
 import { ClerkThemeBridge } from '@/components/clerk-theme-bridge';
+import DiscordMarquee from '@/components/DiscordMarquee';
 import { jsonLdScript } from '@/lib/utils';
 import {
   SITE_URL,
@@ -140,6 +141,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(siteJsonLd) }} />
+        {/*
+         * Runs synchronously, before the marquee below has anything to paint,
+         * so a visitor who already dismissed it this session (or is inside a
+         * live call room) never sees it flash in only to be hidden a moment
+         * later. Mirrors the dismissal key DiscordMarquee itself writes.
+         */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var d=sessionStorage.getItem('sip:discord-marquee-dismissed')==='1';var e=location.pathname.indexOf('/rooms/')===0;if(d||e){document.documentElement.classList.add('announcement-dismissed');}}catch(err){}})();`,
+          }}
+        />
+        <DiscordMarquee />
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <ClerkThemeBridge>
           {children}

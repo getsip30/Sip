@@ -19,6 +19,14 @@
   --clay: #b4643a;
   --scrollbar-thumb: rgba(255,255,255,0.15);
   --scrollbar-thumb-hover: rgba(255,255,255,0.25);
+  --announcement-h: 36px;
+}
+
+/* Set on <html> by the inline script in RootLayout (before hydration) and by
+   DiscordMarquee itself (on dismiss). Every fixed header across the app reads
+   --announcement-h to sit below the strip instead of under it. */
+html.announcement-dismissed {
+  --announcement-h: 0px;
 }
 
 
@@ -64,7 +72,7 @@ input, textarea, button, select {
 .page-shell {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 90px 16px 60px;
+  padding: calc(90px + var(--announcement-h, 0px)) 16px 60px;
 }
 
 /* A main column with a rail of at-a-glance cards beside it. One column until
@@ -81,7 +89,7 @@ input, textarea, button, select {
   .page-split { grid-template-columns: minmax(0, 1fr) 330px; }
   /* The rail is reference material, so it stays put while the main column,
      which is the long one, scrolls past it. */
-  .page-rail { position: sticky; top: 92px; }
+  .page-rail { position: sticky; top: calc(92px + var(--announcement-h, 0px)); }
 }
 
 /* Footer columns. The brand column takes the extra room so the two link columns
@@ -247,4 +255,96 @@ button:disabled {
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(24px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Discord announcement marquee ---------------------------------------------
+   Fixed above every page's own header/nav (see --announcement-h, which those
+   headers use to offset their `top`). Height is a static 36px on every
+   breakpoint rather than something that reflows with font size, because
+   --announcement-h has to match it exactly for the offset math above to hold. */
+html.announcement-dismissed .discord-marquee {
+  display: none;
+}
+
+.discord-marquee {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 110;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(90deg, var(--accent), #4338ca);
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+.discord-marquee__track {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  height: 100%;
+  align-items: center;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 40px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 40px), transparent 100%);
+}
+
+.discord-marquee__copy {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding-right: 24px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+  animation: discord-marquee-scroll 26s linear infinite;
+}
+
+@keyframes discord-marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+.discord-marquee:hover .discord-marquee__copy,
+.discord-marquee:focus-within .discord-marquee__copy {
+  animation-play-state: paused;
+}
+
+.discord-marquee__close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(255,255,255,0.16);
+  color: rgba(255,255,255,0.85);
+}
+
+.discord-marquee__close:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+@media (max-width: 639px) {
+  .discord-marquee__copy {
+    font-size: 11px;
+  }
 }
