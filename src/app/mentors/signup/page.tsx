@@ -43,12 +43,12 @@ export default function MentorSignupPage() {
         initial={{ y: -60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4 }}
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        style={{ position: 'fixed', top: 'var(--announcement-h, 0px)', left: 0, right: 0, zIndex: 100, padding: '0 16px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <Logo />
         <Link href="/dashboard" style={{ color: MUTED, textDecoration: 'none', fontSize: 14 }}>← back to dashboard</Link>
       </motion.nav>
 
-      <main id="main-content" style={{ maxWidth: 860, margin: '0 auto', padding: '90px 16px 60px' }}>
+      <main id="main-content" style={{ maxWidth: 860, margin: '0 auto', padding: 'calc(90px + var(--announcement-h, 0px)) 16px 60px' }}>
         <div style={{ marginBottom: 48 }}>
           <div
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(112,181,249,0.08)', border: '1px solid rgba(112,181,249,0.2)', padding: '6px 16px', borderRadius: 20, fontSize: 12, color: LINK, marginBottom: 20, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>

@@ -414,7 +414,7 @@ function SeekersContent() {
     <div style={{ fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif", background: BG, minHeight: '100vh', color: TEXT }}>
 
       <motion.nav initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4 }}
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 40px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        style={{ position: 'fixed', top: 'var(--announcement-h, 0px)', left: 0, right: 0, zIndex: 100, padding: '0 40px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,14,22,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <Logo />
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', overflowX: 'auto', flexWrap: 'nowrap', maxWidth: '65vw', scrollbarWidth: 'none' }}>
           <button onClick={() => setShowTour(true)} style={{ background: 'none', color: MUTED, fontSize: 13, flexShrink: 0, whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit' }}>how sip works</button>
@@ -427,7 +427,7 @@ function SeekersContent() {
         </div>
       </motion.nav>
 
-      <div id="main-content" style={{ maxWidth: 1280, margin: '0 auto', padding: '90px 16px 20px' }}>
+      <div id="main-content" style={{ maxWidth: 1280, margin: '0 auto', padding: 'calc(90px + var(--announcement-h, 0px)) 16px 20px' }}>
         <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: -1.5, marginBottom: 20 }}>Find Your Sip</h1>
         {(() => {
           if (!seekerProfile) return null;
