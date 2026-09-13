@@ -8,7 +8,7 @@ import { useRoles } from '@/hooks/useRoles';
 import PixelAvatar from '@/components/PixelAvatar';
 import Logo from '@/components/Logo';
 import Reveal from '@/components/landing/Reveal';
-import { Section, Eyebrow, Rule, ArrowRight } from '@/components/landing/shared';
+import { Section, Eyebrow, Rule, ArrowRight, wideCardIndices } from '@/components/landing/shared';
 import styles from '@/components/landing/landing.module.css';
 
 /**
@@ -240,11 +240,22 @@ function QuizPrompt({ onStartQuiz }: { onStartQuiz: () => void }) {
   );
 }
 
+/**
+ * How many placeholder cards stand in while the mentor fetch is outstanding.
+ * It matches the number of cards the section renders once loaded, so the
+ * skeleton grid and the real grid pack into the same rows and nothing moves
+ * when the data lands.
+ */
+const SKELETON_COUNT = 5;
+const SKELETON_WIDE = wideCardIndices(SKELETON_COUNT);
+
 /** Placeholder occupying one card's worth of grid while the fetch is in flight. */
-function MentorCardSkeleton({ lead = false }: { lead?: boolean }) {
+function MentorCardSkeleton({ lead = false, wide = false }: { lead?: boolean; wide?: boolean }) {
   return (
     <div
-      className={`${styles.mentorCard} ${styles.mentorSkeleton}${lead ? ` ${styles.mentorSkeletonLead}` : ''}`}
+      className={`${styles.mentorCard} ${styles.mentorSkeleton}${lead ? ` ${styles.mentorSkeletonLead}` : ''}${
+        wide ? ` ${styles.spanWide}` : ''
+      }`}
       aria-hidden="true"
     />
   );
@@ -266,7 +277,15 @@ function MentorCardSkeleton({ lead = false }: { lead?: boolean }) {
  */
 function MentorGrid({ mentors, loaded }: { mentors: Mentor[]; loaded: boolean }) {
   if (loaded && mentors.length === 0) return null;
-  const featured = mentors.slice(0, 5);
+  const featured = mentors.slice(0, SKELETON_COUNT);
+  /*
+   * Which cards span two columns depends on how many there are — see
+   * wideCardIndices. The first card used to span unconditionally, which fills
+   * the grid at five mentors and leaves a hole at three or four. Spanning and
+   * featuring are separate questions: the lead card keeps its bigger avatar,
+   * bio and name whether or not it is one of the wide ones.
+   */
+  const wide = wideCardIndices(featured.length);
 
   return (
     <Section labelledBy="mentors-heading" tone="base">
@@ -286,9 +305,12 @@ function MentorGrid({ mentors, loaded }: { mentors: Mentor[]; loaded: boolean })
 
       <div className={styles.mentorGrid}>
         {!loaded &&
-          Array.from({ length: 5 }, (_, i) => <MentorCardSkeleton key={`skeleton-${i}`} lead={i === 0} />)}
+          Array.from({ length: SKELETON_COUNT }, (_, i) => (
+            <MentorCardSkeleton key={`skeleton-${i}`} lead={i === 0} wide={SKELETON_WIDE.has(i)} />
+          ))}
         {featured.map((m, i) => {
           const lead = i === 0;
+          const isWide = wide.has(i);
           const topics = m.topics
             .split(',')
             .map((t) => t.trim())
@@ -302,7 +324,7 @@ function MentorGrid({ mentors, loaded }: { mentors: Mentor[]; loaded: boolean })
               key={m.id}
               delay={Math.min(i, 3) * 0.06}
               style={{ display: 'flex' }}
-              className={lead ? styles.spanWide : undefined}
+              className={isWide ? styles.spanWide : undefined}
             >
               <Link href={`/mentors/${m.id}`} className={styles.mentorCard}>
                 <div className={styles.mentorIdentity}>

@@ -1,5 +1,5 @@
 import Reveal from '@/components/landing/Reveal';
-import { Section, Eyebrow } from '@/components/landing/shared';
+import { Section, Eyebrow, wideCardIndices } from '@/components/landing/shared';
 import styles from '@/components/landing/landing.module.css';
 
 type Testimonial = {
@@ -51,14 +51,18 @@ const TESTIMONIALS: Testimonial[] = [
   },
 ];
 
-/**
- * Cards 1 and 4 run double width, which fills a three-column grid exactly —
- * [1 1][2] / [3][4 4] — so the row is deliberately uneven with no empty cell
- * at the end. The wide ones also set their quote at display size.
- */
-const WIDE = new Set([0, 3]);
-
 export default function Testimonials() {
+  /*
+   * Which cards run double width is computed from how many there are, not
+   * hardcoded. It used to be `new Set([0, 3])`, which fills a three-column grid
+   * only while there are exactly four testimonials — adding a fifth would have
+   * left a hole in the last row with nothing to explain why. Add or remove
+   * quotes above freely; the grid stays flush. The wide cards also set their
+   * quote at display size, which is what keeps the row deliberately uneven
+   * rather than four identical boxes.
+   */
+  const wide = wideCardIndices(TESTIMONIALS.length);
+
   return (
     <Section labelledBy="testimonials-heading" tone="gradient">
       <Reveal>
@@ -72,7 +76,7 @@ export default function Testimonials() {
 
       <div className={styles.testimonialGrid}>
         {TESTIMONIALS.map((t, i) => {
-          const wide = WIDE.has(i);
+          const isWide = wide.has(i);
           return (
             // The span and the stretch both go on the wrapper: it is the grid
             // item, so neither works from the card inside it.
@@ -80,9 +84,9 @@ export default function Testimonials() {
               key={t.name}
               delay={i * 0.07}
               style={{ display: 'flex' }}
-              className={wide ? styles.spanWide : undefined}
+              className={isWide ? styles.spanWide : undefined}
             >
-              <figure className={`${styles.testimonialCard}${wide ? ` ${styles.testimonialWide}` : ''}`}>
+              <figure className={`${styles.testimonialCard}${isWide ? ` ${styles.testimonialWide}` : ''}`}>
                 <blockquote className={styles.testimonialQuote}>&ldquo;{t.quote}&rdquo;</blockquote>
                 <figcaption className={styles.testimonialMeta}>
                   <span className={styles.testimonialName}>{t.name}</span>

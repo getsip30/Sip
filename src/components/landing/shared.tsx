@@ -62,6 +62,45 @@ export function Rule() {
   return <div className={styles.rule} />;
 }
 
+/**
+ * Which cards in the three-column card grids should span two columns.
+ *
+ * A span-2 card cannot straddle a row boundary: if it does not fit in the
+ * columns left on the current row, the browser pushes it to the next one and
+ * leaves a visible hole behind it. So the spans have to divide the rows exactly,
+ * and that depends on how many cards there are — which is why hardcoding the
+ * positions (this was `new Set([0, 3])`, correct only for exactly four cards)
+ * breaks the moment somebody adds or removes one.
+ *
+ * Every row is either [2,1] or [1,1,1], so `count + wide` has to be a multiple
+ * of three. This takes the smallest number of wide cards that satisfies that,
+ * and places them at 0, 2, 4… — the start of each [2,1] row, each consuming two
+ * cards — so the wide rows are laid before the even ones and the grid always
+ * ends flush.
+ *
+ *   3 or 6 cards -> none wide, plain rows
+ *   4 cards      -> 0 and 2 wide  ([2,1] [2,1])
+ *   5 cards      -> 0 wide        ([2,1] [1,1,1])
+ *   7 cards      -> 0 and 2 wide  ([2,1] [2,1] [1,1,1])
+ *
+ * One card is the exception: it would need two wide cards to fill a row and
+ * there is only one, so it is left alone in a short row. That is a gap the
+ * grid cannot avoid, not a broken layout.
+ *
+ * Hardcoded to three columns because the [2,1] row shape is what makes the
+ * arithmetic work; a four-column grid would need different packing. The spans
+ * themselves only exist above 980px (see .spanWide), so narrower layouts are
+ * unaffected either way.
+ */
+export function wideCardIndices(count: number): Set<number> {
+  const remainder = count % 3;
+  const needed = remainder === 0 ? 0 : 3 - remainder;
+  const wide = Math.min(needed, Math.floor(count / 2));
+  const indices = new Set<number>();
+  for (let i = 0; i < wide; i++) indices.add(i * 2);
+  return indices;
+}
+
 export function ArrowRight({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
