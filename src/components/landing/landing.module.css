@@ -1,0 +1,949 @@
+/*
+ * The landing page's design system, in one file.
+ *
+ * Imported by Landing.tsx (client) and by Steps/Faq/Testimonials (server).
+ * Nothing here depends on which it is.
+ *
+ * Two things in here are load-bearing rather than decorative, and both have a
+ * note at the rule itself: .heroTitle must never be given an enter animation
+ * (it is the LCP element), and .quizReserve holds the quiz band's space while
+ * Clerk resolves the session.
+ *
+ * A note on :first-of-type — do not use it on anything inside a <Reveal>. Every
+ * revealed row is alone inside its own wrapper div, so each one is a
+ * first-of-type in its own parent and the selector silently matches all of
+ * them. The timeline below draws its connecting line on the container for
+ * exactly this reason.
+ */
+
+.page {
+  --gutter: clamp(20px, 5vw, 56px);
+  --measure: 1180px;
+  /* A small, deliberate scale applied by role, not one value on everything:
+     tags 2px, cards 4px, and 14px reserved for the one floating panel (the
+     live-calls rail), which is meant to read as a distinct object. */
+  --card-radius: 4px;
+  --panel-radius: 14px;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ------------------------------------------------------------------- tones */
+
+/*
+ * Sections alternate between three tones so scrolling reads as distinct zones
+ * rather than one uniform sheet. All three are the same near-black the palette
+ * already defines — a tonal step, not a second colour. The tone has to sit on a
+ * full-bleed wrapper: put it on the centred 1180px column instead and the tint
+ * stops at the column's edges, which looks like a mistake at any width.
+ */
+.sectionOuter {
+  width: 100%;
+}
+
+.toneBase {
+  background: var(--bg);
+}
+
+.toneRaised {
+  background: #0d121c;
+}
+
+.toneGradient {
+  background: linear-gradient(180deg, #0c111a 0%, var(--bg) 100%);
+}
+
+.sectionInner {
+  max-width: var(--measure, 1180px);
+  margin: 0 auto;
+  /* Roughly a third more air than the previous pass, which is the pacing the
+     brief asks for: each zone gets close to a screen of its own. */
+  padding: clamp(100px, 15vh, 180px) var(--gutter, clamp(20px, 5vw, 56px));
+}
+
+/* -------------------------------------------------------------- primitives */
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 26px;
+}
+
+/* A short accent rule leading into the label. The page's one piece of
+   ornament, and it earns its place by marking where every section starts. */
+.eyebrow::before {
+  content: '';
+  width: 24px;
+  height: 1px;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+/*
+ * Headlines are set much larger and tighter than the body copy they sit above,
+ * and the gap between the two is the point: the hierarchy should be obvious
+ * from across the room, not inferred from a few pixels of difference.
+ */
+.headline {
+  font-size: clamp(38px, 6.4vw, 76px);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  font-weight: 700;
+  margin: 0;
+  max-width: 760px;
+  text-wrap: balance;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: clamp(52px, 7vw, 88px);
+}
+
+.headLink {
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--link);
+  text-decoration: none;
+  white-space: nowrap;
+  padding-bottom: 4px;
+  border-bottom: 1px solid transparent;
+  transition: border-color 180ms ease;
+}
+
+.headLink:hover {
+  border-bottom-color: var(--link);
+}
+
+.rule {
+  height: 1px;
+  background: var(--border);
+}
+
+/* -------------------------------------------------------------------- nav */
+
+.nav {
+  position: fixed;
+  top: var(--announcement-h, 0px);
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background 260ms ease, border-color 260ms ease;
+}
+
+.navScrolled {
+  background: rgba(10, 14, 22, 0.92);
+  border-bottom-color: var(--border);
+}
+
+.navInner {
+  max-width: var(--measure, 1180px);
+  margin: 0 auto;
+  padding: 0 var(--gutter, clamp(20px, 5vw, 56px));
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 3vw, 30px);
+}
+
+.navLink {
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.navLink:hover {
+  color: var(--text);
+}
+
+.navCta {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--card-radius, 4px);
+  padding: 9px 18px;
+  white-space: nowrap;
+  transition: border-color 180ms ease;
+}
+
+.navCta:hover {
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+/* ------------------------------------------------------------------- hero */
+
+.hero {
+  max-width: var(--measure, 1180px);
+  margin: 0 auto;
+  padding: clamp(140px, 21vh, 232px) var(--gutter, clamp(20px, 5vw, 56px)) clamp(80px, 12vh, 140px);
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(52px, 7vw, 84px);
+  align-items: start;
+}
+
+/*
+ * The h1 does not animate, and must not be given an enter animation.
+ *
+ * It is this page's LCP element. framer-motion serializes `initial` into the
+ * server-rendered HTML, so an opacity-0 start shipped in the markup and the
+ * largest contentful paint could not happen until JS had downloaded, hydrated
+ * and run the animation — measured at 12.9s LCP against a 1.8s FCP. A CSS fade
+ * holds the element at 0 just the same. The fix is no animation, not a
+ * different one.
+ */
+.heroTitle {
+  font-size: clamp(48px, 9vw, 108px);
+  line-height: 0.88;
+  letter-spacing: -0.052em;
+  font-weight: 700;
+  margin: 0;
+}
+
+.heroTitleMuted {
+  color: var(--link);
+}
+
+/* Deliberately small and muted against a 108px headline. The drop in both size
+   and contrast is what makes the headline land. */
+.heroLede {
+  margin-top: 30px;
+  font-size: clamp(14.5px, 1.5vw, 16.5px);
+  line-height: 1.7;
+  color: var(--muted);
+  max-width: 430px;
+}
+
+/*
+ * Who is open right now, as a distinct floating panel rather than a bare list.
+ *
+ * It sits beside the headline, so it needs to read as its own object: a darker
+ * ground than the section behind it, a pronounced radius against the 4px used
+ * on cards, a hairline top highlight for the inner-shadow effect, and a soft
+ * drop shadow to lift it off the page.
+ */
+.rail {
+  background: #10161f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--panel-radius, 14px);
+  padding: 22px 24px 8px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 24px 56px -28px rgba(0, 0, 0, 0.8);
+}
+
+.railStatus {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 14px;
+}
+
+.railDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success2);
+  flex-shrink: 0;
+}
+
+.railDotIdle {
+  background: var(--muted);
+}
+
+.railLabel {
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.railRow {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 180ms ease;
+}
+
+.railRow:hover {
+  opacity: 0.62;
+}
+
+.railName {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.railMeta {
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.railEmpty {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.65;
+  padding: 4px 0 18px;
+}
+
+/* -------------------------------------------------------------- quiz band */
+
+/*
+ * The mentor-match CTA: a centred panel held in from the column's edges.
+ *
+ * The gradient is a wash of the near-black the palette already uses — lighter
+ * toward the top centre, darker at the edges — so the card lifts off the
+ * section without introducing a colour. Deliberately not the two blurred,
+ * saturated circles this design replaced; the lift here comes from the tone
+ * falling off toward the border, which is why the radial sits over a vertical
+ * gradient rather than on its own.
+ */
+.quizCard {
+  max-width: 940px;
+  margin: 0 auto;
+  /* Vertical padding is deliberately much tighter than the horizontal. The card
+     should hug its five elements; 76px top and bottom left it floating them in
+     a column of empty space nearly a screen tall. */
+  padding: clamp(34px, 3.4vw, 48px) clamp(28px, 5vw, 64px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  text-align: center;
+  background:
+    radial-gradient(120% 130% at 50% 0%, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, #141b26 0%, #0d121b 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 30px 70px -34px rgba(0, 0, 0, 0.85);
+}
+
+/* The eyebrow is a flex row (its leading rule is a ::before), so centring the
+   card's text is not enough to centre it. */
+.quizCard .eyebrow {
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+/* Wide enough that each sentence of the headline sets on one line at this
+   card's width. The 560px cap was the real reason the card was so tall: it
+   broke a two-sentence headline across four lines inside a 780px card. */
+.quizCopy {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.quizTitle {
+  /* Smaller than the section headlines around it, so each sentence fits one
+     line at the card's width instead of wrapping into a tall block. */
+  font-size: clamp(30px, 4vw, 50px);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  margin: 0 0 14px;
+}
+
+.quizTitleMuted {
+  color: var(--link);
+}
+
+.quizSub {
+  font-size: clamp(14px, 1.4vw, 15.5px);
+  line-height: 1.7;
+  color: var(--muted);
+  margin: 0;
+}
+
+.quizAction {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: clamp(20px, 2.4vw, 28px);
+}
+
+.quizFinePrint {
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+}
+
+/*
+ * Holds the quiz band's space while Clerk is still resolving the session.
+ *
+ * The prompt is in the statically rendered HTML (no request to read at build
+ * time means Clerk resolves to signed-out), but on the client the first render
+ * has isLoaded false, so the section unmounted and remounted a beat later and
+ * everything below it moved twice. A signed-in visitor still never sees quiz
+ * copy, not even for a frame — they get this empty box, which collapses.
+ *
+ * Same width, radius and padding as .quizCard, so the only estimate is the
+ * content height below.
+ */
+.quizReserve {
+  max-width: 940px;
+  margin: 0 auto;
+  border: 1px solid transparent;
+  border-radius: 22px;
+  padding: clamp(34px, 3.4vw, 48px) clamp(28px, 5vw, 64px);
+}
+
+.quizReserve::before {
+  content: '';
+  display: block;
+  /* Eyebrow, heading, one line of copy, the button and the small print under
+     it — stacked, at the sizes .quizCard renders them.
+     Measured, not guessed: the card's content box is 298px at 390px wide,
+     where the heading takes four lines, and 288px at 1440px, where it takes
+     two — one per sentence. So it is nearly flat across the range and slightly
+     taller at the narrow end, which is what this interpolates. The ceiling
+     leaves room for the widths where the heading sits at three lines. */
+  height: clamp(288px, calc(302px - 0.95vw), 302px);
+}
+
+/* ------------------------------------------------------------------ steps */
+
+/*
+ * "How it works" as a timeline: one connecting line down the left, a filled dot
+ * marking each step.
+ *
+ * The line is drawn on this container, not per row, because each row sits
+ * inside its own <Reveal> wrapper — so :first-of-type / :last-of-type would
+ * match every row, and a per-row border cannot know it is the last one. Insets
+ * pull the line in to start and stop at the first and last dots.
+ */
+.timeline {
+  position: relative;
+}
+
+/*
+ * The connecting line is drawn per row, not once down the container.
+ *
+ * A single line on .timeline cannot know where the first and last dots are: the
+ * last row's title and body extend well below its dot, so any fixed bottom
+ * inset either stops short or overshoots — it visibly overshot by about 60px.
+ * Each row now carries a full-height segment, and adjacent rows have no gap
+ * between them, so the segments join into one continuous line. The first row's
+ * segment starts at its dot and the last row's stops at its, which is what
+ * makes the line begin and end exactly on a dot at any width.
+ */
+.stepRow {
+  --step-pad: clamp(40px, 5vw, 72px);
+  /* Padding above the row plus half the marker's height. The marker is a flex
+     row, so its height is the numeral's, and half of that lands on the dot. */
+  --dot-center: calc(var(--step-pad) + 12px);
+  position: relative;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px 20px;
+  /* More room per step than a plain list needs; the timeline only reads as one
+     if the stops on it are far enough apart. */
+  padding: var(--step-pad) 0;
+  align-items: start;
+}
+
+.stepRow::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.stepFirst::before {
+  top: var(--dot-center);
+}
+
+.stepLast::before {
+  bottom: calc(100% - var(--dot-center));
+}
+
+/* Dot and numeral in one flex row, so the dot is centred on the numeral
+   without hard-coding a top offset that every font-size change would break.
+   margin-left puts its centre on the line at left: 10px. */
+.stepMarker {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.stepDot {
+  width: 11px;
+  height: 11px;
+  margin-left: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  /* The ring punches the connecting line out from behind the dot, so it must
+     match the section's tone — which is why the steps section is toneBase. */
+  box-shadow:
+    0 0 0 5px var(--bg),
+    0 0 14px rgba(37, 99, 235, 0.55);
+}
+
+.stepNum {
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: clamp(18px, 2.2vw, 24px);
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.28);
+  letter-spacing: -0.02em;
+}
+
+.stepTitle {
+  grid-column: 2;
+  font-size: clamp(22px, 3vw, 34px);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  margin: 0;
+}
+
+.stepBody {
+  grid-column: 2;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--muted);
+  margin: 0;
+  max-width: 440px;
+}
+
+/* ----------------------------------------------------------- testimonials */
+
+.testimonialGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.testimonialCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius, 4px);
+  padding: clamp(28px, 3vw, 38px);
+  transition: border-color 220ms ease, background 220ms ease, box-shadow 220ms ease;
+}
+
+/*
+ * Hover is a border glow and a tone lift, with no transform. The lift-and-grow
+ * on every card is the most commonly named giveaway of a generated page, and it
+ * also fights the reveal animation the card enters with.
+ */
+.testimonialCard:hover {
+  border-color: rgba(112, 181, 249, 0.4);
+  background: #182231;
+  box-shadow:
+    0 0 0 1px rgba(112, 181, 249, 0.14),
+    0 22px 48px -28px rgba(37, 99, 235, 0.5);
+}
+
+.testimonialQuote {
+  font-size: 14.5px;
+  line-height: 1.72;
+  color: var(--text);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+/* The wide cards carry the quote at display size, which is what makes the row
+   uneven on purpose rather than four identical boxes. */
+.testimonialWide .testimonialQuote {
+  font-size: clamp(17px, 2vw, 23px);
+  line-height: 1.45;
+  letter-spacing: -0.02em;
+}
+
+.testimonialMeta {
+  margin-top: 24px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.testimonialName {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.testimonialLink {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.testimonialLink:hover {
+  text-decoration: underline;
+}
+
+/* ----------------------------------------------------------- mentor cards */
+
+.mentorGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.mentorCard {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius, 4px);
+  padding: clamp(26px, 2.8vw, 34px);
+  background: var(--surface);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 220ms ease, background 220ms ease, box-shadow 220ms ease;
+}
+
+.mentorCard:hover {
+  border-color: rgba(112, 181, 249, 0.45);
+  background: #182231;
+  box-shadow:
+    0 0 0 1px rgba(112, 181, 249, 0.14),
+    0 22px 48px -28px rgba(37, 99, 235, 0.5);
+}
+
+/* Stand-ins for cards still being fetched, sized to the real ones so the grid
+   does not resize when the data lands. These are the one approximate thing
+   here; if the card design changes, they move with it. */
+.mentorSkeleton {
+  min-height: 168px;
+}
+
+.mentorSkeletonLead {
+  min-height: 248px;
+}
+
+.mentorIdentity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatarFallback {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.avatarFallbackLead {
+  width: 56px;
+  height: 56px;
+  font-size: 17px;
+}
+
+.mentorName {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.mentorNameLead {
+  font-size: clamp(20px, 2.2vw, 26px);
+  letter-spacing: -0.03em;
+}
+
+.mentorRole {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.mentorBio {
+  font-size: 14px;
+  line-height: 1.72;
+  color: var(--muted);
+  margin: 22px 0 0;
+  max-width: 460px;
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: auto;
+  padding-top: 26px;
+}
+
+.tag {
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 2px;
+  padding: 5px 9px;
+}
+
+/* ------------------------------------------------------------------- stats */
+
+.statBlock {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: clamp(48px, 6vw, 76px) 0;
+}
+
+/* One figure, with the supporting paragraph beside it. */
+.statRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(36px, 4.5vw, 56px);
+  align-items: start;
+}
+
+.statLabel {
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+
+/* Hero-sized, because a number that small was just a paragraph wearing a
+   different font. Tracking tightens as the figure grows. */
+.statNumber {
+  font-size: clamp(72px, 13vw, 168px);
+  font-weight: 700;
+  letter-spacing: -0.065em;
+  line-height: 0.82;
+}
+
+.statBody {
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--muted);
+  margin: 0;
+  max-width: 400px;
+}
+
+/* -------------------------------------------------------------- after-sip */
+
+.pullQuote {
+  font-size: clamp(26px, 4.2vw, 48px);
+  line-height: 1.14;
+  letter-spacing: -0.04em;
+  font-weight: 500;
+  margin: 0;
+  max-width: 900px;
+  text-wrap: pretty;
+}
+
+.pullQuoteMeta {
+  margin-top: 30px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+/* The mentor's name inside the pull quote's attribution. It carries the body
+   colour rather than the link colour so the caption reads as one sentence, and
+   warms on hover. This was an inline `color` plus the global .text-link class,
+   which cannot work: an inline style beats the class's :hover rule, so the
+   hover silently did nothing. */
+.pullQuoteLink {
+  color: var(--text);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.pullQuoteLink:hover {
+  color: var(--link);
+}
+
+.noteGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(32px, 4vw, 52px);
+  padding-top: clamp(40px, 5vw, 60px);
+}
+
+.noteQuote {
+  font-size: 14.5px;
+  line-height: 1.72;
+  margin: 0;
+}
+
+.noteMeta {
+  margin-top: 16px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------- faq */
+
+.faqGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(36px, 4.5vw, 56px) clamp(32px, 5vw, 72px);
+}
+
+.faqQuestion {
+  font-size: clamp(17px, 1.9vw, 20px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  margin: 0 0 12px;
+}
+
+.faqAnswer {
+  font-size: 14px;
+  line-height: 1.78;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* --------------------------------------------------------------- the ask */
+
+.finalCta {
+  max-width: var(--measure, 1180px);
+  margin: 0 auto;
+  padding: clamp(128px, 20vh, 224px) var(--gutter, clamp(20px, 5vw, 56px));
+}
+
+.finalHeadline {
+  font-size: clamp(44px, 10vw, 124px);
+  line-height: 0.88;
+  letter-spacing: -0.055em;
+  font-weight: 700;
+  margin: 0;
+  max-width: 1000px;
+}
+
+.finalHeadlineMuted {
+  color: var(--muted);
+}
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: clamp(44px, 6vw, 68px);
+  align-items: center;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  border-radius: var(--card-radius, 4px);
+  padding: 16px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 200ms ease, border-color 200ms ease;
+}
+
+.btnPrimary:hover {
+  background: #1d4fd8;
+  border-color: #1d4fd8;
+}
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--card-radius, 4px);
+  padding: 16px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  background: transparent;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 200ms ease;
+}
+
+.btnSecondary:hover {
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+/* ------------------------------------------------------------ breakpoints */
+
+@media (min-width: 720px) {
+  .noteGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .faqGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stepRow { grid-template-columns: 150px minmax(0, 300px) minmax(0, 1fr); }
+  .stepBody { grid-column: 3; }
+}
+
+@media (min-width: 980px) {
+  /* The hero is asymmetric on purpose: the headline column is wider than the
+     panel beside it, so the page has a clear left edge to read down rather
+     than two columns of equal weight. */
+  .heroGrid { grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.75fr); }
+
+  /*
+   * Both card grids are three columns with an uneven first row. The span is
+   * declared on the <Reveal> wrapper, not the card: the wrapper is the grid
+   * item, so grid-column on the card inside it does nothing at all.
+   */
+  .testimonialGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mentorGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .spanWide { grid-column: span 2; }
+
+  /* The figures take the width they need and the paragraph sits beside them,
+     rather than sharing one track with them. */
+  .statRow { grid-template-columns: minmax(0, 1.55fr) minmax(0, 0.95fr); }
+}
