@@ -407,6 +407,7 @@ function Proof({ notes, mentors, loaded }: { notes: FeaturedNote[]; mentors: Men
         <Reveal>
           <div className={styles.statBlock}>
             <div className={styles.statRow}>
+              <div className={styles.statFigures}>
               <div>
                 <div className={styles.statLabel}>Mentors listed</div>
                 <div className={styles.statNumber}>
@@ -432,8 +433,9 @@ function Proof({ notes, mentors, loaded }: { notes: FeaturedNote[]; mentors: Men
                   </div>
                 </div>
               )}
+              </div>
 
-              <p className={`${styles.statBody} ${styles.statNote}`}>
+              <p className={styles.statBody}>
                 Every one of them chose to be here and set their own terms for what they will talk
                 about. Notes from finished sips show up here once mentors approve them.
               </p>

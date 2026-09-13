@@ -47,7 +47,15 @@ export default function Steps() {
       <div className={styles.timeline}>
         {STEPS.map((s, i) => (
           <Reveal key={s.n} delay={i * 0.07}>
-            <div className={styles.stepRow}>
+            {/* The line segment each row draws needs to know whether it is the
+                first or last one. :first-of-type cannot tell it — every row is
+                alone inside its own Reveal wrapper, so the selector matches
+                all three. */}
+            <div
+              className={`${styles.stepRow}${i === 0 ? ` ${styles.stepFirst}` : ''}${
+                i === STEPS.length - 1 ? ` ${styles.stepLast}` : ''
+              }`}
+            >
               <div className={styles.stepMarker}>
                 <span className={styles.stepDot} aria-hidden="true" />
                 <span className={styles.stepNum}>{s.n}</span>
