@@ -1,40 +1,68 @@
 /*
  * The landing page's design system, in one file.
  *
- * Every section used to carry its own inline <style> block. Those are global —
- * a plain <style> element, not scoped — so the page was shipping half a dozen
- * competing definitions of the same ideas, and one of them (.text-link) leaked
- * out to Footer on every other route, where Landing never renders and the rule
- * therefore never existed. A module scopes the class names per file and lets
- * the sections share one spacing and type scale instead of each approximating
- * it, which is what made the old page's rhythm drift section to section.
- *
  * Imported by Landing.tsx (client) and by Steps/Faq/Testimonials (server).
  * Nothing here depends on which it is.
+ *
+ * Two things in here are load-bearing rather than decorative, and both have a
+ * note at the rule itself: .heroTitle must never be given an enter animation
+ * (it is the LCP element), and .quizReserve holds the quiz band's space while
+ * Clerk resolves the session.
+ *
+ * A note on :first-of-type — do not use it on anything inside a <Reveal>. Every
+ * revealed row is alone inside its own wrapper div, so each one is a
+ * first-of-type in its own parent and the selector silently matches all of
+ * them. The timeline below draws its connecting line on the container for
+ * exactly this reason.
  */
 
 .page {
   --gutter: clamp(20px, 5vw, 56px);
   --measure: 1180px;
-  /* Deliberately small, and not one value everywhere: cards and inputs get 3px,
-     buttons 4px. The old page put 16-24px on cards and 999px pills on the
-     buttons, which reads as a default rather than a decision. */
-  --card-radius: 3px;
+  /* A small, deliberate scale applied by role, not one value on everything:
+     tags 2px, cards 4px, and 14px reserved for the one floating panel (the
+     live-calls rail), which is meant to read as a distinct object. */
+  --card-radius: 4px;
+  --panel-radius: 14px;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
 }
 
-/* ---------------------------------------------------------------- primitives */
+/* ------------------------------------------------------------------- tones */
 
-/* One section rhythm for the whole page. The generous figure is the brief's
-   ask, and having exactly one of it is what keeps the page from looking
-   machine-assembled out of sections that each chose their own padding. */
-.section {
+/*
+ * Sections alternate between three tones so scrolling reads as distinct zones
+ * rather than one uniform sheet. All three are the same near-black the palette
+ * already defines — a tonal step, not a second colour. The tone has to sit on a
+ * full-bleed wrapper: put it on the centred 1180px column instead and the tint
+ * stops at the column's edges, which looks like a mistake at any width.
+ */
+.sectionOuter {
+  width: 100%;
+}
+
+.toneBase {
+  background: var(--bg);
+}
+
+.toneRaised {
+  background: #0d121c;
+}
+
+.toneGradient {
+  background: linear-gradient(180deg, #0c111a 0%, var(--bg) 100%);
+}
+
+.sectionInner {
   max-width: var(--measure, 1180px);
   margin: 0 auto;
-  padding: clamp(72px, 11vh, 132px) var(--gutter, clamp(20px, 5vw, 56px));
+  /* Roughly a third more air than the previous pass, which is the pacing the
+     brief asks for: each zone gets close to a screen of its own. */
+  padding: clamp(100px, 15vh, 180px) var(--gutter, clamp(20px, 5vw, 56px));
 }
+
+/* -------------------------------------------------------------- primitives */
 
 .eyebrow {
   display: flex;
@@ -42,41 +70,43 @@
   gap: 12px;
   font-family: var(--font-space-mono), 'Space Mono', monospace;
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 22px;
+  margin-bottom: 26px;
 }
 
 /* A short accent rule leading into the label. The page's one piece of
    ornament, and it earns its place by marking where every section starts. */
 .eyebrow::before {
   content: '';
-  width: 20px;
+  width: 24px;
   height: 1px;
   background: var(--accent);
   flex-shrink: 0;
 }
 
+/*
+ * Headlines are set much larger and tighter than the body copy they sit above,
+ * and the gap between the two is the point: the hierarchy should be obvious
+ * from across the room, not inferred from a few pixels of difference.
+ */
 .headline {
-  font-size: clamp(30px, 4.5vw, 50px);
-  line-height: 1.02;
-  letter-spacing: -0.035em;
+  font-size: clamp(38px, 6.4vw, 76px);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
   font-weight: 700;
   margin: 0;
-  max-width: 620px;
+  max-width: 760px;
   text-wrap: balance;
 }
 
-/* Section label block with something aligned to its far edge — the "all
-   mentors" link. Bottom-aligned so the link sits on the headline's baseline
-   side rather than floating at the top of a tall heading. */
 .sectionHead {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
-  margin-bottom: clamp(40px, 5.5vw, 64px);
+  gap: 28px;
+  margin-bottom: clamp(52px, 7vw, 88px);
 }
 
 .headLink {
@@ -101,7 +131,7 @@
   background: var(--border);
 }
 
-/* ---------------------------------------------------------------------- nav */
+/* -------------------------------------------------------------------- nav */
 
 .nav {
   position: fixed;
@@ -153,7 +183,7 @@
   color: var(--text);
   text-decoration: none;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 4px;
+  border-radius: var(--card-radius, 4px);
   padding: 9px 18px;
   white-space: nowrap;
   transition: border-color 180ms ease;
@@ -163,18 +193,18 @@
   border-color: rgba(255, 255, 255, 0.34);
 }
 
-/* --------------------------------------------------------------------- hero */
+/* ------------------------------------------------------------------- hero */
 
 .hero {
   max-width: var(--measure, 1180px);
   margin: 0 auto;
-  padding: clamp(124px, 18vh, 196px) var(--gutter, clamp(20px, 5vw, 56px)) clamp(56px, 8vh, 92px);
+  padding: clamp(140px, 21vh, 232px) var(--gutter, clamp(20px, 5vw, 56px)) clamp(80px, 12vh, 140px);
 }
 
 .heroGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: clamp(48px, 7vw, 76px);
+  gap: clamp(52px, 7vw, 84px);
   align-items: start;
 }
 
@@ -189,9 +219,9 @@
  * different one.
  */
 .heroTitle {
-  font-size: clamp(42px, 7.4vw, 82px);
-  line-height: 0.96;
-  letter-spacing: -0.04em;
+  font-size: clamp(48px, 9vw, 108px);
+  line-height: 0.88;
+  letter-spacing: -0.052em;
   font-weight: 700;
   margin: 0;
 }
@@ -200,27 +230,39 @@
   color: var(--link);
 }
 
+/* Deliberately small and muted against a 108px headline. The drop in both size
+   and contrast is what makes the headline land. */
 .heroLede {
-  margin-top: 26px;
-  font-size: clamp(16px, 1.9vw, 19px);
-  line-height: 1.62;
+  margin-top: 30px;
+  font-size: clamp(14.5px, 1.5vw, 16.5px);
+  line-height: 1.7;
   color: var(--muted);
-  max-width: 470px;
+  max-width: 430px;
 }
 
-/* Who is open, as a list of hairline-separated rows rather than a floating
-   card. Denser and quieter than the bordered panel it replaces, which competed
-   with the headline it sits beside. */
+/*
+ * Who is open right now, as a distinct floating panel rather than a bare list.
+ *
+ * It sits beside the headline, so it needs to read as its own object: a darker
+ * ground than the section behind it, a pronounced radius against the 4px used
+ * on cards, a hairline top highlight for the inner-shadow effect, and a soft
+ * drop shadow to lift it off the page.
+ */
 .rail {
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
+  background: #10161f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--panel-radius, 14px);
+  padding: 22px 24px 8px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 24px 56px -28px rgba(0, 0, 0, 0.8);
 }
 
 .railStatus {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-bottom: 6px;
+  padding-bottom: 14px;
 }
 
 .railDot {
@@ -247,15 +289,11 @@
   display: flex;
   align-items: center;
   gap: 13px;
-  padding: 14px 0;
-  border-top: 1px solid var(--border);
+  padding: 15px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
   text-decoration: none;
   color: inherit;
   transition: opacity 180ms ease;
-}
-
-.railRow:first-of-type {
-  border-top: none;
 }
 
 .railRow:hover {
@@ -279,19 +317,19 @@
 }
 
 .railEmpty {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--muted);
-  line-height: 1.6;
-  padding: 8px 0 2px;
+  line-height: 1.65;
+  padding: 4px 0 18px;
 }
 
-/* --------------------------------------------------------------- quiz band */
+/* -------------------------------------------------------------- quiz band */
 
 /*
  * The mentor-match CTA: copy left, button right, hairlines above and below.
  *
  * It was a centred card with two blurred colour blobs behind it, which is the
- * one layout this redesign is specifically meant to avoid. Nothing about the
+ * one layout this design is specifically meant to avoid. Nothing about the
  * pitch needed a box or a glow; left-aligning it and letting the rules carry
  * the emphasis puts it in the same voice as the rest of the page.
  */
@@ -300,22 +338,22 @@
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: clamp(28px, 4vw, 56px);
+  gap: clamp(32px, 4vw, 64px);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  padding: clamp(44px, 6vw, 68px) 0;
+  padding: clamp(52px, 7vw, 84px) 0;
 }
 
 .quizCopy {
-  max-width: 540px;
+  max-width: 620px;
 }
 
 .quizTitle {
-  font-size: clamp(28px, 4.2vw, 46px);
-  line-height: 1.04;
-  letter-spacing: -0.035em;
+  font-size: clamp(34px, 5.6vw, 66px);
+  line-height: 0.94;
+  letter-spacing: -0.045em;
   font-weight: 700;
-  margin: 0 0 16px;
+  margin: 0 0 20px;
 }
 
 .quizTitleMuted {
@@ -323,8 +361,8 @@
 }
 
 .quizSub {
-  font-size: clamp(15px, 1.8vw, 18px);
-  line-height: 1.6;
+  font-size: clamp(14px, 1.4vw, 15.5px);
+  line-height: 1.7;
   color: var(--muted);
   margin: 0;
 }
@@ -333,7 +371,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 14px;
+  gap: 16px;
 }
 
 .quizFinePrint {
@@ -346,7 +384,7 @@
 }
 
 /*
- * Holds the band's space while Clerk resolves the session.
+ * Holds the quiz band's space while Clerk is still resolving the session.
  *
  * The prompt is in the statically rendered HTML (no request to read at build
  * time means Clerk resolves to signed-out), but on the client the first render
@@ -360,7 +398,7 @@
 .quizReserve {
   border-top: 1px solid transparent;
   border-bottom: 1px solid transparent;
-  padding: clamp(44px, 6vw, 68px) 0;
+  padding: clamp(52px, 7vw, 84px) 0;
 }
 
 .quizReserve::before {
@@ -368,97 +406,153 @@
   display: block;
   /* Two-line heading, one line of copy, and the button beside them at the
      sizes .quizBand renders them. */
-  height: clamp(168px, 22vw, 208px);
+  height: clamp(192px, 25vw, 244px);
 }
 
-/* ------------------------------------------------------------------- steps */
+/* ------------------------------------------------------------------ steps */
 
-/* Number left, title and body right, a hairline between each. The numeral is
-   set large and dim rather than small and coloured: it gives the section a
-   spine to read down without asking to be read as content. */
+/*
+ * "How it works" as a timeline: one connecting line down the left, a filled dot
+ * marking each step.
+ *
+ * The line is drawn on this container, not per row, because each row sits
+ * inside its own <Reveal> wrapper — so :first-of-type / :last-of-type would
+ * match every row, and a per-row border cannot know it is the last one. Insets
+ * pull the line in to start and stop at the first and last dots.
+ */
+.timeline {
+  position: relative;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: clamp(48px, 5.4vw, 74px);
+  bottom: clamp(48px, 5.4vw, 74px);
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.18) 12%,
+    rgba(255, 255, 255, 0.18) 88%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+}
+
 .stepRow {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  gap: 6px 20px;
-  padding: clamp(30px, 3.6vw, 42px) 0;
-  border-top: 1px solid var(--border);
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px 20px;
+  /* More room per step than a plain list needs; the timeline only reads as one
+     if the stops on it are far enough apart. */
+  padding: clamp(40px, 5vw, 72px) 0;
   align-items: start;
 }
 
-.stepRow:first-of-type {
-  border-top: none;
+/* Dot and numeral in one flex row, so the dot is centred on the numeral
+   without hard-coding a top offset that every font-size change would break.
+   margin-left puts its centre on the line at left: 10px. */
+.stepMarker {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.stepDot {
+  width: 11px;
+  height: 11px;
+  margin-left: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  /* The ring punches the connecting line out from behind the dot, so it must
+     match the section's tone — which is why the steps section is toneBase. */
+  box-shadow:
+    0 0 0 5px var(--bg),
+    0 0 14px rgba(37, 99, 235, 0.55);
 }
 
 .stepNum {
   font-family: var(--font-space-mono), 'Space Mono', monospace;
-  font-size: clamp(20px, 2.4vw, 26px);
+  font-size: clamp(18px, 2.2vw, 24px);
   font-weight: 700;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.28);
   letter-spacing: -0.02em;
-  padding-top: 2px;
 }
 
 .stepTitle {
   grid-column: 2;
-  font-size: clamp(20px, 2.5vw, 27px);
+  font-size: clamp(22px, 3vw, 34px);
   font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.2;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
   margin: 0;
 }
 
 .stepBody {
   grid-column: 2;
-  font-size: 15.5px;
-  line-height: 1.68;
+  font-size: 14px;
+  line-height: 1.75;
   color: var(--muted);
   margin: 0;
-  max-width: 460px;
+  max-width: 440px;
 }
 
-/* ------------------------------------------------------------ testimonials */
+/* ----------------------------------------------------------- testimonials */
 
 .testimonialGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1px;
-  background: var(--border);
-  border: 1px solid var(--border);
+  gap: 16px;
 }
 
-/*
- * The cards are separated by the grid's own 1px background showing through,
- * not by their own borders and a gap. Four bordered cards in a row put a
- * double line between every pair; this way the rules are single and shared,
- * which is what makes a row of quotes read as one table rather than four
- * floating boxes. No shadow, per the brief.
- */
 .testimonialCard {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   width: 100%;
+  height: 100%;
   margin: 0;
-  background: var(--bg);
-  padding: clamp(22px, 2.4vw, 28px);
-  transition: background 220ms ease;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius, 4px);
+  padding: clamp(28px, 3vw, 38px);
+  transition: border-color 220ms ease, background 220ms ease, box-shadow 220ms ease;
 }
 
+/*
+ * Hover is a border glow and a tone lift, with no transform. The lift-and-grow
+ * on every card is the most commonly named giveaway of a generated page, and it
+ * also fights the reveal animation the card enters with.
+ */
 .testimonialCard:hover {
-  background: var(--surface);
+  border-color: rgba(112, 181, 249, 0.4);
+  background: #182231;
+  box-shadow:
+    0 0 0 1px rgba(112, 181, 249, 0.14),
+    0 22px 48px -28px rgba(37, 99, 235, 0.5);
 }
 
 .testimonialQuote {
-  font-size: 15px;
-  line-height: 1.66;
+  font-size: 14.5px;
+  line-height: 1.72;
   color: var(--text);
   margin: 0;
   text-wrap: pretty;
 }
 
+/* The wide cards carry the quote at display size, which is what makes the row
+   uneven on purpose rather than four identical boxes. */
+.testimonialWide .testimonialQuote {
+  font-size: clamp(17px, 2vw, 23px);
+  line-height: 1.45;
+  letter-spacing: -0.02em;
+}
+
 .testimonialMeta {
-  margin-top: 20px;
+  margin-top: 24px;
   font-size: 12.5px;
   color: var(--muted);
   line-height: 1.55;
@@ -478,50 +572,51 @@
   text-decoration: underline;
 }
 
-/* ------------------------------------------------------------ mentor cards */
+/* ----------------------------------------------------------- mentor cards */
 
 .mentorGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
+  gap: 16px;
 }
 
 .mentorCard {
   display: flex;
   flex-direction: column;
   width: 100%;
+  height: 100%;
   border: 1px solid var(--border);
-  border-radius: var(--card-radius, 3px);
-  padding: 22px;
+  border-radius: var(--card-radius, 4px);
+  padding: clamp(26px, 2.8vw, 34px);
   background: var(--surface);
   text-decoration: none;
   color: inherit;
-  /* No transform on hover. The lift-and-grow on every card is the single most
-     commonly named giveaway of a generated page, and it also fights the
-     reveal animation the card enters with. The border carries it instead. */
-  transition: border-color 220ms ease, background 220ms ease;
+  transition: border-color 220ms ease, background 220ms ease, box-shadow 220ms ease;
 }
 
 .mentorCard:hover {
   border-color: rgba(112, 181, 249, 0.45);
-  background: #161f2b;
+  background: #182231;
+  box-shadow:
+    0 0 0 1px rgba(112, 181, 249, 0.14),
+    0 22px 48px -28px rgba(37, 99, 235, 0.5);
 }
 
 /* Stand-ins for cards still being fetched, sized to the real ones so the grid
    does not resize when the data lands. These are the one approximate thing
    here; if the card design changes, they move with it. */
 .mentorSkeleton {
-  min-height: 152px;
+  min-height: 168px;
 }
 
-.mentorSkeleton.mentorLead {
-  min-height: 232px;
+.mentorSkeletonLead {
+  min-height: 248px;
 }
 
 .mentorIdentity {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 14px;
 }
 
 .avatarFallback {
@@ -539,9 +634,9 @@
 }
 
 .avatarFallbackLead {
-  width: 52px;
-  height: 52px;
-  font-size: 16px;
+  width: 56px;
+  height: 56px;
+  font-size: 17px;
 }
 
 .mentorName {
@@ -551,21 +646,22 @@
 }
 
 .mentorNameLead {
-  font-size: 19px;
+  font-size: clamp(20px, 2.2vw, 26px);
+  letter-spacing: -0.03em;
 }
 
 .mentorRole {
   font-size: 13px;
   color: var(--muted);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .mentorBio {
-  font-size: 15px;
-  line-height: 1.62;
+  font-size: 14px;
+  line-height: 1.72;
   color: var(--muted);
-  margin: 20px 0 0;
-  max-width: 440px;
+  margin: 22px 0 0;
+  max-width: 460px;
 }
 
 .tagRow {
@@ -573,7 +669,7 @@
   flex-wrap: wrap;
   gap: 7px;
   margin-top: auto;
-  padding-top: 20px;
+  padding-top: 26px;
 }
 
 .tag {
@@ -587,57 +683,68 @@
   padding: 5px 9px;
 }
 
-/* --------------------------------------------------------------------- stat */
+/* ------------------------------------------------------------------- stats */
 
 .statBlock {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 28px;
-  align-items: end;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  padding: clamp(38px, 5vw, 58px) 0;
+  padding: clamp(48px, 6vw, 76px) 0;
+}
+
+.statRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(40px, 5vw, 64px);
 }
 
 .statLabel {
   font-family: var(--font-space-mono), 'Space Mono', monospace;
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
+/* Hero-sized, because a number that small was just a paragraph wearing a
+   different font. Tracking tightens as the figure grows. */
 .statNumber {
-  font-size: clamp(52px, 8.5vw, 96px);
+  font-size: clamp(72px, 13vw, 168px);
   font-weight: 700;
+  letter-spacing: -0.065em;
+  line-height: 0.82;
+}
+
+/* The second and third figures are supporting, not headline: same treatment,
+   noticeably smaller, so the row has a clear primary. */
+.statNumberSm {
+  font-size: clamp(46px, 7vw, 88px);
   letter-spacing: -0.05em;
-  line-height: 0.9;
 }
 
 .statBody {
-  font-size: 16px;
-  line-height: 1.65;
+  font-size: 14.5px;
+  line-height: 1.75;
   color: var(--muted);
   margin: 0;
-  max-width: 420px;
+  max-width: 400px;
 }
 
-/* --------------------------------------------------------------- after-sip */
+/* -------------------------------------------------------------- after-sip */
 
 .pullQuote {
-  font-size: clamp(23px, 3.4vw, 37px);
-  line-height: 1.26;
-  letter-spacing: -0.03em;
+  font-size: clamp(26px, 4.2vw, 48px);
+  line-height: 1.14;
+  letter-spacing: -0.04em;
   font-weight: 500;
   margin: 0;
-  max-width: 860px;
+  max-width: 900px;
   text-wrap: pretty;
 }
 
 .pullQuoteMeta {
-  margin-top: 24px;
-  font-size: 14px;
+  margin-top: 30px;
+  font-size: 13.5px;
   color: var(--muted);
 }
 
@@ -659,59 +766,60 @@
 .noteGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: clamp(28px, 4vw, 44px);
-  padding-top: clamp(32px, 4.5vw, 48px);
+  gap: clamp(32px, 4vw, 52px);
+  padding-top: clamp(40px, 5vw, 60px);
 }
 
 .noteQuote {
-  font-size: 15px;
-  line-height: 1.66;
+  font-size: 14.5px;
+  line-height: 1.72;
   margin: 0;
 }
 
 .noteMeta {
-  margin-top: 14px;
+  margin-top: 16px;
   font-size: 12.5px;
   color: var(--muted);
 }
 
-/* ----------------------------------------------------------------- the faq */
+/* --------------------------------------------------------------------- faq */
 
 .faqGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: clamp(30px, 4vw, 44px) clamp(32px, 5vw, 64px);
+  gap: clamp(36px, 4.5vw, 56px) clamp(32px, 5vw, 72px);
 }
 
 .faqQuestion {
-  font-size: 17px;
+  font-size: clamp(17px, 1.9vw, 20px);
   font-weight: 600;
-  letter-spacing: -0.015em;
-  margin: 0 0 10px;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  margin: 0 0 12px;
 }
 
 .faqAnswer {
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 14px;
+  line-height: 1.78;
   color: var(--muted);
   margin: 0;
 }
 
-/* ----------------------------------------------------------------- the ask */
+/* --------------------------------------------------------------- the ask */
 
 .finalCta {
   max-width: var(--measure, 1180px);
   margin: 0 auto;
-  padding: clamp(96px, 15vh, 168px) var(--gutter, clamp(20px, 5vw, 56px));
+  padding: clamp(128px, 20vh, 224px) var(--gutter, clamp(20px, 5vw, 56px));
 }
 
 .finalHeadline {
-  font-size: clamp(40px, 8.4vw, 96px);
-  line-height: 0.96;
-  letter-spacing: -0.045em;
+  font-size: clamp(44px, 10vw, 124px);
+  line-height: 0.88;
+  letter-spacing: -0.055em;
   font-weight: 700;
   margin: 0;
-  max-width: 900px;
+  max-width: 1000px;
 }
 
 .finalHeadlineMuted {
@@ -722,7 +830,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: clamp(36px, 5vw, 52px);
+  margin-top: clamp(44px, 6vw, 68px);
   align-items: center;
 }
 
@@ -733,8 +841,8 @@
   background: var(--accent);
   color: #fff;
   border: 1px solid var(--accent);
-  border-radius: 4px;
-  padding: 15px 26px;
+  border-radius: var(--card-radius, 4px);
+  padding: 16px 28px;
   font-size: 15px;
   font-weight: 600;
   font-family: inherit;
@@ -752,8 +860,8 @@
   display: inline-flex;
   align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 4px;
-  padding: 15px 26px;
+  border-radius: var(--card-radius, 4px);
+  padding: 16px 28px;
   font-size: 15px;
   font-weight: 600;
   font-family: inherit;
@@ -768,25 +876,33 @@
   border-color: rgba(255, 255, 255, 0.34);
 }
 
-/* ------------------------------------------------------------- breakpoints */
+/* ------------------------------------------------------------ breakpoints */
 
 @media (min-width: 720px) {
-  .testimonialGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .mentorGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .mentorLead { grid-column: span 2; }
   .noteGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .faqGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .statBlock { grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: clamp(40px, 6vw, 88px); }
-  .stepRow { grid-template-columns: 92px minmax(0, 320px) minmax(0, 1fr); }
+  .stepRow { grid-template-columns: 150px minmax(0, 300px) minmax(0, 1fr); }
   .stepBody { grid-column: 3; }
+  .statRow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (min-width: 980px) {
   /* The hero is asymmetric on purpose: the headline column is wider than the
-     rail beside it, so the page has a clear left edge to read down rather
+     panel beside it, so the page has a clear left edge to read down rather
      than two columns of equal weight. */
-  .heroGrid { grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr); }
-  .testimonialGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .heroGrid { grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.75fr); }
+
+  /*
+   * Both card grids are three columns with an uneven first row. The span is
+   * declared on the <Reveal> wrapper, not the card: the wrapper is the grid
+   * item, so grid-column on the card inside it does nothing at all.
+   */
+  .testimonialGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mentorGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .mentorLead { grid-column: span 2; }
+  .spanWide { grid-column: span 2; }
+
+  /* Primary figure takes the room; the two supporting ones and the paragraph
+     share the rest. */
+  .statRow { grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.85fr) minmax(0, 0.85fr); }
+  .statNote { grid-column: 2 / span 2; }
 }

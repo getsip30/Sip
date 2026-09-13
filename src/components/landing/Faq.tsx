@@ -22,9 +22,9 @@ import styles from './landing.module.css';
  */
 export default function Faq({ items }: { items: { q: string; a: string }[] }) {
   return (
-    <Section id="faq" labelledBy="faq-heading">
+    <Section id="faq" labelledBy="faq-heading" tone="base">
       <Reveal>
-        <div style={{ marginBottom: 'clamp(40px, 5.5vw, 64px)' }}>
+        <div style={{ marginBottom: 'clamp(52px, 7vw, 88px)' }}>
           <Eyebrow>Common questions</Eyebrow>
           <h2 id="faq-heading" className={styles.headline}>
             Before you sign up.

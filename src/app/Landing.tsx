@@ -34,6 +34,10 @@ type Mentor = {
   bio: string;
   isOpen: boolean;
   avatarData?: string | null;
+  /** Completed sips on this mentor's row. Public via publicMentor(). */
+  sipCount?: number;
+  /** Mean minutes to first reply, null until they have answered anything. */
+  avgResponseMinutes?: number | null;
 };
 
 type FeaturedNote = {
@@ -118,7 +122,7 @@ function Nav({
 /**
  * The hero copy does not animate in, deliberately — see .heroTitle in the
  * stylesheet for why the <h1> in particular must not be given an enter
- * animation. The rail beside it does; it is not an LCP candidate.
+ * animation. The panel beside it does; it is not an LCP candidate.
  */
 function Hero({ mentors }: { mentors: Mentor[] }) {
   const openCount = mentors.length;
@@ -194,7 +198,7 @@ function Hero({ mentors }: { mentors: Mentor[] }) {
  */
 function QuizPromptReserve() {
   return (
-    <Section>
+    <Section tone="raised">
       <div className={styles.quizReserve} aria-hidden="true" />
     </Section>
   );
@@ -214,7 +218,7 @@ function QuizPromptReserve() {
  */
 function QuizPrompt({ onStartQuiz }: { onStartQuiz: () => void }) {
   return (
-    <Section>
+    <Section tone="raised">
       <Reveal>
         <div className={styles.quizBand}>
           <div className={styles.quizCopy}>
@@ -244,7 +248,7 @@ function QuizPrompt({ onStartQuiz }: { onStartQuiz: () => void }) {
 function MentorCardSkeleton({ lead = false }: { lead?: boolean }) {
   return (
     <div
-      className={`${styles.mentorCard} ${styles.mentorSkeleton}${lead ? ` ${styles.mentorLead}` : ''}`}
+      className={`${styles.mentorCard} ${styles.mentorSkeleton}${lead ? ` ${styles.mentorSkeletonLead}` : ''}`}
       aria-hidden="true"
     />
   );
@@ -269,7 +273,7 @@ function MentorGrid({ mentors, loaded }: { mentors: Mentor[]; loaded: boolean })
   const featured = mentors.slice(0, 5);
 
   return (
-    <Section labelledBy="mentors-heading">
+    <Section labelledBy="mentors-heading" tone="base">
       <Reveal>
         <div className={styles.sectionHead}>
           <div>
@@ -296,16 +300,18 @@ function MentorGrid({ mentors, loaded }: { mentors: Mentor[]; loaded: boolean })
             .slice(0, 3);
 
           return (
-            // display:flex on the wrapper so the grid's align-items: stretch
-            // reaches the card rather than stopping at the animated div.
-            <Reveal key={m.id} delay={Math.min(i, 3) * 0.06} style={{ display: 'flex' }}>
-              <Link
-                href={`/mentors/${m.id}`}
-                className={`${styles.mentorCard}${lead ? ` ${styles.mentorLead}` : ''}`}
-              >
+            // The span and the stretch both belong on the wrapper: it is the
+            // grid item, so grid-column on the card inside does nothing.
+            <Reveal
+              key={m.id}
+              delay={Math.min(i, 3) * 0.06}
+              style={{ display: 'flex' }}
+              className={lead ? styles.spanWide : undefined}
+            >
+              <Link href={`/mentors/${m.id}`} className={styles.mentorCard}>
                 <div className={styles.mentorIdentity}>
                   {m.avatarData ? (
-                    <PixelAvatar data={m.avatarData} size={lead ? 52 : 42} />
+                    <PixelAvatar data={m.avatarData} size={lead ? 56 : 42} />
                   ) : (
                     <div
                       className={`${styles.avatarFallback}${lead ? ` ${styles.avatarFallbackLead}` : ''}`}
@@ -349,8 +355,35 @@ function MentorGrid({ mentors, loaded }: { mentors: Mentor[]; loaded: boolean })
 }
 
 /**
+ * The supporting figures beside "Mentors listed", derived from the mentor list
+ * already on the page.
+ *
+ * Both come off columns publicMentor() deliberately exposes — sip_count and
+ * avg_response_minutes — so nothing here is estimated and no extra request is
+ * made. Each returns null rather than a zero or a dash when there is nothing
+ * real to show yet: an early-stage product showing "0 conversations" as a
+ * headline statistic is worse than showing one honest number on its own.
+ */
+function conversationCount(mentors: Mentor[]): number | null {
+  const total = mentors.reduce((sum, m) => sum + (m.sipCount ?? 0), 0);
+  return total > 0 ? total : null;
+}
+
+function averageReplyMinutes(mentors: Mentor[]): number | null {
+  const answered = mentors
+    .map((m) => m.avgResponseMinutes)
+    .filter((v): v is number => typeof v === 'number' && v > 0);
+  if (answered.length === 0) return null;
+  return Math.round(answered.reduce((sum, v) => sum + v, 0) / answered.length);
+}
+
+function formatReply(minutes: number): string {
+  return minutes < 60 ? `${minutes}m` : `${Math.round(minutes / 60)}h`;
+}
+
+/**
  * Two layouts behind one section: a pull-quote when mentors have approved notes
- * to show, and a bare mentor count when they have not.
+ * to show, and the numbers when they have not.
  *
  * While the fetches are outstanding this renders the count layout with the
  * number itself held blank, rather than rendering nothing. Before, the whole
@@ -361,26 +394,50 @@ function MentorGrid({ mentors, loaded }: { mentors: Mentor[]; loaded: boolean })
  * quote layout is genuinely taller and there is no honest way to reserve for a
  * branch we cannot know yet.
  */
-function Proof({ notes, mentorCount, loaded }: { notes: FeaturedNote[]; mentorCount: number; loaded: boolean }) {
+function Proof({ notes, mentors, loaded }: { notes: FeaturedNote[]; mentors: Mentor[]; loaded: boolean }) {
+  const mentorCount = mentors.length;
+
   if (notes.length === 0) {
     if (loaded && mentorCount === 0) return null;
+    const conversations = loaded ? conversationCount(mentors) : null;
+    const replyMinutes = loaded ? averageReplyMinutes(mentors) : null;
+
     return (
-      <Section>
+      <Section tone="raised">
         <Reveal>
           <div className={styles.statBlock}>
-            <div>
-              <div className={styles.statLabel}>Mentors listed</div>
-              <div className={styles.statNumber}>
-                {/* Non-breaking space, not an empty string: the number's line
-                    box has to exist at its full height before the count lands,
-                    or reserving the row buys nothing. */}
-                {loaded ? mentorCount : ' '}
+            <div className={styles.statRow}>
+              <div>
+                <div className={styles.statLabel}>Mentors listed</div>
+                <div className={styles.statNumber}>
+                  {/* Non-breaking space, not an empty string: the number's line
+                      box has to exist at its full height before the count
+                      lands, or reserving the row buys nothing. */}
+                  {loaded ? mentorCount : ' '}
+                </div>
               </div>
+
+              {conversations !== null && (
+                <div>
+                  <div className={styles.statLabel}>Conversations had</div>
+                  <div className={`${styles.statNumber} ${styles.statNumberSm}`}>{conversations}</div>
+                </div>
+              )}
+
+              {replyMinutes !== null && (
+                <div>
+                  <div className={styles.statLabel}>Average reply</div>
+                  <div className={`${styles.statNumber} ${styles.statNumberSm}`}>
+                    {formatReply(replyMinutes)}
+                  </div>
+                </div>
+              )}
+
+              <p className={`${styles.statBody} ${styles.statNote}`}>
+                Every one of them chose to be here and set their own terms for what they will talk
+                about. Notes from finished sips show up here once mentors approve them.
+              </p>
             </div>
-            <p className={styles.statBody}>
-              Every one of them chose to be here and set their own terms for what they will talk
-              about. Notes from finished sips show up here once mentors approve them.
-            </p>
           </div>
         </Reveal>
       </Section>
@@ -390,13 +447,13 @@ function Proof({ notes, mentorCount, loaded }: { notes: FeaturedNote[]; mentorCo
   const [lead, ...rest] = notes;
 
   return (
-    <Section>
+    <Section tone="raised">
       <Reveal>
         <Eyebrow>After the sip</Eyebrow>
       </Reveal>
 
       <Reveal delay={0.05}>
-        <figure style={{ margin: '0 0 clamp(40px, 6vw, 64px)' }}>
+        <figure style={{ margin: '0 0 clamp(48px, 7vw, 76px)' }}>
           <blockquote className={styles.pullQuote}>&ldquo;{lead.note}&rdquo;</blockquote>
           <figcaption className={styles.pullQuoteMeta}>
             {lead.seekerName}, after sipping with{' '}
@@ -443,28 +500,30 @@ function FinalCta({ signedIn, authResolved }: { signedIn: boolean; authResolved:
   const treatAsSignedIn = signedIn || !authResolved;
 
   return (
-    <div className={styles.finalCta}>
-      <Reveal>
-        <h2 className={styles.finalHeadline}>
-          The conversation
-          <br />
-          you keep putting off
-          <br />
-          <span className={styles.finalHeadlineMuted}>takes twenty minutes.</span>
-        </h2>
-      </Reveal>
+    <div className={`${styles.sectionOuter} ${styles.toneGradient}`}>
+      <div className={styles.finalCta}>
+        <Reveal>
+          <h2 className={styles.finalHeadline}>
+            The conversation
+            <br />
+            you keep putting off
+            <br />
+            <span className={styles.finalHeadlineMuted}>takes twenty minutes.</span>
+          </h2>
+        </Reveal>
 
-      <Reveal delay={0.1}>
-        <div className={styles.ctaRow}>
-          <Link href={treatAsSignedIn ? '/seekers' : '/sign-up'} className={styles.btnPrimary}>
-            {treatAsSignedIn ? 'Find a mentor' : 'Start for free'}
-            <ArrowRight size={16} color="#fff" />
-          </Link>
-          <Link href="/mentors/signup" className={styles.btnSecondary}>
-            Become a mentor
-          </Link>
-        </div>
-      </Reveal>
+        <Reveal delay={0.1}>
+          <div className={styles.ctaRow}>
+            <Link href={treatAsSignedIn ? '/seekers' : '/sign-up'} className={styles.btnPrimary}>
+              {treatAsSignedIn ? 'Find a mentor' : 'Start for free'}
+              <ArrowRight size={16} color="#fff" />
+            </Link>
+            <Link href="/mentors/signup" className={styles.btnSecondary}>
+              Become a mentor
+            </Link>
+          </div>
+        </Reveal>
+      </div>
     </div>
   );
 }
@@ -553,7 +612,7 @@ export default function Landing({
         {testimonials}
         {steps}
         <MentorGrid mentors={mentors} loaded={mentorsLoaded} />
-        <Proof notes={notes} mentorCount={mentors.length} loaded={mentorsLoaded && notesLoaded} />
+        <Proof notes={notes} mentors={mentors} loaded={mentorsLoaded && notesLoaded} />
         {faqSection}
         <FinalCta signedIn={!!user} authResolved={isLoaded} />
       </main>

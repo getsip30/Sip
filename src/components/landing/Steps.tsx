@@ -25,15 +25,18 @@ const STEPS = [
  *
  * A plain Server Component: it renders through <Reveal>, a client leaf, so the
  * scroll-in animation survives, but this file itself has no hooks and ships no
- * JS of its own. It used to be a function nested inside the client-rendered
- * Landing.tsx, which meant its markup was bundled and hydrated along with
- * everything that section actually needs a browser for.
+ * JS of its own.
+ *
+ * The steps read as a timeline: a connecting line down the left with a filled
+ * dot at each stop. The line is drawn on the .timeline container rather than
+ * per row — see the note on that rule — and the dot's ring is painted in the
+ * page background, which is why this section keeps the base tone.
  */
 export default function Steps() {
   return (
-    <Section id="how-it-works" labelledBy="steps-heading">
+    <Section id="how-it-works" labelledBy="steps-heading" tone="base">
       <Reveal>
-        <div style={{ marginBottom: 'clamp(40px, 5.5vw, 64px)' }}>
+        <div style={{ marginBottom: 'clamp(52px, 7vw, 88px)' }}>
           <Eyebrow>How it works</Eyebrow>
           <h2 id="steps-heading" className={styles.headline}>
             Three steps, no cold outreach.
@@ -41,15 +44,20 @@ export default function Steps() {
         </div>
       </Reveal>
 
-      {STEPS.map((s, i) => (
-        <Reveal key={s.n} delay={i * 0.07}>
-          <div className={styles.stepRow}>
-            <div className={styles.stepNum}>{s.n}</div>
-            <h3 className={styles.stepTitle}>{s.title}</h3>
-            <p className={styles.stepBody}>{s.body}</p>
-          </div>
-        </Reveal>
-      ))}
+      <div className={styles.timeline}>
+        {STEPS.map((s, i) => (
+          <Reveal key={s.n} delay={i * 0.07}>
+            <div className={styles.stepRow}>
+              <div className={styles.stepMarker}>
+                <span className={styles.stepDot} aria-hidden="true" />
+                <span className={styles.stepNum}>{s.n}</span>
+              </div>
+              <h3 className={styles.stepTitle}>{s.title}</h3>
+              <p className={styles.stepBody}>{s.body}</p>
+            </div>
+          </Reveal>
+        ))}
+      </div>
     </Section>
   );
 }

@@ -11,21 +11,25 @@ import { motion, useReducedMotion } from 'framer-motion';
  * server-rendered content that passes through a client leaf, rather than each
  * one needing 'use client' itself for a few lines of framer-motion.
  *
- * `style` is how a caller makes the animated wrapper participate correctly in
- * a CSS grid it wraps a grid item for — see MentorGrid and Testimonials, which
- * pass `{ display: 'flex' }` so the wrapper stretches like the card it wraps
- * would have on its own.
+ * `className` and `style` exist because this wrapper becomes the grid item
+ * wherever it wraps one, and the caller is the only one who knows that. A card
+ * that needs to span two columns has to say so here: `grid-column` set on the
+ * card inside does nothing, since the card's parent is this div. `style` is the
+ * escape hatch for one-off values; `className` is how a caller reaches a rule
+ * that needs a media query, which an inline style cannot express.
  */
 export default function Reveal({
   children,
   delay = 0,
   y = 22,
   style,
+  className,
 }: {
   children: React.ReactNode;
   delay?: number;
   y?: number;
   style?: React.CSSProperties;
+  className?: string;
 }) {
   const reduced = useReducedMotion();
   return (
@@ -35,6 +39,7 @@ export default function Reveal({
       viewport={{ once: true, margin: '-70px' }}
       transition={{ duration: 0.6, delay, ease: [0.22, 0.61, 0.36, 1] }}
       style={style}
+      className={className}
     >
       {children}
     </motion.div>

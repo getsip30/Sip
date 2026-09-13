@@ -51,11 +51,18 @@ const TESTIMONIALS: Testimonial[] = [
   },
 ];
 
+/**
+ * Cards 1 and 4 run double width, which fills a three-column grid exactly —
+ * [1 1][2] / [3][4 4] — so the row is deliberately uneven with no empty cell
+ * at the end. The wide ones also set their quote at display size.
+ */
+const WIDE = new Set([0, 3]);
+
 export default function Testimonials() {
   return (
-    <Section labelledBy="testimonials-heading">
+    <Section labelledBy="testimonials-heading" tone="gradient">
       <Reveal>
-        <div style={{ marginBottom: 'clamp(40px, 5.5vw, 64px)' }}>
+        <div style={{ marginBottom: 'clamp(52px, 7vw, 88px)' }}>
           <Eyebrow>Testimonials</Eyebrow>
           <h2 id="testimonials-heading" className={styles.headline}>
             What people are saying
@@ -64,35 +71,41 @@ export default function Testimonials() {
       </Reveal>
 
       <div className={styles.testimonialGrid}>
-        {TESTIMONIALS.map((t, i) => (
-          // display:flex on the wrapper, same reason as the mentor cards: the
-          // animated element is a div wrapping the real grid item, and without
-          // this the grid's align-items: stretch reaches the wrapper instead of
-          // the card, leaving the card itself unstretched inside it.
-          <Reveal key={t.name} delay={i * 0.07} style={{ display: 'flex' }}>
-            <figure className={styles.testimonialCard}>
-              <blockquote className={styles.testimonialQuote}>&ldquo;{t.quote}&rdquo;</blockquote>
-              <figcaption className={styles.testimonialMeta}>
-                <span className={styles.testimonialName}>{t.name}</span>
-                <br />
-                {t.role}
-                {t.link && (
-                  <>
-                    {' · '}
-                    <a
-                      href={t.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.testimonialLink}
-                    >
-                      LinkedIn ↗
-                    </a>
-                  </>
-                )}
-              </figcaption>
-            </figure>
-          </Reveal>
-        ))}
+        {TESTIMONIALS.map((t, i) => {
+          const wide = WIDE.has(i);
+          return (
+            // The span and the stretch both go on the wrapper: it is the grid
+            // item, so neither works from the card inside it.
+            <Reveal
+              key={t.name}
+              delay={i * 0.07}
+              style={{ display: 'flex' }}
+              className={wide ? styles.spanWide : undefined}
+            >
+              <figure className={`${styles.testimonialCard}${wide ? ` ${styles.testimonialWide}` : ''}`}>
+                <blockquote className={styles.testimonialQuote}>&ldquo;{t.quote}&rdquo;</blockquote>
+                <figcaption className={styles.testimonialMeta}>
+                  <span className={styles.testimonialName}>{t.name}</span>
+                  <br />
+                  {t.role}
+                  {t.link && (
+                    <>
+                      {' · '}
+                      <a
+                        href={t.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.testimonialLink}
+                      >
+                        LinkedIn ↗
+                      </a>
+                    </>
+                  )}
+                </figcaption>
+              </figure>
+            </Reveal>
+          );
+        })}
       </div>
     </Section>
   );
