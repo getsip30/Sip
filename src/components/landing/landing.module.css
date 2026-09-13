@@ -326,26 +326,39 @@
 /* -------------------------------------------------------------- quiz band */
 
 /*
- * The mentor-match CTA: copy left, button right, hairlines above and below.
+ * The mentor-match CTA: a centred panel held in from the column's edges.
  *
- * It was a centred card with two blurred colour blobs behind it, which is the
- * one layout this design is specifically meant to avoid. Nothing about the
- * pitch needed a box or a glow; left-aligning it and letting the rules carry
- * the emphasis puts it in the same voice as the rest of the page.
+ * The gradient is a wash of the near-black the palette already uses — lighter
+ * toward the top centre, darker at the edges — so the card lifts off the
+ * section without introducing a colour. Deliberately not the two blurred,
+ * saturated circles this design replaced; the lift here comes from the tone
+ * falling off toward the border, which is why the radial sits over a vertical
+ * gradient rather than on its own.
  */
-.quizBand {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: clamp(32px, 4vw, 64px);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: clamp(52px, 7vw, 84px) 0;
+.quizCard {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: clamp(48px, 6vw, 76px) clamp(28px, 5vw, 64px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  text-align: center;
+  background:
+    radial-gradient(120% 130% at 50% 0%, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, #141b26 0%, #0d121b 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 30px 70px -34px rgba(0, 0, 0, 0.85);
+}
+
+/* The eyebrow is a flex row (its leading rule is a ::before), so centring the
+   card's text is not enough to centre it. */
+.quizCard .eyebrow {
+  justify-content: center;
 }
 
 .quizCopy {
-  max-width: 620px;
+  max-width: 560px;
+  margin: 0 auto;
 }
 
 .quizTitle {
@@ -370,8 +383,9 @@
 .quizAction {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
+  margin-top: clamp(28px, 3.5vw, 40px);
 }
 
 .quizFinePrint {
@@ -392,21 +406,26 @@
  * everything below it moved twice. A signed-in visitor still never sees quiz
  * copy, not even for a frame — they get this empty box, which collapses.
  *
- * Same vertical padding as .quizBand, so the only estimate is the content
- * height below.
+ * Same width, radius and padding as .quizCard, so the only estimate is the
+ * content height below.
  */
 .quizReserve {
-  border-top: 1px solid transparent;
-  border-bottom: 1px solid transparent;
-  padding: clamp(52px, 7vw, 84px) 0;
+  max-width: 780px;
+  margin: 0 auto;
+  border: 1px solid transparent;
+  border-radius: 22px;
+  padding: clamp(48px, 6vw, 76px) clamp(28px, 5vw, 64px);
 }
 
 .quizReserve::before {
   content: '';
   display: block;
-  /* Two-line heading, one line of copy, and the button beside them at the
-     sizes .quizBand renders them. */
-  height: clamp(192px, 25vw, 244px);
+  /* Eyebrow, two-line heading, one line of copy, the button and the small
+     print under it — stacked, at the sizes .quizCard renders them.
+     Measured, not guessed: the card's content box is 330px at 390px wide and
+     464px at 1440px, and this interpolates between the two. It stays an
+     estimate, because where the heading wraps moves with the width. */
+  height: clamp(330px, calc(280px + 12.8vw), 464px);
 }
 
 /* ------------------------------------------------------------------ steps */
@@ -709,26 +728,12 @@
   padding: clamp(48px, 6vw, 76px) 0;
 }
 
-/*
- * Figures on their own row, supporting paragraph beside them.
- *
- * The figures used to be grid items in the same track as the paragraph, which
- * only lands correctly when all three have data. With two — the usual case,
- * since sip_count is still zero sitewide — it left an empty third column and a
- * gap under the first figure. Nesting them in their own auto-flowing row makes
- * the block correct for one, two or three.
- */
+/* One figure, with the supporting paragraph beside it. */
 .statRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: clamp(36px, 4.5vw, 56px);
   align-items: start;
-}
-
-.statFigures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: clamp(36px, 5vw, 72px);
 }
 
 .statLabel {
@@ -747,13 +752,6 @@
   font-weight: 700;
   letter-spacing: -0.065em;
   line-height: 0.82;
-}
-
-/* The second and third figures are supporting, not headline: same treatment,
-   noticeably smaller, so the row has a clear primary. */
-.statNumberSm {
-  font-size: clamp(46px, 7vw, 88px);
-  letter-spacing: -0.05em;
 }
 
 .statBody {

@@ -34,10 +34,6 @@ type Mentor = {
   bio: string;
   isOpen: boolean;
   avatarData?: string | null;
-  /** Completed sips on this mentor's row. Public via publicMentor(). */
-  sipCount?: number;
-  /** Mean minutes to first reply, null until they have answered anything. */
-  avgResponseMinutes?: number | null;
 };
 
 type FeaturedNote = {
@@ -220,7 +216,7 @@ function QuizPrompt({ onStartQuiz }: { onStartQuiz: () => void }) {
   return (
     <Section tone="raised">
       <Reveal>
-        <div className={styles.quizBand}>
+        <div className={styles.quizCard}>
           <div className={styles.quizCopy}>
             <Eyebrow color="var(--link)">Mentor match</Eyebrow>
             <h2 className={styles.quizTitle}>
@@ -355,33 +351,6 @@ function MentorGrid({ mentors, loaded }: { mentors: Mentor[]; loaded: boolean })
 }
 
 /**
- * The supporting figures beside "Mentors listed", derived from the mentor list
- * already on the page.
- *
- * Both come off columns publicMentor() deliberately exposes — sip_count and
- * avg_response_minutes — so nothing here is estimated and no extra request is
- * made. Each returns null rather than a zero or a dash when there is nothing
- * real to show yet: an early-stage product showing "0 conversations" as a
- * headline statistic is worse than showing one honest number on its own.
- */
-function conversationCount(mentors: Mentor[]): number | null {
-  const total = mentors.reduce((sum, m) => sum + (m.sipCount ?? 0), 0);
-  return total > 0 ? total : null;
-}
-
-function averageReplyMinutes(mentors: Mentor[]): number | null {
-  const answered = mentors
-    .map((m) => m.avgResponseMinutes)
-    .filter((v): v is number => typeof v === 'number' && v > 0);
-  if (answered.length === 0) return null;
-  return Math.round(answered.reduce((sum, v) => sum + v, 0) / answered.length);
-}
-
-function formatReply(minutes: number): string {
-  return minutes < 60 ? `${minutes}m` : `${Math.round(minutes / 60)}h`;
-}
-
-/**
  * Two layouts behind one section: a pull-quote when mentors have approved notes
  * to show, and the numbers when they have not.
  *
@@ -399,15 +368,11 @@ function Proof({ notes, mentors, loaded }: { notes: FeaturedNote[]; mentors: Men
 
   if (notes.length === 0) {
     if (loaded && mentorCount === 0) return null;
-    const conversations = loaded ? conversationCount(mentors) : null;
-    const replyMinutes = loaded ? averageReplyMinutes(mentors) : null;
-
     return (
       <Section tone="raised">
         <Reveal>
           <div className={styles.statBlock}>
             <div className={styles.statRow}>
-              <div className={styles.statFigures}>
               <div>
                 <div className={styles.statLabel}>Mentors listed</div>
                 <div className={styles.statNumber}>
@@ -416,23 +381,6 @@ function Proof({ notes, mentors, loaded }: { notes: FeaturedNote[]; mentors: Men
                       lands, or reserving the row buys nothing. */}
                   {loaded ? mentorCount : ' '}
                 </div>
-              </div>
-
-              {conversations !== null && (
-                <div>
-                  <div className={styles.statLabel}>Conversations had</div>
-                  <div className={`${styles.statNumber} ${styles.statNumberSm}`}>{conversations}</div>
-                </div>
-              )}
-
-              {replyMinutes !== null && (
-                <div>
-                  <div className={styles.statLabel}>Average reply</div>
-                  <div className={`${styles.statNumber} ${styles.statNumberSm}`}>
-                    {formatReply(replyMinutes)}
-                  </div>
-                </div>
-              )}
               </div>
 
               <p className={styles.statBody}>
