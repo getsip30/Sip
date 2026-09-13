@@ -1,0 +1,792 @@
+/*
+ * The landing page's design system, in one file.
+ *
+ * Every section used to carry its own inline <style> block. Those are global —
+ * a plain <style> element, not scoped — so the page was shipping half a dozen
+ * competing definitions of the same ideas, and one of them (.text-link) leaked
+ * out to Footer on every other route, where Landing never renders and the rule
+ * therefore never existed. A module scopes the class names per file and lets
+ * the sections share one spacing and type scale instead of each approximating
+ * it, which is what made the old page's rhythm drift section to section.
+ *
+ * Imported by Landing.tsx (client) and by Steps/Faq/Testimonials (server).
+ * Nothing here depends on which it is.
+ */
+
+.page {
+  --gutter: clamp(20px, 5vw, 56px);
+  --measure: 1180px;
+  /* Deliberately small, and not one value everywhere: cards and inputs get 3px,
+     buttons 4px. The old page put 16-24px on cards and 999px pills on the
+     buttons, which reads as a default rather than a decision. */
+  --card-radius: 3px;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ---------------------------------------------------------------- primitives */
+
+/* One section rhythm for the whole page. The generous figure is the brief's
+   ask, and having exactly one of it is what keeps the page from looking
+   machine-assembled out of sections that each chose their own padding. */
+.section {
+  max-width: var(--measure, 1180px);
+  margin: 0 auto;
+  padding: clamp(72px, 11vh, 132px) var(--gutter, clamp(20px, 5vw, 56px));
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 22px;
+}
+
+/* A short accent rule leading into the label. The page's one piece of
+   ornament, and it earns its place by marking where every section starts. */
+.eyebrow::before {
+  content: '';
+  width: 20px;
+  height: 1px;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.headline {
+  font-size: clamp(30px, 4.5vw, 50px);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  margin: 0;
+  max-width: 620px;
+  text-wrap: balance;
+}
+
+/* Section label block with something aligned to its far edge — the "all
+   mentors" link. Bottom-aligned so the link sits on the headline's baseline
+   side rather than floating at the top of a tall heading. */
+.sectionHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: clamp(40px, 5.5vw, 64px);
+}
+
+.headLink {
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--link);
+  text-decoration: none;
+  white-space: nowrap;
+  padding-bottom: 4px;
+  border-bottom: 1px solid transparent;
+  transition: border-color 180ms ease;
+}
+
+.headLink:hover {
+  border-bottom-color: var(--link);
+}
+
+.rule {
+  height: 1px;
+  background: var(--border);
+}
+
+/* ---------------------------------------------------------------------- nav */
+
+.nav {
+  position: fixed;
+  top: var(--announcement-h, 0px);
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background 260ms ease, border-color 260ms ease;
+}
+
+.navScrolled {
+  background: rgba(10, 14, 22, 0.92);
+  border-bottom-color: var(--border);
+}
+
+.navInner {
+  max-width: var(--measure, 1180px);
+  margin: 0 auto;
+  padding: 0 var(--gutter, clamp(20px, 5vw, 56px));
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 3vw, 30px);
+}
+
+.navLink {
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.navLink:hover {
+  color: var(--text);
+}
+
+.navCta {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  padding: 9px 18px;
+  white-space: nowrap;
+  transition: border-color 180ms ease;
+}
+
+.navCta:hover {
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+/* --------------------------------------------------------------------- hero */
+
+.hero {
+  max-width: var(--measure, 1180px);
+  margin: 0 auto;
+  padding: clamp(124px, 18vh, 196px) var(--gutter, clamp(20px, 5vw, 56px)) clamp(56px, 8vh, 92px);
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(48px, 7vw, 76px);
+  align-items: start;
+}
+
+/*
+ * The h1 does not animate, and must not be given an enter animation.
+ *
+ * It is this page's LCP element. framer-motion serializes `initial` into the
+ * server-rendered HTML, so an opacity-0 start shipped in the markup and the
+ * largest contentful paint could not happen until JS had downloaded, hydrated
+ * and run the animation — measured at 12.9s LCP against a 1.8s FCP. A CSS fade
+ * holds the element at 0 just the same. The fix is no animation, not a
+ * different one.
+ */
+.heroTitle {
+  font-size: clamp(42px, 7.4vw, 82px);
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  margin: 0;
+}
+
+.heroTitleMuted {
+  color: var(--link);
+}
+
+.heroLede {
+  margin-top: 26px;
+  font-size: clamp(16px, 1.9vw, 19px);
+  line-height: 1.62;
+  color: var(--muted);
+  max-width: 470px;
+}
+
+/* Who is open, as a list of hairline-separated rows rather than a floating
+   card. Denser and quieter than the bordered panel it replaces, which competed
+   with the headline it sits beside. */
+.rail {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.railStatus {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 6px;
+}
+
+.railDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success2);
+  flex-shrink: 0;
+}
+
+.railDotIdle {
+  background: var(--muted);
+}
+
+.railLabel {
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.railRow {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 180ms ease;
+}
+
+.railRow:first-of-type {
+  border-top: none;
+}
+
+.railRow:hover {
+  opacity: 0.62;
+}
+
+.railName {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.railMeta {
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.railEmpty {
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.6;
+  padding: 8px 0 2px;
+}
+
+/* --------------------------------------------------------------- quiz band */
+
+/*
+ * The mentor-match CTA: copy left, button right, hairlines above and below.
+ *
+ * It was a centred card with two blurred colour blobs behind it, which is the
+ * one layout this redesign is specifically meant to avoid. Nothing about the
+ * pitch needed a box or a glow; left-aligning it and letting the rules carry
+ * the emphasis puts it in the same voice as the rest of the page.
+ */
+.quizBand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: clamp(28px, 4vw, 56px);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: clamp(44px, 6vw, 68px) 0;
+}
+
+.quizCopy {
+  max-width: 540px;
+}
+
+.quizTitle {
+  font-size: clamp(28px, 4.2vw, 46px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.quizTitleMuted {
+  color: var(--link);
+}
+
+.quizSub {
+  font-size: clamp(15px, 1.8vw, 18px);
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0;
+}
+
+.quizAction {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.quizFinePrint {
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+}
+
+/*
+ * Holds the band's space while Clerk resolves the session.
+ *
+ * The prompt is in the statically rendered HTML (no request to read at build
+ * time means Clerk resolves to signed-out), but on the client the first render
+ * has isLoaded false, so the section unmounted and remounted a beat later and
+ * everything below it moved twice. A signed-in visitor still never sees quiz
+ * copy, not even for a frame — they get this empty box, which collapses.
+ *
+ * Same vertical padding as .quizBand, so the only estimate is the content
+ * height below.
+ */
+.quizReserve {
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  padding: clamp(44px, 6vw, 68px) 0;
+}
+
+.quizReserve::before {
+  content: '';
+  display: block;
+  /* Two-line heading, one line of copy, and the button beside them at the
+     sizes .quizBand renders them. */
+  height: clamp(168px, 22vw, 208px);
+}
+
+/* ------------------------------------------------------------------- steps */
+
+/* Number left, title and body right, a hairline between each. The numeral is
+   set large and dim rather than small and coloured: it gives the section a
+   spine to read down without asking to be read as content. */
+.stepRow {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 6px 20px;
+  padding: clamp(30px, 3.6vw, 42px) 0;
+  border-top: 1px solid var(--border);
+  align-items: start;
+}
+
+.stepRow:first-of-type {
+  border-top: none;
+}
+
+.stepNum {
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: clamp(20px, 2.4vw, 26px);
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: -0.02em;
+  padding-top: 2px;
+}
+
+.stepTitle {
+  grid-column: 2;
+  font-size: clamp(20px, 2.5vw, 27px);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.stepBody {
+  grid-column: 2;
+  font-size: 15.5px;
+  line-height: 1.68;
+  color: var(--muted);
+  margin: 0;
+  max-width: 460px;
+}
+
+/* ------------------------------------------------------------ testimonials */
+
+.testimonialGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+/*
+ * The cards are separated by the grid's own 1px background showing through,
+ * not by their own borders and a gap. Four bordered cards in a row put a
+ * double line between every pair; this way the rules are single and shared,
+ * which is what makes a row of quotes read as one table rather than four
+ * floating boxes. No shadow, per the brief.
+ */
+.testimonialCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0;
+  background: var(--bg);
+  padding: clamp(22px, 2.4vw, 28px);
+  transition: background 220ms ease;
+}
+
+.testimonialCard:hover {
+  background: var(--surface);
+}
+
+.testimonialQuote {
+  font-size: 15px;
+  line-height: 1.66;
+  color: var(--text);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.testimonialMeta {
+  margin-top: 20px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.testimonialName {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.testimonialLink {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.testimonialLink:hover {
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------ mentor cards */
+
+.mentorGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.mentorCard {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius, 3px);
+  padding: 22px;
+  background: var(--surface);
+  text-decoration: none;
+  color: inherit;
+  /* No transform on hover. The lift-and-grow on every card is the single most
+     commonly named giveaway of a generated page, and it also fights the
+     reveal animation the card enters with. The border carries it instead. */
+  transition: border-color 220ms ease, background 220ms ease;
+}
+
+.mentorCard:hover {
+  border-color: rgba(112, 181, 249, 0.45);
+  background: #161f2b;
+}
+
+/* Stand-ins for cards still being fetched, sized to the real ones so the grid
+   does not resize when the data lands. These are the one approximate thing
+   here; if the card design changes, they move with it. */
+.mentorSkeleton {
+  min-height: 152px;
+}
+
+.mentorSkeleton.mentorLead {
+  min-height: 232px;
+}
+
+.mentorIdentity {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.avatarFallback {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.avatarFallbackLead {
+  width: 52px;
+  height: 52px;
+  font-size: 16px;
+}
+
+.mentorName {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.mentorNameLead {
+  font-size: 19px;
+}
+
+.mentorRole {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.mentorBio {
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--muted);
+  margin: 20px 0 0;
+  max-width: 440px;
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.tag {
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 2px;
+  padding: 5px 9px;
+}
+
+/* --------------------------------------------------------------------- stat */
+
+.statBlock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+  align-items: end;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: clamp(38px, 5vw, 58px) 0;
+}
+
+.statLabel {
+  font-family: var(--font-space-mono), 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.statNumber {
+  font-size: clamp(52px, 8.5vw, 96px);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 0.9;
+}
+
+.statBody {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--muted);
+  margin: 0;
+  max-width: 420px;
+}
+
+/* --------------------------------------------------------------- after-sip */
+
+.pullQuote {
+  font-size: clamp(23px, 3.4vw, 37px);
+  line-height: 1.26;
+  letter-spacing: -0.03em;
+  font-weight: 500;
+  margin: 0;
+  max-width: 860px;
+  text-wrap: pretty;
+}
+
+.pullQuoteMeta {
+  margin-top: 24px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* The mentor's name inside the pull quote's attribution. It carries the body
+   colour rather than the link colour so the caption reads as one sentence, and
+   warms on hover. This was an inline `color` plus the global .text-link class,
+   which cannot work: an inline style beats the class's :hover rule, so the
+   hover silently did nothing. */
+.pullQuoteLink {
+  color: var(--text);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.pullQuoteLink:hover {
+  color: var(--link);
+}
+
+.noteGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 44px);
+  padding-top: clamp(32px, 4.5vw, 48px);
+}
+
+.noteQuote {
+  font-size: 15px;
+  line-height: 1.66;
+  margin: 0;
+}
+
+.noteMeta {
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* ----------------------------------------------------------------- the faq */
+
+.faqGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(30px, 4vw, 44px) clamp(32px, 5vw, 64px);
+}
+
+.faqQuestion {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0 0 10px;
+}
+
+.faqAnswer {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ----------------------------------------------------------------- the ask */
+
+.finalCta {
+  max-width: var(--measure, 1180px);
+  margin: 0 auto;
+  padding: clamp(96px, 15vh, 168px) var(--gutter, clamp(20px, 5vw, 56px));
+}
+
+.finalHeadline {
+  font-size: clamp(40px, 8.4vw, 96px);
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+  font-weight: 700;
+  margin: 0;
+  max-width: 900px;
+}
+
+.finalHeadlineMuted {
+  color: var(--muted);
+}
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: clamp(36px, 5vw, 52px);
+  align-items: center;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 15px 26px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 200ms ease, border-color 200ms ease;
+}
+
+.btnPrimary:hover {
+  background: #1d4fd8;
+  border-color: #1d4fd8;
+}
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  padding: 15px 26px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  background: transparent;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 200ms ease;
+}
+
+.btnSecondary:hover {
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+/* ------------------------------------------------------------- breakpoints */
+
+@media (min-width: 720px) {
+  .testimonialGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mentorGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mentorLead { grid-column: span 2; }
+  .noteGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .faqGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .statBlock { grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: clamp(40px, 6vw, 88px); }
+  .stepRow { grid-template-columns: 92px minmax(0, 320px) minmax(0, 1fr); }
+  .stepBody { grid-column: 3; }
+}
+
+@media (min-width: 980px) {
+  /* The hero is asymmetric on purpose: the headline column is wider than the
+     rail beside it, so the page has a clear left edge to read down rather
+     than two columns of equal weight. */
+  .heroGrid { grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr); }
+  .testimonialGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .mentorGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mentorLead { grid-column: span 2; }
+}

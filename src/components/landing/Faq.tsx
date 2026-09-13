@@ -1,6 +1,6 @@
-import { MUTED } from '@/lib/theme';
 import Reveal from './Reveal';
-import { MAX_PAGE_WIDTH, GUTTER, Eyebrow } from './shared';
+import { Section, Eyebrow } from './shared';
+import styles from './landing.module.css';
 
 /**
  * Common questions, rendered as real content.
@@ -16,54 +16,30 @@ import { MAX_PAGE_WIDTH, GUTTER, Eyebrow } from './shared';
  * cannot drift apart, which is both a Google requirement and the only way this
  * stays honest.
  *
- * A plain Server Component, same reasoning as Steps: the only client code is
- * <Reveal>, and this file has no hooks of its own.
+ * Plain prose in a two-column grid, not an accordion: there are six short
+ * answers and hiding them behind a click would undo the indexing this section
+ * exists for.
  */
 export default function Faq({ items }: { items: { q: string; a: string }[] }) {
   return (
-    <section
-      id="faq"
-      aria-labelledby="faq-heading"
-      style={{ maxWidth: MAX_PAGE_WIDTH, margin: '0 auto', padding: `clamp(56px, 9vh, 100px) ${GUTTER}` }}
-    >
+    <Section id="faq" labelledBy="faq-heading">
       <Reveal>
-        <Eyebrow>Common questions</Eyebrow>
-        <h2
-          id="faq-heading"
-          style={{
-            fontSize: 'clamp(30px, 4.4vw, 48px)',
-            lineHeight: 1.06,
-            letterSpacing: '-0.03em',
-            fontWeight: 700,
-            margin: '0 0 clamp(40px, 6vw, 64px)',
-            maxWidth: 620,
-          }}
-        >
-          Before you sign up.
-        </h2>
+        <div style={{ marginBottom: 'clamp(40px, 5.5vw, 64px)' }}>
+          <Eyebrow>Common questions</Eyebrow>
+          <h2 id="faq-heading" className={styles.headline}>
+            Before you sign up.
+          </h2>
+        </div>
       </Reveal>
 
-      <div className="faq-grid">
+      <div className={styles.faqGrid}>
         {items.map((item, i) => (
           <Reveal key={item.q} delay={Math.min(i, 3) * 0.05}>
-            <h3 style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em', margin: '0 0 10px' }}>
-              {item.q}
-            </h3>
-            <p style={{ fontSize: 15, lineHeight: 1.7, color: MUTED, margin: 0 }}>{item.a}</p>
+            <h3 className={styles.faqQuestion}>{item.q}</h3>
+            <p className={styles.faqAnswer}>{item.a}</p>
           </Reveal>
         ))}
       </div>
-
-      <style>{`
-        .faq-grid {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr);
-          gap: clamp(28px, 4vw, 40px) clamp(32px, 5vw, 56px);
-        }
-        @media (min-width: 720px) {
-          .faq-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-      `}</style>
-    </section>
+    </Section>
   );
 }
