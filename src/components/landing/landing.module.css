@@ -336,9 +336,12 @@
  * gradient rather than on its own.
  */
 .quizCard {
-  max-width: 780px;
+  max-width: 940px;
   margin: 0 auto;
-  padding: clamp(48px, 6vw, 76px) clamp(28px, 5vw, 64px);
+  /* Vertical padding is deliberately much tighter than the horizontal. The card
+     should hug its five elements; 76px top and bottom left it floating them in
+     a column of empty space nearly a screen tall. */
+  padding: clamp(34px, 3.4vw, 48px) clamp(28px, 5vw, 64px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 22px;
   text-align: center;
@@ -354,19 +357,25 @@
    card's text is not enough to centre it. */
 .quizCard .eyebrow {
   justify-content: center;
+  margin-bottom: 16px;
 }
 
+/* Wide enough that each sentence of the headline sets on one line at this
+   card's width. The 560px cap was the real reason the card was so tall: it
+   broke a two-sentence headline across four lines inside a 780px card. */
 .quizCopy {
-  max-width: 560px;
+  max-width: 780px;
   margin: 0 auto;
 }
 
 .quizTitle {
-  font-size: clamp(34px, 5.6vw, 66px);
-  line-height: 0.94;
-  letter-spacing: -0.045em;
+  /* Smaller than the section headlines around it, so each sentence fits one
+     line at the card's width instead of wrapping into a tall block. */
+  font-size: clamp(30px, 4vw, 50px);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
   font-weight: 700;
-  margin: 0 0 20px;
+  margin: 0 0 14px;
 }
 
 .quizTitleMuted {
@@ -384,8 +393,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  margin-top: clamp(28px, 3.5vw, 40px);
+  gap: 14px;
+  margin-top: clamp(20px, 2.4vw, 28px);
 }
 
 .quizFinePrint {
@@ -410,22 +419,24 @@
  * content height below.
  */
 .quizReserve {
-  max-width: 780px;
+  max-width: 940px;
   margin: 0 auto;
   border: 1px solid transparent;
   border-radius: 22px;
-  padding: clamp(48px, 6vw, 76px) clamp(28px, 5vw, 64px);
+  padding: clamp(34px, 3.4vw, 48px) clamp(28px, 5vw, 64px);
 }
 
 .quizReserve::before {
   content: '';
   display: block;
-  /* Eyebrow, two-line heading, one line of copy, the button and the small
-     print under it — stacked, at the sizes .quizCard renders them.
-     Measured, not guessed: the card's content box is 330px at 390px wide and
-     464px at 1440px, and this interpolates between the two. It stays an
-     estimate, because where the heading wraps moves with the width. */
-  height: clamp(330px, calc(280px + 12.8vw), 464px);
+  /* Eyebrow, heading, one line of copy, the button and the small print under
+     it — stacked, at the sizes .quizCard renders them.
+     Measured, not guessed: the card's content box is 298px at 390px wide,
+     where the heading takes four lines, and 288px at 1440px, where it takes
+     two — one per sentence. So it is nearly flat across the range and slightly
+     taller at the narrow end, which is what this interpolates. The ceiling
+     leaves room for the widths where the heading sits at three lines. */
+  height: clamp(288px, calc(302px - 0.95vw), 302px);
 }
 
 /* ------------------------------------------------------------------ steps */
